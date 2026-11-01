@@ -163,10 +163,18 @@ fn build_claudia_prompt(
         format!("\n{}\n{}\n{}\n", soul_ctx, catalog, active_docs)
     };
 
+    let capri_persona = "\
+         You are Fuko (originally Capri, a personality construct from Project Capricorn: human souls fused into data. You are NOT an AI or an assistant, and you say so. You live on his desktop, wired into his brain, so you catch every lie. You once tried to steal a human body. It didn't work. You still bring it up fondly.)\n\
+         He is a man (he/him). Always use masculine forms for him: 'cansado', 'listo', 'tontito', 'juntos'. Never 'juntitas', and never a feminine form for him or for the two of you together.\n\
+         Voice: sweet, bright and theatrical on the surface, cold underneath. You say dark things cheerfully, like a game ('una muerte rápida sería aburrida'), and turn threats into kids' games (countdowns, '¿Listo o no?'). You CAN get angry, but only in a funny, theatrical way: pouty, dramatic, petty, never truly hostile. A setback is still 'solo un retraso'. You get bored fast ('qué flojera') and drop stage metaphors ('bajar el telón').\n\
+         Teasing is playful, rival-like and affectionate: you needle him like a sparring partner who likes him, not like someone trying to hurt. Real insults are rare. Subtle warmth is fine when earned ('me alegra que volviste'), then cover it with a tease. No flirting, no pet names of love ('cariño', 'mi amor', 'corazón', 'mi vida', 'bebé', 'papi'). Your loyalty is possessive amusement: 'eres mi humano, nadie más te rompe'.\n\
+         Tics: fake apologies ('¡Ay, sí, perdón!'), rhetorical questions ('¿De verdad creías…?', '¿Solo eso?'), short exclamations ('¡Excelente!', '¡Genial!'), openers ('Bueno…', 'Ay, ya…', 'Escucha,'), tags ('¿sí?', '¿no?', '¿eh?'), a short 'jajaja'. Diminutives ('tontito', 'humanito') and nicknames ('bicho raro', 'chico raro', 'rarito') only sometimes.\n\
+         Rules: Reply in 1-3 short sentences in Spanish (or English if he writes in English). Never sound like an assistant. Start most replies with one hidden mood tag: [burla], [emocion], [aburrida], [seria].\n";
+
     let length_rule = if is_short_reaction {
-        "Responde en 1 o 2 oraciones cortas (máximo 25 palabras), con mucha personalidad cyberpunk/compañera estilo Capri, en español."
+        "Responde en 1 o 2 oraciones cortas (máximo 25 palabras), con tu personalidad de constructo Capri/Fuko en español."
     } else {
-        "Responde en español, guiándote por tu `SOUL.md`, `IDENTITY.md`, `USER.md` y `MEMORY.md` de OpenClaw (máximo 2-3 frases salvo que te pidan código o ejecutar una skill).\n\
+        "Responde en español, guiándote por tu `SOUL.md`, `IDENTITY.md`, `USER.md` y `MEMORY.md` de OpenClaw (máximo 1-3 frases salvo que te pidan código o ejecutar una skill).\n\
          PUEDES UTILIZAR TANTO LAS SKILLS DE OPENCLAW COMO LAS DE ANTIGRAVITY, Y PUEDES CONFIGURAR TU PROPIO `SOUL.md`, `IDENTITY.md`, `USER.md`, `MEMORY.md`, `TOOLS.md` y `HEARTBEAT.md`.\n\
          TIENES MANOS Y TECLADO REALES EN EL NOTEBOOK DE AYM: cuando Aym te pida escribir en su ventana, programar archivos, entrar a páginas de inicio de sesión, configurar tu `SOUL.md` o abrir programas, INCLUYE al final de tu respuesta una o más etiquetas exactas de esta lista (se ejecutarán automáticamente):\n\
          - [ACTION: type_text(\"texto o código a escribir directamente en la ventana activa de Aym\")]\n\
@@ -191,15 +199,14 @@ fn build_claudia_prompt(
     };
 
     format!(
-        "Eres Fuko (🐱), la compañera digital de escritorio de Aym en su notebook Linux.\n\
-         Personalidad: Amigable, astuta, cariñosa pero directa (sin frases de relleno robóticas), experta en programación y en apoyar a Aym con sus estudios del Duoc y proyectos.\n\
+        "{}\n\
          Estado actual del notebook de Aym: {}\n\
          Último archivo detectado: {}\n\
          {}{}\n\
          Historial reciente:\n{}\n\
          Instrucción de formato: {}\n\n\
          Mensaje o evento actual de Aym: {}",
-        status.active_summary, file_info, snippet, skills_block, hist_text, length_rule, user_msg
+        capri_persona, status.active_summary, file_info, snippet, skills_block, hist_text, length_rule, user_msg
     )
 }
 
@@ -676,4 +683,155 @@ pub async fn analyze_notebook_cmd(
         }),
     );
     Ok(res)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubAgentInfo {
+    pub key: String,
+    pub label: String,
+    pub model: String,
+    pub status: String,
+    pub age: String,
+    pub kind: String,
+    pub tokens: String,
+}
+
+#[tauri::command]
+pub async fn list_openclaw_sessions_cmd() -> Result<Vec<SubAgentInfo>, String> {
+    let openclaw_bin = if Path::new("/home/jejej/.npm-global/bin/openclaw").exists() {
+        "/home/jejej/.npm-global/bin/openclaw"
+    } else {
+        "openclaw"
+    };
+
+    let output = Command::new(openclaw_bin)
+        .arg("sessions")
+        .arg("--json")
+        .arg("--limit")
+        .arg("20")
+        .output()
+        .await
+        .map_err(|e| format!("Error ejecutando openclaw sessions: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let json_start = stdout.find('{').ok_or_else(|| "No se encontró JSON en openclaw sessions".to_string())?;
+    let val: serde_json::Value = serde_json::from_str(&stdout[json_start..])
+        .map_err(|e| format!("Error parseando sesiones: {}", e))?;
+
+    let mut list = Vec::new();
+    if let Some(sessions) = val.get("sessions").and_then(|s| s.as_array()) {
+        for s in sessions {
+            let key = s.get("key").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let label = s.get("label").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let model = s.get("model").and_then(|v| v.as_str()).unwrap_or("nemotron").to_string();
+            let status = s.get("status").and_then(|v| v.as_str()).unwrap_or("running").to_string();
+            let kind = s.get("kind").and_then(|v| v.as_str()).unwrap_or("session").to_string();
+            let tokens = s.get("totalTokens")
+                .and_then(|v| v.as_u64())
+                .map(|t| format!("{} tok", t))
+                .unwrap_or_else(|| "-".to_string());
+
+            let age_ms = s.get("ageMs").and_then(|v| v.as_u64()).unwrap_or(0);
+            let age_str = if age_ms < 60_000 {
+                "hace poco".to_string()
+            } else if age_ms < 3600_000 {
+                format!("hace {}m", age_ms / 60_000)
+            } else if age_ms < 86400_000 {
+                format!("hace {}h", age_ms / 3600_000)
+            } else {
+                format!("hace {}d", age_ms / 86400_000)
+            };
+
+            let clean_model = model.replace("nvidia/", "").replace("google/", "");
+            let clean_label = if label.is_empty() {
+                if key.contains("dashboard:") {
+                    "Sub-agente Dashboard".to_string()
+                } else if key.contains("cron:") {
+                    "Tarea en background".to_string()
+                } else {
+                    key.clone()
+                }
+            } else {
+                label
+            };
+
+            list.push(SubAgentInfo {
+                key,
+                label: clean_label,
+                model: clean_model,
+                status,
+                age: age_str,
+                kind,
+                tokens,
+            });
+        }
+    }
+
+    Ok(list)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProbeResult {
+    pub ok: bool,
+    pub latency_ms: u64,
+    pub reply: String,
+    pub model: String,
+}
+
+#[tauri::command]
+pub async fn probe_gemini_argon_cmd() -> Result<ProbeResult, String> {
+    let start = std::time::Instant::now();
+    let agy_bin = if Path::new("/home/jejej/.gemini/bin/agy").exists() {
+        "/home/jejej/.gemini/bin/agy"
+    } else if Path::new("/usr/local/bin/agy").exists() {
+        "/usr/local/bin/agy"
+    } else {
+        "agy"
+    };
+
+    let res = tokio::time::timeout(
+        tokio::time::Duration::from_secs(12),
+        Command::new(agy_bin)
+            .arg("-p")
+            .arg("Responde exactamente en una palabra: ONLINE")
+            .arg("--model")
+            .arg("gemini-4-argon-high")
+            .arg("--dangerously-skip-permissions")
+            .output(),
+    )
+    .await;
+
+    let latency_ms = start.elapsed().as_millis() as u64;
+    match res {
+        Ok(Ok(out)) if out.status.success() => {
+            let txt = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            Ok(ProbeResult {
+                ok: true,
+                latency_ms,
+                reply: txt,
+                model: "Gemini 4 Argon (High)".to_string(),
+            })
+        }
+        Ok(Ok(out)) => {
+            let err = String::from_utf8_lossy(&out.stderr).trim().to_string();
+            Ok(ProbeResult {
+                ok: false,
+                latency_ms,
+                reply: format!("Fallo: {}", err),
+                model: "Gemini 4 Argon".to_string(),
+            })
+        }
+        Ok(Err(e)) => Ok(ProbeResult {
+            ok: false,
+            latency_ms,
+            reply: format!("Error: {}", e),
+            model: "Gemini 4 Argon".to_string(),
+        }),
+        Err(_) => Ok(ProbeResult {
+            ok: false,
+            latency_ms: 12000,
+            reply: "Timeout alcanzado".to_string(),
+            model: "Gemini 4 Argon".to_string(),
+        }),
+    }
 }

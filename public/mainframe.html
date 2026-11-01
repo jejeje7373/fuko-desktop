@@ -1,20 +1,24 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="capri">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fuko Mainframe - SOUL.md, OpenClaw & Gemini 4 Argon</title>
+    <title>Fuko · Ajustes & Mainframe (Capri / OpenClaw / Antigravity)</title>
     <style>
         :root {
-            --bg-primary: #090b10;
-            --bg-secondary: #111520;
-            --bg-card: #171c2b;
-            --accent: #3ad6eb;
-            --accent-pink: #ff2a6d;
-            --neon-green: #10b981;
-            --text-primary: #e8ecf2;
-            --text-secondary: #8f98a8;
-            --border: #252e42;
+            --bg: #09030f;
+            --panel: #140a1f;
+            --plate-hi: #2a1240;
+            --plate-lo: #0b0512;
+            --line: #7b3fe4;
+            --label: #ff2d6f;
+            --accent: #5ef6ff;
+            --accent-green: #3dff8f;
+            --muted: #a78ba9;
+            --title: #ffffff;
+            font-family: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+            color: #fff;
+            background: var(--bg);
         }
 
         * {
@@ -25,553 +29,623 @@
         }
 
         body {
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            min-width: 720px;
             height: 100vh;
+            background: radial-gradient(circle at 18% 0%, rgba(123, 63, 228, 0.28), transparent 60%), var(--bg);
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            font-family: 'Share Tech Mono', 'JetBrains Mono', Consolas, monospace;
         }
 
-        header {
-            padding: 14px 22px;
-            background: var(--bg-secondary);
-            border-bottom: 1.5px solid var(--accent);
+        /* Barra superior Cyberpunk (MtGhozt/Capri-Desktop settings__bar) */
+        .settings__bar {
+            height: 44px;
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            align-items: center;
+            padding: 0 16px;
+            color: var(--accent);
+            border-bottom: 1.5px solid var(--line);
+            background: var(--panel);
+            font-size: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            box-shadow: 0 2px 14px rgba(123, 63, 228, 0.35);
         }
 
-        .brand {
+        .settings__bar-brand {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
-        .brand-icon {
-            font-size: 22px;
-            background: rgba(58, 214, 235, 0.14);
-            padding: 7px 10px;
-            border-radius: 8px;
-            border: 1px solid var(--accent);
+        .settings__bar-logo {
+            width: 26px;
+            height: 26px;
+            clip-path: polygon(18% 0, 100% 0, 100% 82%, 82% 100%, 0 100%, 0 18%);
+            background: #110816;
+            border: 1px solid var(--line);
         }
 
-        .brand-text h1 {
-            font-size: 16px;
+        .settings__bar-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .settings__bar-title {
+            color: var(--label);
             font-weight: 700;
-            letter-spacing: 0.8px;
-            color: var(--accent);
+            letter-spacing: 0.15em;
         }
 
-        .brand-text p {
-            font-size: 11px;
-            color: var(--text-secondary);
-            font-family: monospace;
-        }
-
-        .status-badge {
+        .settings__bar-status {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 11.5px;
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--neon-green);
-            padding: 6px 14px;
-            border-radius: 20px;
-            border: 1px solid rgba(16, 185, 129, 0.35);
-            font-weight: 600;
+            font-size: 11px;
+            color: var(--accent-green);
+            background: rgba(61, 255, 143, 0.1);
+            border: 1px solid rgba(61, 255, 143, 0.4);
+            padding: 3px 10px;
+            clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
         }
 
         .pulse-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--neon-green);
+            width: 7px;
+            height: 7px;
+            background: var(--accent-green);
             border-radius: 50%;
-            box-shadow: 0 0 10px var(--neon-green);
+            box-shadow: 0 0 8px var(--accent-green);
+            animation: pulse 1.4s ease-in-out infinite;
         }
 
-        .main-container {
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        /* Estructura principal con tabs a la izquierda */
+        .settings__main {
+            display: flex;
             flex: 1;
-            display: grid;
-            grid-template-columns: 235px 1fr;
+            height: calc(100vh - 44px);
             overflow: hidden;
+            background: var(--panel);
         }
 
-        aside {
-            background: var(--bg-secondary);
-            border-right: 1px solid var(--border);
-            padding: 16px;
+        /* Tabs laterales Cyberpunk (.settings__tabs) */
+        .settings__tabs {
+            width: 220px;
+            flex: none;
+            padding: 16px 0;
+            border-right: 1px solid rgba(123, 63, 228, 0.35);
+            background: rgba(9, 3, 15, 0.85);
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 4px;
         }
 
-        .nav-item {
+        .settings__tabs button {
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 11px 13px;
-            border-radius: 8px;
-            color: var(--text-secondary);
+            width: 100%;
+            padding: 12px 18px;
+            border: 0;
+            border-left: 3px solid transparent;
             background: transparent;
-            border: 1px solid transparent;
-            font-size: 13px;
-            font-weight: 600;
+            color: var(--muted);
+            font-family: inherit;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            text-align: left;
             cursor: pointer;
-            transition: all 0.15s;
+            transition: all 0.14s ease;
         }
 
-        .nav-item:hover {
-            color: var(--text-primary);
-            background: rgba(58, 214, 235, 0.08);
+        .settings__tabs button:hover {
+            background: rgba(255, 45, 111, 0.1);
+            color: #fff;
         }
 
-        .nav-item.active {
-            color: var(--accent);
-            background: var(--bg-card);
-            border-color: var(--accent);
-            border-left: 3px solid var(--accent-pink);
+        .settings__tabs button.is-active {
+            border-left-color: var(--label);
+            background: rgba(255, 45, 111, 0.15);
+            color: #fff;
+            font-weight: 700;
+            text-shadow: 0 0 8px rgba(255, 45, 111, 0.6);
         }
 
-        main {
-            padding: 20px 24px;
+        /* Contenido de la pestaña activa */
+        .settings__content {
+            flex: 1;
+            min-width: 0;
             overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+            padding: 22px 28px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(123, 63, 228, 0.5) transparent;
         }
 
         .tab-panel {
             display: none;
             flex-direction: column;
             gap: 18px;
-            height: 100%;
         }
 
-        .tab-panel.active {
+        .tab-panel.is-active {
             display: flex;
         }
 
-        .section-title {
-            font-size: 14.5px;
+        /* Cyberpunk Brain Cards (.appmenu__brain-card) */
+        .appmenu__brain {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .appmenu__brain-card {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px 18px;
+            border: 1px solid rgba(123, 63, 228, 0.55);
+            background: rgba(15, 7, 24, 0.88);
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            box-shadow: 0 0 14px rgba(123, 63, 228, 0.18);
+        }
+
+        .appmenu__brain-card-title {
+            color: var(--label);
+            font-size: 13.5px;
             font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .appmenu__hint {
+            font-size: 11px;
+            line-height: 1.45;
+            color: var(--muted);
+        }
+
+        .appmenu__hint code {
             color: var(--accent);
+            background: rgba(94, 246, 255, 0.1);
+            padding: 1px 4px;
+            border-radius: 2px;
+        }
+
+        .appmenu__brain-picks {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .appmenu__toggle-btn {
+            appearance: none;
+            border: 1px solid rgba(123, 63, 228, 0.6);
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--muted);
+            font-family: inherit;
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            cursor: pointer;
+            clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+            transition: all 0.12s;
+        }
+
+        .appmenu__toggle-btn:hover {
+            background: rgba(255, 45, 111, 0.12);
+            color: #fff;
+            border-color: var(--label);
+        }
+
+        .appmenu__toggle-btn.is-active {
+            background: var(--label);
+            border-color: var(--label);
+            color: #fff;
+            font-weight: 700;
+            box-shadow: 0 0 10px rgba(255, 45, 111, 0.5);
+        }
+
+        .appmenu__toggle-btn.is-green {
+            background: rgba(61, 255, 143, 0.15);
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .appmenu__toggle-btn.is-green:hover {
+            background: var(--accent-green);
+            color: #09030f;
+            box-shadow: 0 0 10px var(--accent-green);
+        }
+
+        .appmenu__probe-box {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 10px;
-            letter-spacing: 0.4px;
+            justify-content: space-between;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 10px 14px;
+            border: 1px dashed rgba(123, 63, 228, 0.45);
         }
 
-        /* =========================================================
-           EDITOR EN VIVO DE SOUL.MD Y ARCHIVOS DE OPENCLAW
-           ========================================================= */
+        .appmenu__probe-status {
+            font-size: 11px;
+            color: var(--accent);
+        }
+
+        /* Tabla de Agentes (Sub-agentes de OpenClaw) */
+        .agents-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .agent-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 12px 14px;
+            background: rgba(11, 5, 18, 0.85);
+            border: 1px solid rgba(123, 63, 228, 0.4);
+            clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+        }
+
+        .agent-info {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
+        }
+
+        .agent-label {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .agent-meta {
+            font-size: 10px;
+            color: var(--muted);
+            display: flex;
+            gap: 10px;
+        }
+
+        .agent-badge {
+            font-size: 9px;
+            padding: 2px 7px;
+            text-transform: uppercase;
+            font-weight: 700;
+            clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
+        }
+
+        .agent-badge.is-done { background: rgba(61, 255, 143, 0.2); color: var(--accent-green); border: 1px solid var(--accent-green); }
+        .agent-badge.is-running { background: rgba(94, 246, 255, 0.2); color: var(--accent); border: 1px solid var(--accent); }
+        .agent-badge.is-failed { background: rgba(255, 45, 111, 0.2); color: var(--label); border: 1px solid var(--label); }
+
+        /* Editor de Memoria (SOUL.md, IDENTITY.md, etc.) */
         .file-pills {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
+            margin-bottom: 12px;
         }
 
         .file-pill {
-            padding: 7px 13px;
-            border-radius: 6px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            font-size: 12px;
-            font-weight: 700;
-            font-family: monospace;
+            padding: 6px 12px;
+            border: 1px solid rgba(123, 63, 228, 0.5);
+            background: rgba(20, 10, 32, 0.7);
+            color: var(--muted);
+            font-size: 11px;
             cursor: pointer;
-            transition: all 0.15s;
+            clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+            transition: all 0.12s;
         }
 
         .file-pill:hover {
-            border-color: var(--accent);
-            color: var(--text-primary);
+            color: #fff;
+            border-color: var(--label);
         }
 
-        .file-pill.active {
-            background: rgba(58, 214, 235, 0.16);
-            border-color: var(--accent);
-            color: var(--accent);
-            box-shadow: 0 0 10px rgba(58, 214, 235, 0.25);
+        .file-pill.is-active {
+            background: var(--label);
+            border-color: var(--label);
+            color: #fff;
+            font-weight: 700;
         }
 
-        .soul-toolbar {
+        .editor-toolbar {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            padding: 10px 14px;
-            border-radius: 8px;
+            justify-content: space-between;
             gap: 12px;
+            padding: 8px 12px;
+            background: rgba(10, 4, 16, 0.9);
+            border: 1px solid rgba(123, 63, 228, 0.5);
+            border-bottom: 0;
         }
 
-        .soul-meta {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .soul-meta .desc {
-            font-size: 12.5px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .soul-meta .path {
+        .editor-path {
             font-size: 11px;
-            font-family: monospace;
-            color: var(--text-secondary);
+            color: var(--accent);
         }
 
-        .soul-actions {
+        .editor-actions {
             display: flex;
             gap: 8px;
             align-items: center;
         }
 
-        #soul-editor {
-            flex: 1;
-            min-height: 310px;
+        .editor-textarea {
             width: 100%;
-            background: #07090e;
-            color: #d9e6f7;
-            border: 1.5px solid var(--border);
-            border-radius: 8px;
-            padding: 14px 16px;
-            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-            font-size: 13px;
+            height: 380px;
+            padding: 14px;
+            background: rgba(7, 2, 12, 0.95);
+            border: 1px solid rgba(123, 63, 228, 0.6);
+            color: #f2e9ff;
+            font-family: inherit;
+            font-size: 12px;
             line-height: 1.5;
             resize: vertical;
             outline: none;
-            user-select: text;
+            box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.6);
+            white-space: pre-wrap;
         }
 
-        #soul-editor:focus {
+        .editor-textarea:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 12px rgba(58, 214, 235, 0.2);
         }
 
         .save-toast {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--neon-green);
+            font-size: 11px;
+            color: var(--accent-green);
             opacity: 0;
-            transition: opacity 0.2s;
+            transition: opacity 0.2s ease;
         }
 
-        .save-toast.show {
+        .save-toast.is-show {
             opacity: 1;
         }
 
-        /* =========================================================
-           TARJETAS DE CEREBRO IA, TECLADO Y CARPETAS
-           ========================================================= */
-        .grid-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
-        }
-
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 14px;
+        /* Checkboxes y switches */
+        .toggle-switch {
             display: flex;
-            flex-direction: column;
-            gap: 5px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(123, 63, 228, 0.35);
         }
 
-        .card-label {
-            font-size: 10.5px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            font-weight: 700;
-        }
-
-        .card-value {
-            font-size: 15px;
-            font-weight: 700;
-            color: var(--text-primary);
-            word-break: break-word;
-        }
-
-        .mode-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
-            gap: 10px;
-        }
-
-        .mode-card {
-            background: var(--bg-card);
-            border: 1.5px solid var(--border);
-            border-radius: 10px;
-            padding: 13px;
-            cursor: pointer;
-            transition: all 0.15s;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .mode-card:hover, .mode-card.active {
-            border-color: var(--accent);
-            background: rgba(58, 214, 235, 0.12);
-        }
-
-        .mode-card h4 {
-            font-size: 13.5px;
+        .toggle-switch label {
+            font-size: 11.5px;
             color: #fff;
-        }
-
-        .mode-card p {
-            font-size: 11px;
-            color: var(--text-secondary);
-            line-height: 1.35;
-        }
-
-        .toggle-row {
-            margin-top: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            padding: 11px 15px;
-            border-radius: 8px;
-        }
-
-        .action-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 8px;
-        }
-
-        .state-btn {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 10px;
-            color: var(--text-primary);
-            font-size: 12px;
             cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-            transition: all 0.15s;
         }
 
-        .state-btn:hover {
-            border-color: var(--accent);
-            background: rgba(58, 214, 235, 0.14);
-        }
-
-        .paths-list {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .path-row {
-            padding: 9px 14px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 12px;
-            font-family: monospace;
-        }
-
-        .path-row:last-child {
-            border-bottom: none;
-        }
-
-        .remove-path-btn {
-            background: transparent;
-            border: none;
-            color: var(--accent-pink);
+        .toggle-switch input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--label);
             cursor: pointer;
-            font-weight: 600;
-        }
-
-        .add-path-bar {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-        }
-
-        .add-path-bar input {
-            flex: 1;
-            padding: 9px 13px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 7px;
-            color: white;
-            font-size: 12.5px;
-            outline: none;
-            font-family: monospace;
-            user-select: text;
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: #06090e;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 7px;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 12px;
-            transition: all 0.15s;
-        }
-
-        .btn-primary:hover {
-            filter: brightness(1.12);
-        }
-
-        .btn-secondary {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-            padding: 8px 13px;
-            border-radius: 7px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 12px;
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--accent);
-            color: var(--accent);
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="brand">
-            <div class="brand-icon">🐱</div>
-            <div class="brand-text">
-                <h1>FUKO // CAPRI MAINFRAME</h1>
-                <p>OPENCLAW SOUL.MD + GEMINI 4 ARGON + HANDS & EARS</p>
-            </div>
+    <!-- Barra de título Cyberpunk -->
+    <header class="settings__bar">
+        <div class="settings__bar-brand">
+            <figure class="settings__bar-logo">
+                <img src="icons/capri.png" alt="Capri / Fuko">
+            </figure>
+            <span class="settings__bar-title">FUKO.SYS // AJUSTES & MAINFRAME</span>
         </div>
-        <div class="status-badge">
+        <div class="settings__bar-status">
             <span class="pulse-dot"></span>
-            <span>OPENCLAW + ARGON + OÍDOS EN VIVO</span>
+            <span id="gateway-status-pill">OPENCLAW & GEMINI 4 ARGON // ONLINE</span>
         </div>
     </header>
 
-    <div class="main-container">
-        <aside>
-            <div class="nav-item active" id="nav-soul" onclick="switchTab('soul')">🧬 SOUL.md & Archivos OpenClaw</div>
-            <div class="nav-item" id="nav-brain" onclick="switchTab('brain')">🧠 Cerebro IA, Manos & Sensores</div>
-            <button class="btn-primary" onclick="analyzeNow()" style="margin-top: auto;">👁 Analizar Pantalla Ahora</button>
-        </aside>
+    <div class="settings__main">
+        <!-- Pestañas a la izquierda -->
+        <nav class="settings__tabs">
+            <button type="button" class="is-active" onclick="switchTab('brain')">🧠 Cerebro</button>
+            <button type="button" onclick="switchTab('agents')">👥 Agentes</button>
+            <button type="button" onclick="switchTab('memory')">💾 Memoria</button>
+            <button type="button" onclick="switchTab('hearing')">🎙️ Oído</button>
+            <button type="button" onclick="switchTab('sensors')">⚡ Sensores & Manos</button>
+        </nav>
 
-        <main>
-            <!-- PESTAÑA 1: SOUL.MD Y ARCHIVOS DE OPENCLAW -->
-            <div class="tab-panel active" id="panel-soul">
-                <div>
-                    <h3 class="section-title">🧬 Configuración en Vivo de SOUL.md y Archivos de OpenClaw</h3>
-                    <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
-                        Edita aquí el alma (<code>SOUL.md</code>), identidad (<code>IDENTITY.md</code>), perfil de usuario (<code>USER.md</code>), memoria (<code>MEMORY.md</code>), herramientas/logins (<code>TOOLS.md</code>) y reglas (<code>AGENTS.md</code>). También puedes pedirle a Fuko por voz: <i>"Fuko, agrega a tu soul.md que..."</i> o <i>"Fuko, recuerda que..."</i>.
+        <!-- Contenido principal -->
+        <main class="settings__content">
+
+            <!-- PESTAÑA 1: CEREBRO (Antigravity Gemini 4 Argon + OpenClaw Gateway) -->
+            <section class="tab-panel is-active" id="panel-brain">
+                <div class="appmenu__brain">
+
+                    <!-- TARJETA 1: GEMINI 4 ARGON HIGH (ANTIGRAVITY CLI) -->
+                    <div class="appmenu__brain-card">
+                        <div class="appmenu__brain-card-title">
+                            <span>💎 Google Gemini 4 Argon (High) · Antigravity CLI</span>
+                            <span style="color: var(--accent); font-size: 11px;">Motor Pesado / Razonamiento</span>
+                        </div>
+                        <p class="appmenu__hint">
+                            Conexión de máxima capacidad para programación compleja, análisis profundo de arquitectura, bugs difíciles, refactorizaciones y auditoría de ciberseguridad sin costo a través del CLI oficial <code>agy</code>.
+                        </p>
+                        <div class="appmenu__probe-box">
+                            <div>
+                                <span style="font-weight: 700; color: #fff;">Estado CLI:</span>
+                                <span class="appmenu__probe-status" id="argon-probe-status">gemini-4-argon-high disponible (agy)</span>
+                            </div>
+                            <button type="button" class="appmenu__toggle-btn is-green" id="btn-probe-argon" onclick="probeArgon()">PROBAR CONEXIÓN (PING)</button>
+                        </div>
+                    </div>
+
+                    <!-- TARJETA 2: OPENCLAW GATEWAY & MODELOS -->
+                    <div class="appmenu__brain-card">
+                        <div class="appmenu__brain-card-title">
+                            <span>🦞 OpenClaw Gateway 2026 · Agente & Skills</span>
+                            <span style="color: var(--accent-green); font-size: 11px;">Stack Local / loopback :18789</span>
+                        </div>
+                        <p class="appmenu__hint">
+                            Compañera en vivo conectada al gateway con acceso a tus 44 Skills, control de ventanas, manos de teclado nativas y sensores de pantalla.
+                        </p>
+                        <div class="appmenu__brain-picks">
+                            <button type="button" class="appmenu__toggle-btn is-active" id="btn-model-ultra" onclick="pickModel('nvidia/nemotron-3-ultra-550b-a55b')">Nemotron 3 Ultra 550B (Recomendado)</button>
+                            <button type="button" class="appmenu__toggle-btn" id="btn-model-bolt" onclick="pickModel('nvidia/nemotron-3.5-bolt-e4b')">Nemotron 3.5 Bolt E4B (Rápido)</button>
+                            <button type="button" class="appmenu__toggle-btn" id="btn-model-super" onclick="pickModel('nvidia/nemotron-3-super-120b-a12b')">Nemotron 3 Super 120B</button>
+                        </div>
+                    </div>
+
+                    <!-- TARJETA 3: MODO DE ENRUTAMIENTO (ROUTING) -->
+                    <div class="appmenu__brain-card">
+                        <div class="appmenu__brain-card-title">
+                            <span>⚡ Modo de Enrutamiento Inteligente</span>
+                            <span id="current-mode-label" style="color: var(--label); font-size: 11px;">AUTO (HÍBRIDO)</span>
+                        </div>
+                        <p class="appmenu__hint">
+                            Elige si deseas que Fuko alterne automáticamente entre OpenClaw y Gemini 4 Argon según la dificultad de la tarea, o fuerce un motor específico.
+                        </p>
+                        <div class="appmenu__brain-picks">
+                            <button type="button" class="appmenu__toggle-btn is-active" id="mode-btn-auto" onclick="setRoutingMode('auto')">⚡ Auto (Híbrido Inteligente)</button>
+                            <button type="button" class="appmenu__toggle-btn" id="mode-btn-argon" onclick="setRoutingMode('argon')">💎 Solo Gemini 4 Argon</button>
+                            <button type="button" class="appmenu__toggle-btn" id="mode-btn-openclaw" onclick="setRoutingMode('openclaw')">🦞 Solo OpenClaw</button>
+                            <button type="button" class="appmenu__toggle-btn" id="mode-btn-ollama" onclick="setRoutingMode('ollama')">🏠 Ollama Local</button>
+                        </div>
+
+                        <div class="toggle-switch">
+                            <div>
+                                <label for="proactive-check">Reacción Proactiva a Archivos y Pantalla del Notebook</label>
+                                <p class="appmenu__hint">Comenta autónomamente cuando guardas código o abres proyectos.</p>
+                            </div>
+                            <input type="checkbox" id="proactive-check" checked onchange="toggleProactive(this.checked)">
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- PESTAÑA 2: AGENTES (Sub-agentes de OpenClaw) -->
+            <section class="tab-panel" id="panel-agents">
+                <div class="appmenu__brain-card">
+                    <div class="appmenu__brain-card-title">
+                        <span>👥 Sub-agentes & Sesiones Activas en Background</span>
+                        <button type="button" class="appmenu__toggle-btn" onclick="loadSubAgents()">🔄 Actualizar</button>
+                    </div>
+                    <p class="appmenu__hint">
+                        Sub-agentes creados en OpenClaw ejecutando tareas en segundo plano para programación, análisis y chat.
                     </p>
-                    <div class="file-pills" id="openclaw-file-pills"></div>
-                </div>
-
-                <div class="soul-toolbar">
-                    <div class="soul-meta">
-                        <span class="desc" id="current-file-desc">Alma, personalidad, límites y esencia de Fuko en OpenClaw</span>
-                        <span class="path" id="current-file-path">/home/jejej/.openclaw/workspace/SOUL.md</span>
-                    </div>
-                    <div class="soul-actions">
-                        <span class="save-toast" id="save-toast">✓ Guardado en vivo</span>
-                        <button class="btn-secondary" onclick="reloadCurrentFile()">🔄 Recargar</button>
-                        <button class="btn-secondary" onclick="openCurrentInVsCode()">💻 Abrir en VS Code</button>
-                        <button class="btn-primary" onclick="saveCurrentFile()">💾 Guardar (Ctrl+S)</button>
+                    <div class="agents-grid" id="agents-container">
+                        <p style="color: var(--muted); font-size: 11px;">Cargando sesiones de sub-agentes...</p>
                     </div>
                 </div>
+            </section>
 
-                <textarea id="soul-editor" spellcheck="false" placeholder="Cargando archivo de OpenClaw..."></textarea>
-            </div>
+            <!-- PESTAÑA 3: MEMORIA (SOUL.md, IDENTITY.md, USER.md, etc.) -->
+            <section class="tab-panel" id="panel-memory">
+                <div class="appmenu__brain-card">
+                    <div class="appmenu__brain-card-title">
+                        <span>💾 Memoria Curada & Alma de Fuko</span>
+                        <span id="current-file-badge" style="color: var(--accent); font-size: 11px;">SOUL.md</span>
+                    </div>
+                    <p class="appmenu__hint">
+                        Archivos de personalidad, memoria y reglas de OpenClaw en <code>/home/jejej/.openclaw/workspace</code>. Se sincronizan en vivo.
+                    </p>
 
-            <!-- PESTAÑA 2: CEREBRO IA, TECLADO / LOGIN Y SENSORES -->
-            <div class="tab-panel" id="panel-brain">
-                <div class="grid-cards">
-                    <div class="card">
-                        <span class="card-label">Estado de Animación</span>
-                        <span class="card-value" id="current-state-val">Idle</span>
-                    </div>
-                    <div class="card">
-                        <span class="card-label">Último Modelo Usado</span>
-                        <span class="card-value" id="last-model-val" style="color: var(--accent); font-size: 12.5px; font-family: monospace;">nvidia/nemotron-3-ultra-550b-a55b</span>
-                    </div>
-                    <div class="card">
-                        <span class="card-label">Actividad en Notebook</span>
-                        <span class="card-value" id="activity-val" style="color: var(--neon-green); font-size: 12.5px;">Monitoreando...</span>
-                    </div>
-                </div>
+                    <div class="file-pills" id="memory-file-pills"></div>
 
-                <div>
-                    <h3 class="section-title">🧠 Selección de Motor de Inteligencia Artificial</h3>
-                    <div class="mode-grid">
-                        <div class="mode-card active" id="mode-auto" onclick="selectMode('auto')">
-                            <h4>⚡ Auto (Híbrido)</h4>
-                            <p>Usa OpenClaw para charla rápida y delega a <b>Gemini 4 Argon</b> las tareas complejas o de código.</p>
-                        </div>
-                        <div class="mode-card" id="mode-argon" onclick="selectMode('argon')">
-                            <h4>🧠 Gemini 4 Argon</h4>
-                            <p>Envía tus consultas al modelo pesado Gemini 4 Argon (High) de Antigravity.</p>
-                        </div>
-                        <div class="mode-card" id="mode-openclaw" onclick="selectMode('openclaw')">
-                            <h4>🦞 OpenClaw</h4>
-                            <p>Usa el agente de OpenClaw con acceso completo a tus 44 Skills y workspace.</p>
-                        </div>
-                        <div class="mode-card" id="mode-ollama" onclick="selectMode('ollama')">
-                            <h4>🏠 Ollama Local</h4>
-                            <p>Ejecución 100% local en tu notebook a través de Ollama.</p>
+                    <div class="editor-toolbar">
+                        <span class="editor-path" id="current-file-path">/home/jejej/.openclaw/workspace/SOUL.md</span>
+                        <div class="editor-actions">
+                            <span class="save-toast" id="save-toast">✓ Guardado en vivo</span>
+                            <button type="button" class="appmenu__toggle-btn" onclick="reloadCurrentFile()">🔄 Recargar</button>
+                            <button type="button" class="appmenu__toggle-btn" onclick="openInVsCode()">💻 Abrir en VS Code</button>
+                            <button type="button" class="appmenu__toggle-btn is-active" onclick="saveCurrentFile()">💾 Guardar (Ctrl+S)</button>
                         </div>
                     </div>
 
-                    <div class="toggle-row">
-                        <div>
-                            <strong style="font-size: 13px;">Reacciones Proactivas a tus Archivos, Pantalla y Música</strong>
-                            <p style="font-size: 11px; color: var(--text-secondary);">Fuko comenta cuando guardas archivos en Duoc/Workspace o pones música.</p>
-                        </div>
-                        <input type="checkbox" id="proactive-check" checked onchange="toggleProactive(this.checked)" style="width: 18px; height: 18px; cursor: pointer;">
+                    <textarea id="soul-editor" class="editor-textarea" spellcheck="false" placeholder="Cargando archivo..."></textarea>
+                </div>
+            </section>
+
+            <!-- PESTAÑA 4: OÍDO (Micrófono & Voz Piper TTS) -->
+            <section class="tab-panel" id="panel-hearing">
+                <div class="appmenu__brain-card">
+                    <div class="appmenu__brain-card-title">
+                        <span>🎙️ Oído (Reconocimiento de Voz faster-whisper)</span>
+                        <span style="color: var(--accent-green); font-size: 11px;">Modelo Local / Latencia Cero</span>
+                    </div>
+                    <p class="appmenu__hint">
+                        Reconoce órdenes naturales en español desde el micrófono de tu notebook.
+                    </p>
+                    <div class="toggle-switch">
+                        <label for="mic-continuous-check">Escucha Continua (TalkPill activo)</label>
+                        <input type="checkbox" id="mic-continuous-check" checked onchange="toggleContinuousListen(this.checked)">
                     </div>
                 </div>
 
-                <div>
-                    <h3 class="section-title">🎭 Probar Estados y Animaciones Capri</h3>
-                    <div class="action-grid">
-                        <button class="state-btn" onclick="triggerState('Idle')"><span>✨</span><span>Idle</span></button>
-                        <button class="state-btn" onclick="triggerState('Dance')"><span>💃</span><span>Bailar</span></button>
-                        <button class="state-btn" onclick="triggerState('Talking')"><span>🗣️</span><span>Hablar</span></button>
-                        <button class="state-btn" onclick="triggerState('Glitch')"><span>⚡</span><span>Glitch</span></button>
-                        <button class="state-btn" onclick="triggerState('Sleep')"><span>💤</span><span>Dormir</span></button>
-                        <button class="state-btn" onclick="triggerState('Happy')"><span>🥰</span><span>Feliz</span></button>
-                        <button class="state-btn" onclick="triggerState('Sitting')"><span>🪑</span><span>Perch</span></button>
-                        <button class="state-btn" onclick="triggerState('Wander')"><span>🚶</span><span>Caminar</span></button>
+                <div class="appmenu__brain-card">
+                    <div class="appmenu__brain-card-title">
+                        <span>🔊 Voz de Fuko (Piper TTS)</span>
+                        <span style="color: var(--label); font-size: 11px;">Modelo es_ES-davefx</span>
+                    </div>
+                    <p class="appmenu__hint">
+                        Sintetizador neuronal local de voz en tiempo real con acento y personalidad rápida.
+                    </p>
+                    <div class="toggle-switch">
+                        <label for="tts-enabled-check">Voz Activada al Responder</label>
+                        <input type="checkbox" id="tts-enabled-check" checked onchange="toggleTts(this.checked)">
+                    </div>
+                </div>
+            </section>
+
+            <!-- PESTAÑA 5: SENSORES & MANOS -->
+            <section class="tab-panel" id="panel-sensors">
+                <div class="appmenu__brain-card">
+                    <div class="appmenu__brain-card-title">
+                        <span>📂 Carpetas Vigiladas del Notebook</span>
+                    </div>
+                    <p class="appmenu__hint">
+                        Rutas locales monitoreadas para reaccionar a tus cambios de código:
+                    </p>
+                    <div id="watched-paths-list" style="display: flex; flex-direction: column; gap: 6px; margin: 8px 0;"></div>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="new-path-input" placeholder="/home/jejej/Duoc/nuevo-ramo" style="flex: 1; padding: 6px 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--line); color: #fff; font-family: inherit; font-size: 11px; outline: none;">
+                        <button type="button" class="appmenu__toggle-btn" onclick="addWatchedPath()">+ Agregar</button>
                     </div>
                 </div>
 
-                <div>
-                    <h3 class="section-title">📂 Carpetas Vigiladas en tu Notebook</h3>
-                    <div class="paths-list" id="paths-container"></div>
-                    <div class="add-path-bar">
-                        <input type="text" id="new-path-input" placeholder="/home/jejej/Duoc/nuevo-ramo...">
-                        <button class="btn-primary" onclick="addPath()">Vigilar Carpeta</button>
+                <div class="appmenu__brain-card">
+                    <div class="appmenu__brain-card-title">
+                        <span>🎭 Probar Animaciones y Posturas de Fuko</span>
+                    </div>
+                    <div class="appmenu__brain-picks">
+                        <button type="button" class="appmenu__toggle-btn" onclick="testState('Idle')">✨ Idle</button>
+                        <button type="button" class="appmenu__toggle-btn" onclick="testState('Dance')">💃 Bailar</button>
+                        <button type="button" class="appmenu__toggle-btn" onclick="testState('Talking')">🗣️ Hablar</button>
+                        <button type="button" class="appmenu__toggle-btn" onclick="testState('Glitch')">⚡ Glitch</button>
+                        <button type="button" class="appmenu__toggle-btn" onclick="testState('Sleep')">💤 Dormir</button>
+                        <button type="button" class="appmenu__toggle-btn" onclick="testState('Happy')">🥰 Feliz</button>
                     </div>
                 </div>
-            </div>
+            </section>
+
         </main>
     </div>
 
@@ -583,182 +657,241 @@
         let openclawFiles = [];
         let activeFileName = 'SOUL.md';
         const editorEl = document.getElementById('soul-editor');
-        const saveToastEl = document.getElementById('save-toast');
+        const saveToast = document.getElementById('save-toast');
 
-        function switchTab(tab) {
-            document.getElementById('nav-soul').classList.toggle('active', tab === 'soul');
-            document.getElementById('nav-brain').classList.toggle('active', tab === 'brain');
-            document.getElementById('panel-soul').classList.toggle('active', tab === 'soul');
-            document.getElementById('panel-brain').classList.toggle('active', tab === 'brain');
+        function switchTab(tabId) {
+            document.querySelectorAll('.settings__tabs button').forEach(btn => btn.classList.remove('is-active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('is-active'));
+
+            const panel = document.getElementById(`panel-${tabId}`);
+            if (panel) panel.classList.add('is-active');
+
+            const btn = Array.from(document.querySelectorAll('.settings__tabs button')).find(b => b.getAttribute('onclick')?.includes(tabId));
+            if (btn) btn.classList.add('is-active');
+
+            if (tabId === 'agents') loadSubAgents();
+            if (tabId === 'memory') loadOpenClawFiles();
+            if (tabId === 'sensors') loadWatchedPaths();
         }
 
-        async function loadOpenClawFilesList(selectName = null) {
+        // --- CEREBRO & ROUTING ---
+        async function loadAiStatus() {
+            try {
+                const st = await invoke('get_ai_status_cmd');
+                updateRoutingUI(st.mode);
+                document.getElementById('proactive-check').checked = st.proactive;
+            } catch (_) {}
+        }
+
+        function updateRoutingUI(mode) {
+            ['auto', 'argon', 'openclaw', 'ollama'].forEach(m => {
+                const btn = document.getElementById(`mode-btn-${m}`);
+                if (btn) btn.classList.toggle('is-active', m === mode);
+            });
+            const labelMap = { auto: 'AUTO (HÍBRIDO)', argon: 'SOLO GEMINI 4 ARGON', openclaw: 'SOLO OPENCLAW', ollama: 'OLLAMA LOCAL' };
+            document.getElementById('current-mode-label').innerText = labelMap[mode] || mode.toUpperCase();
+        }
+
+        async function setRoutingMode(mode) {
+            updateRoutingUI(mode);
+            try {
+                await invoke('set_ai_mode_cmd', { mode });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function toggleProactive(proactive) {
+            try {
+                await invoke('set_proactive_mode_cmd', { proactive });
+            } catch (_) {}
+        }
+
+        async function probeArgon() {
+            const btn = document.getElementById('btn-probe-argon');
+            const statusEl = document.getElementById('argon-probe-status');
+            btn.innerText = 'PROBANDO...';
+            statusEl.innerText = 'Invocando agy -m gemini-4-argon-high...';
+            try {
+                const res = await invoke('probe_gemini_argon_cmd');
+                if (res.ok) {
+                    statusEl.innerText = `Online (${res.latency_ms}ms) · Respuesta: "${res.reply}"`;
+                    btn.innerText = 'ONLINE ✓';
+                } else {
+                    statusEl.innerText = `Fallo: ${res.reply}`;
+                    btn.innerText = 'REINTENTAR';
+                }
+            } catch (err) {
+                statusEl.innerText = `Error: ${err}`;
+                btn.innerText = 'ERROR';
+            }
+        }
+
+        function pickModel(modelId) {
+            document.querySelectorAll('.appmenu__brain-picks .appmenu__toggle-btn').forEach(b => b.classList.remove('is-active'));
+            event.target.classList.add('is-active');
+        }
+
+        // --- SUB-AGENTES DE OPENCLAW ---
+        async function loadSubAgents() {
+            const container = document.getElementById('agents-container');
+            container.innerHTML = '<p style="color: var(--muted); font-size: 11px;">Consultando sub-agentes en OpenClaw...</p>';
+            try {
+                const list = await invoke('list_openclaw_sessions_cmd');
+                if (!list || !list.length) {
+                    container.innerHTML = '<p style="color: var(--muted); font-size: 11px;">No hay sub-agentes registrados recientemente.</p>';
+                    return;
+                }
+                container.innerHTML = '';
+                list.forEach(agent => {
+                    const card = document.createElement('div');
+                    card.className = 'agent-card';
+                    const statusClass = agent.status === 'running' ? 'is-running' : (agent.status === 'done' ? 'is-done' : 'is-failed');
+                    card.innerHTML = `
+                        <div class="agent-info">
+                            <span class="agent-label">${agent.label || agent.key}</span>
+                            <div class="agent-meta">
+                                <span><b>Modelo:</b> ${agent.model}</span>
+                                <span><b>Tokens:</b> ${agent.tokens}</span>
+                                <span><b>Actividad:</b> ${agent.age}</span>
+                            </div>
+                        </div>
+                        <span class="agent-badge ${statusClass}">${agent.status}</span>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (err) {
+                container.innerHTML = `<p style="color: var(--label); font-size: 11px;">Error cargando sub-agentes: ${err}</p>`;
+            }
+        }
+
+        // --- MEMORIA Y SOUL.MD ---
+        async function loadOpenClawFiles() {
             try {
                 openclawFiles = await invoke('list_openclaw_files_cmd') || [];
-                if (selectName) activeFileName = selectName;
-                renderFilePills();
-                await selectOpenClawFile(activeFileName);
-            } catch (e) {
-                console.error('Error listando archivos OpenClaw:', e);
+                const pillsBox = document.getElementById('memory-file-pills');
+                pillsBox.innerHTML = '';
+                openclawFiles.forEach(file => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = `file-pill ${file.name === activeFileName ? 'is-active' : ''}`;
+                    btn.innerText = file.name;
+                    btn.onclick = () => selectMemoryFile(file.name);
+                    pillsBox.appendChild(btn);
+                });
+                await loadFileContent(activeFileName);
+            } catch (err) {
+                console.error(err);
             }
         }
 
-        function renderFilePills() {
-            const container = document.getElementById('openclaw-file-pills');
-            container.innerHTML = openclawFiles.map(f => `
-                <div class="file-pill ${f.name === activeFileName ? 'active' : ''}" onclick="selectOpenClawFile('${f.name}')">
-                    ${f.label}
-                </div>
-            `).join('');
-        }
-
-        async function selectOpenClawFile(name) {
+        async function selectMemoryFile(name) {
             activeFileName = name;
-            renderFilePills();
-            const meta = openclawFiles.find(f => f.name === name);
-            if (meta) {
-                document.getElementById('current-file-desc').innerText = meta.description;
-                document.getElementById('current-file-path').innerText = meta.path;
-            }
+            document.querySelectorAll('#memory-file-pills .file-pill').forEach(p => {
+                p.classList.toggle('is-active', p.innerText === name);
+            });
+            document.getElementById('current-file-badge').innerText = name;
+            document.getElementById('current-file-path').innerText = `/home/jejej/.openclaw/workspace/${name}`;
+            await loadFileContent(name);
+        }
+
+        async function loadFileContent(name) {
+            editorEl.value = 'Cargando contenido...';
             try {
                 const content = await invoke('read_openclaw_file_cmd', { name });
-                editorEl.value = content || '';
-            } catch (e) {
-                editorEl.value = `# Error leyendo ${name}: ${e}`;
+                editorEl.value = content;
+            } catch (err) {
+                editorEl.value = `Error leyendo ${name}: ${err}`;
             }
-        }
-
-        async function reloadCurrentFile() {
-            await selectOpenClawFile(activeFileName);
         }
 
         async function saveCurrentFile() {
+            const content = editorEl.value;
             try {
-                await invoke('save_openclaw_file_cmd', {
-                    name: activeFileName,
-                    content: editorEl.value
-                });
-                saveToastEl.classList.add('show');
-                setTimeout(() => saveToastEl.classList.remove('show'), 2200);
-            } catch (e) {
-                alert('No pude guardar ' + activeFileName + ': ' + e);
+                await invoke('save_openclaw_file_cmd', { name: activeFileName, content });
+                saveToast.classList.add('is-show');
+                setTimeout(() => saveToast.classList.remove('is-show'), 2200);
+            } catch (err) {
+                alert(`Error al guardar: ${err}`);
             }
         }
 
-        async function openCurrentInVsCode() {
+        function reloadCurrentFile() {
+            loadFileContent(activeFileName);
+        }
+
+        async function openInVsCode() {
             try {
                 await invoke('open_openclaw_file_vscode_cmd', { name: activeFileName });
-            } catch (e) {
-                alert('Error al abrir VS Code: ' + e);
+            } catch (err) {
+                console.error(err);
             }
         }
 
+        // --- OÍDO & PIPER TTS ---
+        async function toggleContinuousListen(enabled) {
+            try {
+                await invoke('set_continuous_listen_cmd', { enabled });
+            } catch (_) {}
+        }
+
+        async function toggleTts(enabled) {
+            try {
+                await invoke('set_tts_enabled_cmd', { enabled });
+            } catch (_) {}
+        }
+
+        // --- SENSORES & MANOS ---
+        async function loadWatchedPaths() {
+            const box = document.getElementById('watched-paths-list');
+            try {
+                const paths = await invoke('get_watched_paths_cmd') || [];
+                box.innerHTML = '';
+                paths.forEach(p => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(123,63,228,0.3); font-size: 11px;';
+                    row.innerHTML = `<span>${p}</span><button type="button" style="background:transparent; border:none; color:var(--label); cursor:pointer;" onclick="removePath('${p}')">✕</button>`;
+                    box.appendChild(row);
+                });
+            } catch (_) {}
+        }
+
+        async function addWatchedPath() {
+            const input = document.getElementById('new-path-input');
+            const p = input.value.trim();
+            if (!p) return;
+            try {
+                await invoke('add_watched_path_cmd', { path: p, recursive: true });
+                input.value = '';
+                loadWatchedPaths();
+            } catch (e) { alert(e); }
+        }
+
+        async function removePath(p) {
+            try {
+                await invoke('remove_watched_path_cmd', { path: p });
+                loadWatchedPaths();
+            } catch (_) {}
+        }
+
+        async function testState(state) {
+            try {
+                await invoke('set_avatar_state', { state });
+            } catch (_) {}
+        }
+
+        // Atajo Ctrl+S para guardar en el editor
         window.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                 e.preventDefault();
                 saveCurrentFile();
             }
         });
 
-        listen('open_soul_tab', (ev) => {
-            switchTab('soul');
-            const target = (typeof ev.payload === 'string' && ev.payload.endsWith('.md')) ? ev.payload : 'SOUL.md';
-            selectOpenClawFile(target);
-        });
-
-        function updateModeCards(activeMode) {
-            ['auto', 'argon', 'openclaw', 'ollama'].forEach(m => {
-                const el = document.getElementById('mode-' + m);
-                if (el) el.classList.toggle('active', m === activeMode);
-            });
-        }
-
-        async function selectMode(mode) {
-            updateModeCards(mode);
-            const st = await invoke('set_ai_mode_cmd', { mode });
-            if (st) renderStatus(st);
-        }
-
-        async function toggleProactive(proactive) {
-            const st = await invoke('set_proactive_mode_cmd', { proactive });
-            if (st) renderStatus(st);
-        }
-
-        async function triggerState(state) {
-            await invoke('set_avatar_state', { state });
-            document.getElementById('current-state-val').innerText = state;
-        }
-
-        async function analyzeNow() {
-            await invoke('analyze_notebook_cmd', { customQuestion: null });
-        }
-
-        function renderStatus(st) {
-            if (!st) return;
-            updateModeCards(st.mode || 'auto');
-            document.getElementById('proactive-check').checked = !!st.proactive;
-            if (st.last_model_used) {
-                document.getElementById('last-model-val').innerText = st.last_model_used;
-            }
-            if (st.active_summary) {
-                document.getElementById('activity-val').innerText = st.active_summary;
-            }
-        }
-
-        listen('ai_status_updated', (ev) => renderStatus(ev.payload));
-        listen('notebook_activity', (ev) => {
-            if (ev.payload && ev.payload.summary) {
-                document.getElementById('activity-val').innerText = ev.payload.summary;
-            }
-        });
-
-        async function loadWatchedPaths() {
-            try {
-                const paths = await invoke('get_watched_paths_cmd');
-                const container = document.getElementById('paths-container');
-                if (paths && paths.length > 0) {
-                    container.innerHTML = paths.map(p => `
-                        <div class="path-row">
-                            <span>${p}</span>
-                            <button class="remove-path-btn" onclick="removePath('${p}')">Quitar</button>
-                        </div>
-                    `).join('');
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        async function addPath() {
-            const input = document.getElementById('new-path-input');
-            const path = input.value.trim();
-            if (!path) return;
-            try {
-                await invoke('add_watched_path_cmd', { path, recursive: true });
-                input.value = '';
-                loadWatchedPaths();
-            } catch (e) {
-                alert('Error al vigilar ruta: ' + e);
-            }
-        }
-
-        async function removePath(path) {
-            try {
-                await invoke('remove_watched_path_cmd', { path });
-                loadWatchedPaths();
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        (async () => {
-            await loadOpenClawFilesList('SOUL.md');
-            loadWatchedPaths();
-            try {
-                const st = await invoke('get_ai_status_cmd');
-                renderStatus(st);
-            } catch (_) {}
-        })();
+        // Inicio
+        loadAiStatus();
+        loadOpenClawFiles();
+        loadSubAgents();
     </script>
 </body>
 </html>

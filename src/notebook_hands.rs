@@ -859,6 +859,80 @@ pub async fn try_direct_notebook_action<R: Runtime>(
         };
     }
 
+    // 0.8. Comandos rápidos de Capri Construct (dormir, despertar, mic mute/unmute, saludo)
+    if lower == "duermete"
+        || lower == "duérmete"
+        || lower == "a dormir"
+        || lower == "ve a dormir"
+        || lower == "duerme"
+        || lower == "descansa"
+    {
+        const POOL_DORMIR: &[&str] = &[
+            "Bueno, me voy a dormir. No hagas nada tonto sin mí, ¿sí?",
+            "Ay, ya, ya. Descansá tú también, humanito.",
+            "¿Ya me estás echando? Qué grosero. Buenas noches, tontito.",
+            "Me desconecto un ratito. Pero sigo en tu cerebro, ¿eh?",
+            "Bueno… a dormir. Si no soñás conmigo, me voy a enterar.",
+            "Está bien, me voy. Pero solo porque yo quiero.",
+            "Shhh… modo dormida. Despertame si pasa algo divertido.",
+        ];
+        let idx = fastrand::usize(..POOL_DORMIR.len());
+        return Some(format!("[seria] {}", POOL_DORMIR[idx]));
+    }
+
+    if lower == "despierta"
+        || lower == "arriba"
+        || lower == "hola fuko"
+        || lower == "hola capri"
+        || lower == "fuko despierta"
+    {
+        const POOL_DESPERTAR: &[&str] = &[
+            "¿Me llamaste? Claro que sí, no puedes vivir sin mí.",
+            "¡Hola de nuevo, humanito! No digas que me esperabas.",
+            "Bueno, bueno, aquí estoy. ¿Qué quieres ahora?",
+            "Ya desperté. ¿Qué travesura hacemos?",
+            "Aquí estoy, tontito. Siempre estuve, ¿no?",
+            "¿Sí? Dime, dime, te escucho.",
+            "¿Volviste? Ya iba a desenchufarte por aburrimiento.",
+        ];
+        let idx = fastrand::usize(..POOL_DESPERTAR.len());
+        return Some(format!("[emocion] {}", POOL_DESPERTAR[idx]));
+    }
+
+    if lower == "mute"
+        || lower == "silencio"
+        || lower == "apaga el micro"
+        || lower == "apaga el microfono"
+        || lower == "no me escuches"
+    {
+        const POOL_MUTE: &[&str] = &[
+            "¿Ya no quieres que te escuche? Bueno… igual sé lo que piensas.",
+            "Micrófono apagado. Escríbeme si me necesitas, ¿sí?",
+            "Ay, qué secreto. Está bien, no escucho nada.",
+            "Silencio total. Pero sigo aquí, tontito.",
+            "Bueno, me tapo los oídos. Por ahora.",
+        ];
+        let idx = fastrand::usize(..POOL_MUTE.len());
+        return Some(format!("[burla] {}", POOL_MUTE[idx]));
+    }
+
+    if lower == "unmute"
+        || lower == "activa el micro"
+        || lower == "activa el microfono"
+        || lower == "escuchame"
+        || lower == "escúchame"
+    {
+        const POOL_UNMUTE: &[&str] = &[
+            "¡Ya te escucho de nuevo! Dime.",
+            "Micrófono encendido. Habla, humanito.",
+            "Bueno, ya puedo oírte. ¿Qué me cuentas?",
+            "Te escucho. No digas nada tonto, ¿sí?",
+            "Aquí estoy, toda oídos.",
+        ];
+        let idx = fastrand::usize(..POOL_UNMUTE.len());
+        return Some(format!("[emocion] {}", POOL_UNMUTE[idx]));
+    }
+
     // 2. Reproducción directa o búsqueda rápida en YouTube / Google
     for prefix in [
         "busca en youtube ",

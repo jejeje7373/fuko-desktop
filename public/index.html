@@ -22,197 +22,277 @@
         }
 
         /* =========================================================
-           CAPRI CYBERPUNK SPEECH BUBBLE (Look.cs / Talk.cs Sheet)
-           Panel: rgb(9, 11, 15), Border: #3ad6eb, Accent: #ff4466
+           CAPRI CYBERPUNK MESSAGE BUBBLE & SEPARATED TEXT BLOCK
+           (Adaptado fielmente de MtGhozt/Capri-Desktop)
            ========================================================= */
-        #capri-bubble {
+        .bubble {
+            --tab-h: 22px;
+            --capri-pink: #ff2d6f;
+            --capri-violet: #7b3fe4;
+            --capri-green: #3dff8f;
+            --capri-cyan: #5ef6ff;
             position: absolute;
             top: 8px;
             left: 10px;
             right: 10px;
-            background: rgba(9, 11, 15, 0.95);
-            border: 2px solid #3ad6eb;
-            /* Esquinas biseladas estilo Capri Look.Plate */
-            clip-path: polygon(
-                10px 0%,
-                calc(100% - 10px) 0%,
-                100% 10px,
-                100% calc(100% - 10px),
-                calc(100% - 10px) 100%,
-                10px 100%,
-                0% calc(100% - 10px),
-                0% 10px
-            );
-            box-shadow: 0 0 14px rgba(58, 214, 235, 0.35);
-            padding: 10px 14px 11px 22px;
-            min-height: 54px;
-            max-height: 148px;
-            overflow-y: auto;
+            z-index: 2000;
+            color: #efe8ff;
+            font-family: 'Share Tech Mono', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+            pointer-events: none;
             opacity: 0;
             transform: translateY(6px);
-            pointer-events: none;
-            transition: opacity 0.14s ease, transform 0.14s ease;
-            z-index: 2000;
-            cursor: pointer;
+            transition: opacity 0.16s ease, transform 0.16s ease;
+            filter: drop-shadow(0 0 12px rgba(255, 45, 111, 0.45)) drop-shadow(0 0 8px rgba(94, 246, 255, 0.3));
         }
 
-        #capri-bubble.visible {
+        .bubble.visible {
             opacity: 1;
             transform: translateY(0);
             pointer-events: auto;
         }
 
-        /* Scanlines sutiles como en Talk.cs Clean() */
-        #capri-bubble::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: repeating-linear-gradient(
-                to bottom,
-                rgba(255, 255, 255, 0.03) 0px,
-                rgba(255, 255, 255, 0.03) 1px,
-                transparent 1px,
-                transparent 3px
-            );
-            pointer-events: none;
+        .bubble__tab {
+            position: relative;
+            z-index: 1;
+            width: 52%;
+            min-height: var(--tab-h);
+            padding: 4px 12px 3px 10px;
+            background: rgba(11, 6, 18, 0.94);
+            color: var(--capri-pink);
+            clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 100%, 0 100%);
+            box-shadow: inset 0 0 0 1px rgba(123, 63, 228, 0.85);
+            cursor: pointer;
+            user-select: none;
         }
 
-        /* Barra vertical roja de Capri a la izquierda (Look.Red) */
-        .bubble-red-bar {
-            position: absolute;
-            left: 9px;
-            top: 11px;
-            bottom: 11px;
-            width: 3px;
-            background: #ff4466;
-            box-shadow: 0 0 6px rgba(255, 68, 102, 0.7);
-        }
-
-        .bubble-heard {
-            font-size: 12px;
-            font-style: italic;
-            color: #7c8492;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-bottom: 3px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .bubble-model-tag {
-            font-style: normal;
+        .bubble__title {
+            display: block;
             font-size: 9.5px;
-            color: #3ad6eb;
-            opacity: 0.85;
-            letter-spacing: 0.4px;
-        }
-
-        .bubble-body {
-            font-size: 13px;
-            line-height: 1.35;
-            color: #5ceeff;
-            word-wrap: break-word;
-        }
-
-        .speaker-tag {
-            color: #ff4466;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
             font-weight: 700;
         }
 
-        .caret-block {
-            display: inline-block;
-            width: 7px;
-            height: 13px;
-            background: #5ceeff;
-            vertical-align: text-bottom;
-            margin-left: 2px;
-            animation: blinkCaret 0.7s steps(1) infinite;
-        }
-
-        @keyframes blinkCaret {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0; }
-        }
-
-        /* =========================================================
-           CAPRI TYPER INPUT BAR (Talk.cs Typer)
-           ========================================================= */
-        #capri-typer {
-            position: absolute;
-            bottom: 256px;
-            left: 12px;
-            right: 12px;
-            height: 42px;
-            background: rgba(9, 11, 15, 0.96);
-            border: 2px solid #3ad6eb;
-            clip-path: polygon(
-                8px 0%,
-                calc(100% - 8px) 0%,
-                100% 8px,
-                100% calc(100% - 8px),
-                calc(100% - 8px) 100%,
-                8px 100%,
-                0% calc(100% - 8px),
-                0% 8px
-            );
-            display: none;
-            align-items: center;
-            padding: 0 10px 0 18px;
-            z-index: 2100;
-            box-shadow: 0 0 16px rgba(58, 214, 235, 0.4);
-        }
-
-        #capri-typer.open {
+        .bubble__body {
+            position: relative;
+            margin-top: -1px;
             display: flex;
+            flex-direction: column;
+            gap: 7px;
+            padding: 9px 12px 10px 12px;
+            background: rgba(9, 4, 15, 0.94);
+            box-shadow:
+                inset 0 0 0 1px rgba(123, 63, 228, 0.85),
+                0 0 14px rgba(255, 45, 111, 0.3);
+            clip-path: polygon(
+                0 0,
+                52% 0,
+                calc(52% + 16px) 0,
+                100% 0,
+                100% 100%,
+                0 100%
+            );
         }
 
-        #capri-typer .typer-red-bar {
+        .bubble__brackets {
+            pointer-events: none;
             position: absolute;
-            left: 8px;
-            top: 8px;
-            bottom: 8px;
-            width: 3px;
-            background: #ff4466;
+            inset: 4px 5px;
+            background:
+                linear-gradient(var(--capri-pink), var(--capri-pink)) top left / 10px 1.5px no-repeat,
+                linear-gradient(var(--capri-pink), var(--capri-pink)) top left / 1.5px 10px no-repeat,
+                linear-gradient(var(--capri-pink), var(--capri-pink)) top right / 10px 1.5px no-repeat,
+                linear-gradient(var(--capri-pink), var(--capri-pink)) top right / 1.5px 10px no-repeat,
+                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom left / 10px 1.5px no-repeat,
+                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom left / 1.5px 10px no-repeat,
+                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom right / 10px 1.5px no-repeat,
+                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom right / 1.5px 10px no-repeat;
         }
 
-        .typer-prompt {
-            color: #7c8492;
-            font-style: italic;
-            font-size: 13px;
-            margin-right: 6px;
-            white-space: nowrap;
+        .bubble__scan {
+            pointer-events: none;
+            position: absolute;
+            inset: 0;
+            opacity: 0.2;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent 0 2px,
+                rgba(94, 246, 255, 0.12) 2px 3px
+            );
         }
 
-        #typer-input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            outline: none;
-            color: #e8ecf2;
-            font-family: inherit;
-            font-size: 13px;
-            caret-color: #5ceeff;
-            user-select: text;
+        .bubble__head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
         }
 
-        #typer-mode-pill {
+        .bubble__logo {
+            margin: 0;
+            width: 28px;
+            height: 28px;
+            flex: none;
+            background: #110816;
+            clip-path: polygon(18% 0, 100% 0, 100% 82%, 82% 100%, 0 100%, 0 18%);
+            border: 1px solid rgba(123, 63, 228, 0.7);
+        }
+
+        .bubble__logo img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            clip-path: polygon(18% 0, 100% 0, 100% 82%, 82% 100%, 0 100%, 0 18%);
+        }
+
+        .bubble__meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bubble__model {
+            font-size: 9px;
+            letter-spacing: 0.12em;
+            color: var(--capri-cyan);
+            text-transform: uppercase;
+        }
+
+        .bubble__badge {
+            font-size: 8.5px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--capri-violet);
+            font-weight: 700;
+        }
+
+        .bubble[data-state='LISTENING'] .bubble__badge { color: #e6c15a; }
+        .bubble[data-state='THINKING'] .bubble__badge { color: var(--capri-pink); animation: blinkBadge 0.7s steps(2, jump-none) infinite; }
+        .bubble[data-state='TALKING'] .bubble__badge { color: var(--capri-green); animation: blinkBadge 0.7s steps(2, jump-none) infinite; }
+        .bubble[data-state='ONLINE'] .bubble__badge { color: var(--capri-cyan); }
+
+        @keyframes blinkBadge {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.35; }
+        }
+
+        /* Bloque de texto separado para Fuko (MtGhozt/Capri-Desktop) */
+        .bubble__speech-block {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            background: rgba(20, 10, 32, 0.75);
+            border-left: 2.5px solid var(--capri-pink);
+            padding: 6px 9px;
+            box-shadow: inset 0 0 10px rgba(123, 63, 228, 0.2);
+        }
+
+        .bubble__speaker {
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            color: var(--capri-pink);
+        }
+
+        .bubble__line {
+            margin: 0;
+            min-height: 2em;
+            font-size: 12.5px;
+            line-height: 1.4;
+            color: #f7efff;
+            overflow-wrap: anywhere;
+        }
+
+        .bubble__cursor {
+            display: inline-block;
+            margin-left: 1px;
+            color: var(--capri-pink);
+            animation: blinkBadge 0.8s steps(2, jump-none) infinite;
+        }
+
+        /* Registro de interacción / turn log separado */
+        .bubble__log {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            max-height: 48px;
+            overflow-y: auto;
             font-size: 10px;
-            padding: 2px 6px;
-            background: rgba(58, 214, 235, 0.14);
-            border: 1px solid rgba(58, 214, 235, 0.5);
-            color: #5ceeff;
-            cursor: pointer;
-            margin-left: 6px;
-            white-space: nowrap;
-            title: "Cambiar motor IA";
+            line-height: 1.35;
+            letter-spacing: 0.03em;
+            border-top: 1px dashed rgba(123, 63, 228, 0.4);
+            padding-top: 3px;
         }
 
-        #typer-mode-pill:hover {
-            background: rgba(255, 68, 102, 0.25);
-            border-color: #ff4466;
-            color: #ff4466;
+        .bubble__row {
+            margin: 0;
+            overflow-wrap: anywhere;
+        }
+        .bubble__row.is-oido { color: var(--capri-green); }
+        .bubble__row.is-pregunta { color: #e6c15a; }
+        .bubble__row.is-fuko { color: var(--capri-cyan); }
+        .bubble__row.is-sistema { color: #c9a6ff; }
+
+        .bubble__tag {
+            font-weight: 700;
+            margin-right: 5px;
+        }
+
+        /* Barra de entrada / prompt bar separada abajo */
+        .bubble__prompt {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding-top: 4px;
+            border-top: 1px solid rgba(123, 63, 228, 0.5);
+        }
+
+        .bubble__you {
+            flex: none;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: var(--capri-violet);
+            pointer-events: none;
+        }
+
+        .bubble__field {
+            flex: 1;
+            min-width: 0;
+            appearance: none;
+            border: 0;
+            padding: 2px 0;
+            background: transparent;
+            color: #fff;
+            font-family: inherit;
+            font-size: 12px;
+            outline: none;
+            user-select: text;
+            pointer-events: auto;
+        }
+
+        .bubble__field::placeholder {
+            color: rgba(167, 139, 169, 0.55);
+        }
+
+        .bubble__mode-btn {
+            flex: none;
+            font-size: 9px;
+            padding: 2px 6px;
+            background: rgba(94, 246, 255, 0.14);
+            border: 1px solid rgba(94, 246, 255, 0.5);
+            color: var(--capri-cyan);
+            cursor: pointer;
+            letter-spacing: 0.08em;
+            clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
+            transition: all 0.12s;
+        }
+
+        .bubble__mode-btn:hover {
+            background: rgba(255, 45, 111, 0.25);
+            border-color: var(--capri-pink);
+            color: var(--capri-pink);
         }
 
         /* =========================================================
@@ -344,25 +424,37 @@
 </head>
 <body>
 
-    <!-- Globo Cyberpunk de Capri / Fuko -->
-    <div id="capri-bubble" title="Click para cerrar">
-        <div class="bubble-red-bar"></div>
-        <div class="bubble-heard">
-            <span id="bubble-prompt">&gt; tú: startup</span>
-            <span class="bubble-model-tag" id="bubble-model"></span>
+    <!-- Burbuja Cyberpunk de Capri / Fuko con Bloque de Texto Separado (MtGhozt/Capri-Desktop) -->
+    <aside id="capri-bubble" class="bubble" title="Click para cerrar">
+        <div class="bubble__tab" id="bubble-tab">
+            <span class="bubble__title">FUKO.SYS // MENSAJE</span>
         </div>
-        <div class="bubble-body">
-            <span class="speaker-tag">FUKO: </span><span id="bubble-reply"></span><span class="caret-block" id="bubble-caret"></span>
+        <div class="bubble__body">
+            <div class="bubble__brackets" aria-hidden="true"></div>
+            <div class="bubble__scan" aria-hidden="true"></div>
+            <header class="bubble__head">
+                <figure class="bubble__logo">
+                    <img src="icons/capri.png" alt="Capri / Fuko">
+                </figure>
+                <div class="bubble__meta">
+                    <span class="bubble__model" id="bubble-model">⚡ AUTO</span>
+                    <span class="bubble__badge bubble__state" id="bubble-state">EN ESPERA</span>
+                </div>
+            </header>
+            <div class="bubble__speech-block">
+                <span class="bubble__speaker">FUKO &gt;</span>
+                <p class="bubble__line">
+                    <span class="bubble__text" id="bubble-reply"></span><span class="bubble__cursor" id="bubble-caret" aria-hidden="true">▌</span>
+                </p>
+            </div>
+            <ol class="bubble__log" id="bubble-log" aria-live="polite"></ol>
+            <div class="bubble__prompt" id="capri-typer">
+                <span class="bubble__you">TÚ &gt;</span>
+                <input class="bubble__field" id="typer-input" type="text" maxlength="500" placeholder="escribe algo… (Enter para enviar)" autocomplete="off" spellcheck="false">
+                <span class="bubble__mode-btn" id="typer-mode-pill" title="Click para cambiar motor IA (Auto / Argon / Nemotron)">⚡ AUTO</span>
+            </div>
         </div>
-    </div>
-
-    <!-- Barra de entrada estilo Capri (> tú: ...) -->
-    <div id="capri-typer">
-        <div class="typer-red-bar"></div>
-        <span class="typer-prompt">&gt; tú:</span>
-        <input type="text" id="typer-input" placeholder="pide: abre chrome, abre vscode, sube volumen, /argon..." maxlength="240" autocomplete="off" />
-        <span id="typer-mode-pill" title="Click para cambiar motor IA">⚡ AUTO</span>
-    </div>
+    </aside>
 
     <!-- Escenario del personaje (sin botones flotantes invasivos) -->
     <div id="pet-stage">
@@ -435,6 +527,9 @@
         const bubbleModel = document.getElementById('bubble-model');
         const bubbleReply = document.getElementById('bubble-reply');
         const bubbleCaret = document.getElementById('bubble-caret');
+        const bubbleState = document.getElementById('bubble-state');
+        const bubbleLog = document.getElementById('bubble-log');
+        const bubbleTab = document.getElementById('bubble-tab');
         const typer = document.getElementById('capri-typer');
         const typerInput = document.getElementById('typer-input');
         const typerModePill = document.getElementById('typer-mode-pill');
@@ -1070,19 +1165,74 @@
         }
 
         // =========================================================================
-        // 5. GLOBO CYBERPUNK CON EFECTO MÁQUINA DE ESCRIBIR (Talk.cs)
+        // 5. GLOBO CYBERPUNK CON BLOQUE DE TEXTO SEPARADO (MtGhozt/Capri-Desktop)
         // =========================================================================
+        function addBubbleLogEntry(kind, text) {
+            if (!bubbleLog || !text) return;
+            const li = document.createElement('li');
+            li.className = `bubble__row is-${kind}`;
+            const tag = document.createElement('span');
+            tag.className = 'bubble__tag';
+            let label = '[TÚ]';
+            if (kind === 'oido') label = '[OÍDO]';
+            else if (kind === 'fuko') label = '[FUKO]';
+            else if (kind === 'sistema') label = '[SISTEMA]';
+            tag.textContent = label;
+            const body = document.createElement('span');
+            body.textContent = ` ${text}`;
+            li.appendChild(tag);
+            li.appendChild(body);
+            bubbleLog.appendChild(li);
+            while (bubbleLog.children.length > 5) {
+                bubbleLog.removeChild(bubbleLog.firstChild);
+            }
+            bubbleLog.scrollTop = bubbleLog.scrollHeight;
+        }
+
         function showCapriBubble(heard, reply, model = '', thinking = false) {
-            const cleanHeard = (heard || 'chat').replace(/^>\s*tú:\s*/i, '');
-            bubblePrompt.innerText = `> tú: ${cleanHeard}`;
-            bubbleModel.innerText = model ? `[${model}]` : '';
+            const cleanHeard = (heard || '').replace(/^>\s*tú:\s*/i, '').trim();
+            if (cleanHeard && !thinking) {
+                addBubbleLogEntry('pregunta', cleanHeard);
+            }
+
+            // Detectar y procesar etiquetas de ánimo ocultas ([burla], [emocion], [aburrida], [seria])
+            let cleanReply = reply || '';
+            let moodMatch = cleanReply.match(/^\[(burla|emocion|aburrida|seria)\]\s*/i);
+            if (moodMatch) {
+                const mood = moodMatch[1].toLowerCase();
+                cleanReply = cleanReply.replace(moodMatch[0], '');
+                if (mood === 'burla') playClip('grin');
+                else if (mood === 'emocion') playClip('dance');
+                else if (mood === 'aburrida') playClip('dangle');
+                else if (mood === 'seria') playClip('idle');
+            }
+
+            if (model) {
+                let badge = model;
+                if (model.includes('argon')) badge = 'GEMINI 4 ARGON';
+                else if (model.includes('nemotron')) badge = 'OPENCLAW NEMOTRON';
+                else if (model.includes('bolt')) badge = 'OPENCLAW BOLT';
+                else if (model.includes('skills')) badge = 'SKILLS+HANDS';
+                bubbleModel.innerText = badge;
+            }
 
             isThinking = thinking;
-            fullReplyText = thinking ? '...' : (reply || '');
+            fullReplyText = thinking ? '...' : cleanReply;
             revealedChars = 0;
             revealStart = getNow();
             bubbleVisible = true;
             bubble.classList.add('visible');
+
+            if (bubbleState) {
+                if (thinking) {
+                    bubbleState.innerText = 'PENSANDO';
+                    bubble.setAttribute('data-state', 'THINKING');
+                } else {
+                    bubbleState.innerText = 'HABLANDO';
+                    bubble.setAttribute('data-state', 'TALKING');
+                    if (cleanReply) addBubbleLogEntry('fuko', cleanReply);
+                }
+            }
 
             if (currentClip === 'sleep') {
                 napping = false;
@@ -1091,10 +1241,14 @@
 
             clearTimeout(bubbleHideTimer);
             if (!thinking) {
-                const readDuration = Math.max(6500, Math.min(16000, fullReplyText.length * 75 + 4000));
+                const readDuration = Math.max(7500, Math.min(20000, fullReplyText.length * 75 + 4500));
                 bubbleHideTimer = setTimeout(() => {
                     bubbleVisible = false;
                     bubble.classList.remove('visible');
+                    if (bubbleState) {
+                        bubbleState.innerText = 'EN ESPERA';
+                        bubble.setAttribute('data-state', 'ONLINE');
+                    }
                 }, readDuration);
             }
         }
@@ -1113,14 +1267,22 @@
                 revealedChars = count;
                 bubbleReply.innerText = fullReplyText.slice(0, revealedChars);
             }
-            bubbleCaret.style.display = (revealedChars < fullReplyText.length) ? 'inline-block' : 'none';
+            const isDone = revealedChars >= fullReplyText.length;
+            bubbleCaret.style.display = isDone ? 'none' : 'inline-block';
+            if (isDone && bubbleState && bubbleState.innerText === 'HABLANDO') {
+                bubbleState.innerText = 'EN ESPERA';
+                bubble.setAttribute('data-state', 'ONLINE');
+            }
         }
 
-        bubble.addEventListener('click', () => {
-            bubbleVisible = false;
-            bubble.classList.remove('visible');
-            clearTimeout(bubbleHideTimer);
-        });
+        if (bubbleTab) {
+            bubbleTab.addEventListener('click', (e) => {
+                e.stopPropagation();
+                bubbleVisible = false;
+                bubble.classList.remove('visible');
+                clearTimeout(bubbleHideTimer);
+            });
+        }
 
         // =========================================================================
         // 6. INTERACCIONES NATURALES DEL MOUSE: ARRASTRAR, SOLTAR CON GRAVEDAD Y ACARICIAR (Stroke)
@@ -1684,10 +1846,16 @@
         // 7.5. INPUT BAR (> tú:) Y CONEXIÓN A OPENCLAW + GEMINI 4 ARGON
         // =========================================================================
         function toggleTyper(force = null) {
-            const open = force !== null ? force : !typer.classList.contains('open');
-            typer.classList.toggle('open', open);
+            const open = force !== null ? force : !bubbleVisible;
+            bubbleVisible = open;
+            bubble.classList.toggle('visible', open);
             if (open) {
                 typerInput.focus();
+                clearTimeout(bubbleHideTimer);
+                if (bubbleState) {
+                    bubbleState.innerText = 'EN ESPERA';
+                    bubble.setAttribute('data-state', 'ONLINE');
+                }
             }
         }
 
@@ -1715,7 +1883,6 @@
                 const text = typerInput.value.trim();
                 if (!text) return;
                 typerInput.value = '';
-                toggleTyper(false);
                 await sendToClaudia(text);
             }
         });

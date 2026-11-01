@@ -172,6 +172,8 @@ pub fn run() {
             openclaw_bridge::set_ai_mode_cmd,
             openclaw_bridge::set_proactive_mode_cmd,
             openclaw_bridge::analyze_notebook_cmd,
+            openclaw_bridge::list_openclaw_sessions_cmd,
+            openclaw_bridge::probe_gemini_argon_cmd,
             // OpenClaw SOUL.md, IDENTITY.md, USER.md, MEMORY.md, TOOLS.md & AGENTS.md commands
             soul_config::list_openclaw_files_cmd,
             soul_config::read_openclaw_file_cmd,
