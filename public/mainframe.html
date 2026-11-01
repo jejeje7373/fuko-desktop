@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuko Mainframe - SOUL.md, OpenClaw & Gemini 4 Argon</title>
+    <style>
+        :root {
+            --bg-primary: #090b10;
+            --bg-secondary: #111520;
+            --bg-card: #171c2b;
+            --accent: #3ad6eb;
+            --accent-pink: #ff2a6d;
+            --neon-green: #10b981;
+            --text-primary: #e8ecf2;
+            --text-secondary: #8f98a8;
+            --border: #252e42;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 14px 22px;
+            background: var(--bg-secondary);
+            border-bottom: 1.5px solid var(--accent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            font-size: 22px;
+            background: rgba(58, 214, 235, 0.14);
+            padding: 7px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--accent);
+        }
+
+        .brand-text h1 {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            color: var(--accent);
+        }
+
+        .brand-text p {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-family: monospace;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11.5px;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--neon-green);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            font-weight: 600;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--neon-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 235px 1fr;
+            overflow: hidden;
+        }
+
+        aside {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 13px;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            background: transparent;
+            border: 1px solid transparent;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .nav-item:hover {
+            color: var(--text-primary);
+            background: rgba(58, 214, 235, 0.08);
+        }
+
+        .nav-item.active {
+            color: var(--accent);
+            background: var(--bg-card);
+            border-color: var(--accent);
+            border-left: 3px solid var(--accent-pink);
+        }
+
+        main {
+            padding: 20px 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .tab-panel {
+            display: none;
+            flex-direction: column;
+            gap: 18px;
+            height: 100%;
+        }
+
+        .tab-panel.active {
+            display: flex;
+        }
+
+        .section-title {
+            font-size: 14.5px;
+            font-weight: 700;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            letter-spacing: 0.4px;
+        }
+
+        /* =========================================================
+           EDITOR EN VIVO DE SOUL.MD Y ARCHIVOS DE OPENCLAW
+           ========================================================= */
+        .file-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .file-pill {
+            padding: 7px 13px;
+            border-radius: 6px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 700;
+            font-family: monospace;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .file-pill:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+
+        .file-pill.active {
+            background: rgba(58, 214, 235, 0.16);
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: 0 0 10px rgba(58, 214, 235, 0.25);
+        }
+
+        .soul-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            border-radius: 8px;
+            gap: 12px;
+        }
+
+        .soul-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .soul-meta .desc {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .soul-meta .path {
+            font-size: 11px;
+            font-family: monospace;
+            color: var(--text-secondary);
+        }
+
+        .soul-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        #soul-editor {
+            flex: 1;
+            min-height: 310px;
+            width: 100%;
+            background: #07090e;
+            color: #d9e6f7;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            resize: vertical;
+            outline: none;
+            user-select: text;
+        }
+
+        #soul-editor:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 12px rgba(58, 214, 235, 0.2);
+        }
+
+        .save-toast {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--neon-green);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .save-toast.show {
+            opacity: 1;
+        }
+
+        /* =========================================================
+           TARJETAS DE CEREBRO IA, TECLADO Y CARPETAS
+           ========================================================= */
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .card-label {
+            font-size: 10.5px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .card-value {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+            word-break: break-word;
+        }
+
+        .mode-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+            gap: 10px;
+        }
+
+        .mode-card {
+            background: var(--bg-card);
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 13px;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .mode-card:hover, .mode-card.active {
+            border-color: var(--accent);
+            background: rgba(58, 214, 235, 0.12);
+        }
+
+        .mode-card h4 {
+            font-size: 13.5px;
+            color: #fff;
+        }
+
+        .mode-card p {
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.35;
+        }
+
+        .toggle-row {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 11px 15px;
+            border-radius: 8px;
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 8px;
+        }
+
+        .state-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            color: var(--text-primary);
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.15s;
+        }
+
+        .state-btn:hover {
+            border-color: var(--accent);
+            background: rgba(58, 214, 235, 0.14);
+        }
+
+        .paths-list {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .path-row {
+            padding: 9px 14px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-family: monospace;
+        }
+
+        .path-row:last-child {
+            border-bottom: none;
+        }
+
+        .remove-path-btn {
+            background: transparent;
+            border: none;
+            color: var(--accent-pink);
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .add-path-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .add-path-bar input {
+            flex: 1;
+            padding: 9px 13px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            color: white;
+            font-size: 12.5px;
+            outline: none;
+            font-family: monospace;
+            user-select: text;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #06090e;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 12px;
+            transition: all 0.15s;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.12);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 8px 13px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <div class="brand-icon">🐱</div>
+            <div class="brand-text">
+                <h1>FUKO // CAPRI MAINFRAME</h1>
+                <p>OPENCLAW SOUL.MD + GEMINI 4 ARGON + HANDS & EARS</p>
+            </div>
+        </div>
+        <div class="status-badge">
+            <span class="pulse-dot"></span>
+            <span>OPENCLAW + ARGON + OÍDOS EN VIVO</span>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <aside>
+            <div class="nav-item active" id="nav-soul" onclick="switchTab('soul')">🧬 SOUL.md & Archivos OpenClaw</div>
+            <div class="nav-item" id="nav-brain" onclick="switchTab('brain')">🧠 Cerebro IA, Manos & Sensores</div>
+            <button class="btn-primary" onclick="analyzeNow()" style="margin-top: auto;">👁 Analizar Pantalla Ahora</button>
+        </aside>
+
+        <main>
+            <!-- PESTAÑA 1: SOUL.MD Y ARCHIVOS DE OPENCLAW -->
+            <div class="tab-panel active" id="panel-soul">
+                <div>
+                    <h3 class="section-title">🧬 Configuración en Vivo de SOUL.md y Archivos de OpenClaw</h3>
+                    <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+                        Edita aquí el alma (<code>SOUL.md</code>), identidad (<code>IDENTITY.md</code>), perfil de usuario (<code>USER.md</code>), memoria (<code>MEMORY.md</code>), herramientas/logins (<code>TOOLS.md</code>) y reglas (<code>AGENTS.md</code>). También puedes pedirle a Fuko por voz: <i>"Fuko, agrega a tu soul.md que..."</i> o <i>"Fuko, recuerda que..."</i>.
+                    </p>
+                    <div class="file-pills" id="openclaw-file-pills"></div>
+                </div>
+
+                <div class="soul-toolbar">
+                    <div class="soul-meta">
+                        <span class="desc" id="current-file-desc">Alma, personalidad, límites y esencia de Fuko en OpenClaw</span>
+                        <span class="path" id="current-file-path">/home/jejej/.openclaw/workspace/SOUL.md</span>
+                    </div>
+                    <div class="soul-actions">
+                        <span class="save-toast" id="save-toast">✓ Guardado en vivo</span>
+                        <button class="btn-secondary" onclick="reloadCurrentFile()">🔄 Recargar</button>
+                        <button class="btn-secondary" onclick="openCurrentInVsCode()">💻 Abrir en VS Code</button>
+                        <button class="btn-primary" onclick="saveCurrentFile()">💾 Guardar (Ctrl+S)</button>
+                    </div>
+                </div>
+
+                <textarea id="soul-editor" spellcheck="false" placeholder="Cargando archivo de OpenClaw..."></textarea>
+            </div>
+
+            <!-- PESTAÑA 2: CEREBRO IA, TECLADO / LOGIN Y SENSORES -->
+            <div class="tab-panel" id="panel-brain">
+                <div class="grid-cards">
+                    <div class="card">
+                        <span class="card-label">Estado de Animación</span>
+                        <span class="card-value" id="current-state-val">Idle</span>
+                    </div>
+                    <div class="card">
+                        <span class="card-label">Último Modelo Usado</span>
+                        <span class="card-value" id="last-model-val" style="color: var(--accent); font-size: 12.5px; font-family: monospace;">nvidia/nemotron-3-ultra-550b-a55b</span>
+                    </div>
+                    <div class="card">
+                        <span class="card-label">Actividad en Notebook</span>
+                        <span class="card-value" id="activity-val" style="color: var(--neon-green); font-size: 12.5px;">Monitoreando...</span>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="section-title">🧠 Selección de Motor de Inteligencia Artificial</h3>
+                    <div class="mode-grid">
+                        <div class="mode-card active" id="mode-auto" onclick="selectMode('auto')">
+                            <h4>⚡ Auto (Híbrido)</h4>
+                            <p>Usa OpenClaw para charla rápida y delega a <b>Gemini 4 Argon</b> las tareas complejas o de código.</p>
+                        </div>
+                        <div class="mode-card" id="mode-argon" onclick="selectMode('argon')">
+                            <h4>🧠 Gemini 4 Argon</h4>
+                            <p>Envía tus consultas al modelo pesado Gemini 4 Argon (High) de Antigravity.</p>
+                        </div>
+                        <div class="mode-card" id="mode-openclaw" onclick="selectMode('openclaw')">
+                            <h4>🦞 OpenClaw</h4>
+                            <p>Usa el agente de OpenClaw con acceso completo a tus 44 Skills y workspace.</p>
+                        </div>
+                        <div class="mode-card" id="mode-ollama" onclick="selectMode('ollama')">
+                            <h4>🏠 Ollama Local</h4>
+                            <p>Ejecución 100% local en tu notebook a través de Ollama.</p>
+                        </div>
+                    </div>
+
+                    <div class="toggle-row">
+                        <div>
+                            <strong style="font-size: 13px;">Reacciones Proactivas a tus Archivos, Pantalla y Música</strong>
+                            <p style="font-size: 11px; color: var(--text-secondary);">Fuko comenta cuando guardas archivos en Duoc/Workspace o pones música.</p>
+                        </div>
+                        <input type="checkbox" id="proactive-check" checked onchange="toggleProactive(this.checked)" style="width: 18px; height: 18px; cursor: pointer;">
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="section-title">🎭 Probar Estados y Animaciones Capri</h3>
+                    <div class="action-grid">
+                        <button class="state-btn" onclick="triggerState('Idle')"><span>✨</span><span>Idle</span></button>
+                        <button class="state-btn" onclick="triggerState('Dance')"><span>💃</span><span>Bailar</span></button>
+                        <button class="state-btn" onclick="triggerState('Talking')"><span>🗣️</span><span>Hablar</span></button>
+                        <button class="state-btn" onclick="triggerState('Glitch')"><span>⚡</span><span>Glitch</span></button>
+                        <button class="state-btn" onclick="triggerState('Sleep')"><span>💤</span><span>Dormir</span></button>
+                        <button class="state-btn" onclick="triggerState('Happy')"><span>🥰</span><span>Feliz</span></button>
+                        <button class="state-btn" onclick="triggerState('Sitting')"><span>🪑</span><span>Perch</span></button>
+                        <button class="state-btn" onclick="triggerState('Wander')"><span>🚶</span><span>Caminar</span></button>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="section-title">📂 Carpetas Vigiladas en tu Notebook</h3>
+                    <div class="paths-list" id="paths-container"></div>
+                    <div class="add-path-bar">
+                        <input type="text" id="new-path-input" placeholder="/home/jejej/Duoc/nuevo-ramo...">
+                        <button class="btn-primary" onclick="addPath()">Vigilar Carpeta</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const tauri = window.__TAURI__ || null;
+        const invoke = tauri ? tauri.core.invoke : async () => ({});
+        const listen = tauri ? tauri.event.listen : () => {};
+
+        let openclawFiles = [];
+        let activeFileName = 'SOUL.md';
+        const editorEl = document.getElementById('soul-editor');
+        const saveToastEl = document.getElementById('save-toast');
+
+        function switchTab(tab) {
+            document.getElementById('nav-soul').classList.toggle('active', tab === 'soul');
+            document.getElementById('nav-brain').classList.toggle('active', tab === 'brain');
+            document.getElementById('panel-soul').classList.toggle('active', tab === 'soul');
+            document.getElementById('panel-brain').classList.toggle('active', tab === 'brain');
+        }
+
+        async function loadOpenClawFilesList(selectName = null) {
+            try {
+                openclawFiles = await invoke('list_openclaw_files_cmd') || [];
+                if (selectName) activeFileName = selectName;
+                renderFilePills();
+                await selectOpenClawFile(activeFileName);
+            } catch (e) {
+                console.error('Error listando archivos OpenClaw:', e);
+            }
+        }
+
+        function renderFilePills() {
+            const container = document.getElementById('openclaw-file-pills');
+            container.innerHTML = openclawFiles.map(f => `
+                <div class="file-pill ${f.name === activeFileName ? 'active' : ''}" onclick="selectOpenClawFile('${f.name}')">
+                    ${f.label}
+                </div>
+            `).join('');
+        }
+
+        async function selectOpenClawFile(name) {
+            activeFileName = name;
+            renderFilePills();
+            const meta = openclawFiles.find(f => f.name === name);
+            if (meta) {
+                document.getElementById('current-file-desc').innerText = meta.description;
+                document.getElementById('current-file-path').innerText = meta.path;
+            }
+            try {
+                const content = await invoke('read_openclaw_file_cmd', { name });
+                editorEl.value = content || '';
+            } catch (e) {
+                editorEl.value = `# Error leyendo ${name}: ${e}`;
+            }
+        }
+
+        async function reloadCurrentFile() {
+            await selectOpenClawFile(activeFileName);
+        }
+
+        async function saveCurrentFile() {
+            try {
+                await invoke('save_openclaw_file_cmd', {
+                    name: activeFileName,
+                    content: editorEl.value
+                });
+                saveToastEl.classList.add('show');
+                setTimeout(() => saveToastEl.classList.remove('show'), 2200);
+            } catch (e) {
+                alert('No pude guardar ' + activeFileName + ': ' + e);
+            }
+        }
+
+        async function openCurrentInVsCode() {
+            try {
+                await invoke('open_openclaw_file_vscode_cmd', { name: activeFileName });
+            } catch (e) {
+                alert('Error al abrir VS Code: ' + e);
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                saveCurrentFile();
+            }
+        });
+
+        listen('open_soul_tab', (ev) => {
+            switchTab('soul');
+            const target = (typeof ev.payload === 'string' && ev.payload.endsWith('.md')) ? ev.payload : 'SOUL.md';
+            selectOpenClawFile(target);
+        });
+
+        function updateModeCards(activeMode) {
+            ['auto', 'argon', 'openclaw', 'ollama'].forEach(m => {
+                const el = document.getElementById('mode-' + m);
+                if (el) el.classList.toggle('active', m === activeMode);
+            });
+        }
+
+        async function selectMode(mode) {
+            updateModeCards(mode);
+            const st = await invoke('set_ai_mode_cmd', { mode });
+            if (st) renderStatus(st);
+        }
+
+        async function toggleProactive(proactive) {
+            const st = await invoke('set_proactive_mode_cmd', { proactive });
+            if (st) renderStatus(st);
+        }
+
+        async function triggerState(state) {
+            await invoke('set_avatar_state', { state });
+            document.getElementById('current-state-val').innerText = state;
+        }
+
+        async function analyzeNow() {
+            await invoke('analyze_notebook_cmd', { customQuestion: null });
+        }
+
+        function renderStatus(st) {
+            if (!st) return;
+            updateModeCards(st.mode || 'auto');
+            document.getElementById('proactive-check').checked = !!st.proactive;
+            if (st.last_model_used) {
+                document.getElementById('last-model-val').innerText = st.last_model_used;
+            }
+            if (st.active_summary) {
+                document.getElementById('activity-val').innerText = st.active_summary;
+            }
+        }
+
+        listen('ai_status_updated', (ev) => renderStatus(ev.payload));
+        listen('notebook_activity', (ev) => {
+            if (ev.payload && ev.payload.summary) {
+                document.getElementById('activity-val').innerText = ev.payload.summary;
+            }
+        });
+
+        async function loadWatchedPaths() {
+            try {
+                const paths = await invoke('get_watched_paths_cmd');
+                const container = document.getElementById('paths-container');
+                if (paths && paths.length > 0) {
+                    container.innerHTML = paths.map(p => `
+                        <div class="path-row">
+                            <span>${p}</span>
+                            <button class="remove-path-btn" onclick="removePath('${p}')">Quitar</button>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function addPath() {
+            const input = document.getElementById('new-path-input');
+            const path = input.value.trim();
+            if (!path) return;
+            try {
+                await invoke('add_watched_path_cmd', { path, recursive: true });
+                input.value = '';
+                loadWatchedPaths();
+            } catch (e) {
+                alert('Error al vigilar ruta: ' + e);
+            }
+        }
+
+        async function removePath(path) {
+            try {
+                await invoke('remove_watched_path_cmd', { path });
+                loadWatchedPaths();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        (async () => {
+            await loadOpenClawFilesList('SOUL.md');
+            loadWatchedPaths();
+            try {
+                const st = await invoke('get_ai_status_cmd');
+                renderStatus(st);
+            } catch (_) {}
+        })();
+    </script>
+</body>
+</html>

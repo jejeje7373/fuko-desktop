@@ -1,0 +1,7 @@
+// public/avatar-talking.svg
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="45" fill="#FF69B4"/>
+  <circle cx="50" cy="50" r="30" fill="#FFC0CB"/>
+  <path d="M 30 50 Q 50 30, 70 50" stroke="white" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <text x="50" y="60" font-size="30" text-anchor="middle" fill="white">🐱</text>
+</svg>
