@@ -537,7 +537,7 @@
             floor_y: 660
         };
 
-        let dropAfter = true; // Al terminar arrive inicial, cae con gravedad
+        let dropAfter = false; // Por defecto se mantiene en el aire sin caer forzadamente al suelo
         let falling = false;
         let fallSpeed = 0;
         let fallStep = getNow();
@@ -547,8 +547,8 @@
         let musicPlaying = false;
         let napping = false;
 
-        // FÍSICAS AVANZADAS: MODO FLOTACIÓN EN EL AIRE Y BORDES DE VENTANAS
-        let floatingMode = false; // true = levita en el aire donde la dejes; false = gravedad normal
+        // FÍSICAS AVANZADAS: FLOTACIÓN AUTOMÁTICA EN EL AIRE Y BORDES DE VENTANAS
+        let floatingMode = true; // TRUE por defecto: se mantiene flotando en el aire sin menús ni botones
         let openLedges = [];      // Ventanas abiertas detectadas vía D-Bus
         let currentSeat = null;   // Ventana sobre la que está sentada actualmente
 
@@ -867,14 +867,14 @@
             const minX = 50;
             const maxX = Math.max(150, geom.screen_width - geom.win_width - 50);
             const destX = targetX !== null ? targetX : Math.round(minX + Math.random() * (maxX - minX));
-            const destY = targetY !== null ? targetY : geom.floor_y;
+            const destY = targetY !== null ? targetY : (geom.win_y < geom.floor_y - 60 ? geom.win_y : geom.floor_y);
 
             playClip(seated ? 'perch_leave' : 'leave');
             outroAt = getNow() + 0.65;
             outroCallback = () => {
                 moveWindowTo(destX, destY);
                 playClip(seated ? 'perch_arrive' : 'arrive');
-                dropAfter = (destY < geom.floor_y);
+                dropAfter = false;
             };
         }
 
@@ -1200,8 +1200,18 @@
                 const nearbyLedge = findLedgeAt(hipX, hipY) || findLedgeBelow(hipX, hipY - 90);
                 if (nearbyLedge && Math.abs(hipY - nearbyLedge.y) < 180) {
                     sitOnLedge(nearbyLedge);
-                } else if (floatingMode || e.shiftKey) {
-                    // MANTENERSE EN EL AIRE (Modo Flotación o con tecla Shift)
+                } else if (geom.win_y >= geom.floor_y - 35) {
+                    // Si se soltó en el suelo del escritorio
+                    falling = false;
+                    seated = false;
+                    currentSeat = null;
+                    const stageEl = document.getElementById('pet-stage');
+                    stageEl.style.top = 'auto';
+                    stageEl.style.bottom = '24px';
+                    moveWindowTo(geom.win_x, geom.floor_y);
+                    playClip('glitch');
+                } else {
+                    // SIEMPRE SE MANTIENE FLOTANDO EN EL AIRE AUTOMÁTICAMENTE (sin botones ni menú)
                     falling = false;
                     seated = false;
                     currentSeat = null;
@@ -1209,13 +1219,6 @@
                     stageEl.style.top = 'auto';
                     stageEl.style.bottom = '24px';
                     playClip('idle');
-                    showCapriBubble('(flotando)', 'Flotando en el aire. ¡No me caigo!', 'capri');
-                } else {
-                    // Cae por gravedad hacia una ventana debajo o al suelo
-                    const stageEl = document.getElementById('pet-stage');
-                    stageEl.style.top = 'auto';
-                    stageEl.style.bottom = '24px';
-                    startFall();
                 }
             } else {
                 // Fue un click simple sobre ella (React en Pet.cs)
