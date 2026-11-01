@@ -435,13 +435,30 @@ pub async fn ask_claudia<R: Runtime>(
     let result = if use_argon {
         match query_gemini_argon_cli(&full_prompt).await {
             Ok((r, m)) => Ok((r, format!("{}{}", m, skill_badge))),
-            Err(_) => {
-                query_openclaw_agent_exec(
-                    &full_prompt,
-                    Some("nvidia/nemotron-3-ultra-550b-a55b"),
-                )
-                .await
-                .map(|(r, m)| (r, format!("{}{}", m, skill_badge)))
+            Err(e) => {
+                eprintln!("[Fuko AI] Gemini 4 Argon no disponible ({}), usando fallback de programación...", e);
+                // Cascada de fallback para programación en OpenClaw:
+                // 1. Nemotron 3 Ultra 550B (modelo insignia de código y razonamiento)
+                // 2. Nemotron 3.5 Lightning 30B (ultrarrápido y confiable)
+                // 3. Nemotron 3.5 Bolt E4B
+                let fallback_models = [
+                    "nvidia/nemotron-3-ultra-550b-a55b",
+                    "nvidia/nemotron-3.5-lightning-30b-a3b",
+                    "nvidia/nemotron-3.5-bolt-e4b",
+                ];
+                let mut fallback_res = Err("Ningún modelo de fallback disponible".to_string());
+                for m in fallback_models {
+                    let res = if use_agent_exec {
+                        query_openclaw_agent_exec(&full_prompt, Some(m)).await
+                    } else {
+                        query_openclaw_cli(&full_prompt, Some(m), None).await
+                    };
+                    if let Ok((r, used)) = res {
+                        fallback_res = Ok((r, format!("{} (fallback){}", used, skill_badge)));
+                        break;
+                    }
+                }
+                fallback_res
             }
         }
     } else {
