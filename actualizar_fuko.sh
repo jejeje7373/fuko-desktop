@@ -44,9 +44,13 @@ rsync -av --delete \
     --exclude=".git" \
     --exclude="node_modules" \
     --exclude="target" \
+    --exclude="src-tauri/target" \
     --exclude="*.log" \
     --exclude="__pycache__" \
+    --exclude="*.pyc" \
     --exclude=".DS_Store" \
+    --exclude="README.md" \
+    --exclude=".gitignore" \
     "$WORKSPACE_DIR/" "$TARGET_DIR/"
 
 # Sincronizar SOUL.md e IDENTITY.md si están en el workspace raíz
@@ -57,6 +61,14 @@ fi
 if [ -f "$OPENCLAW_WORKSPACE/IDENTITY.md" ]; then
     cp -u "$OPENCLAW_WORKSPACE/IDENTITY.md" "$TARGET_DIR/IDENTITY.md"
     echo -e "  - IDENTITY.md sincronizado."
+fi
+
+# Copiar README.md y .gitignore si existen
+if [ -f "$WORKSPACE_DIR/README.md" ]; then
+    cp -u "$WORKSPACE_DIR/README.md" "$TARGET_DIR/README.md"
+fi
+if [ -f "$WORKSPACE_DIR/.gitignore" ]; then
+    cp -u "$WORKSPACE_DIR/.gitignore" "$TARGET_DIR/.gitignore"
 fi
 
 # Copiar el script actual al destino y al workspace
@@ -91,7 +103,7 @@ else
     echo -e "\n${BLUE}[4/5] Añadiendo cambios y creando commit...${NC}"
     git add -A
 
-    COMMIT_MSG="${2:-feat: sincronización de Fuko con mejoras de Capri, cascada de modelos OpenClaw y Wayland perches}"
+    COMMIT_MSG="${2:-feat: actualizar repositorio Fuko Desktop con README, SOUL e integraciones de Capri y OpenClaw}"
     git commit -m "$COMMIT_MSG"
     echo -e "${GREEN}✓ Commit creado: '$COMMIT_MSG'${NC}"
 
