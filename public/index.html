@@ -13,8 +13,8 @@
         }
 
         html, body {
-            width: 360px;
-            height: 420px;
+            width: 320px;
+            height: 380px;
             background: transparent !important;
             overflow: hidden;
             font-family: 'Share Tech Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
@@ -22,14 +22,11 @@
         }
 
         /* =========================================================
-           AVATAR STAGE & CANVAS (240px Capri Scale)
+           AVATAR STAGE & CANVAS (Capri Scale)
            ========================================================= */
         #pet-stage {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 270px;
-            height: 290px;
+            inset: 0;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -37,8 +34,8 @@
         }
 
         #avatar-canvas {
-            width: 260px;
-            height: 270px;
+            width: 320px;
+            height: 380px;
             cursor: grab;
             filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
         }
@@ -54,7 +51,7 @@
            ========================================================= */
         #talk-pill-wrap {
             position: absolute;
-            bottom: 1px;
+            bottom: 4px;
             left: 50%;
             transform: translateX(-50%);
             opacity: 0;
@@ -151,7 +148,7 @@
 
     <!-- Escenario del personaje (sin botones flotantes invasivos) -->
     <div id="pet-stage">
-        <canvas id="avatar-canvas" width="260" height="270"></canvas>
+        <canvas id="avatar-canvas" width="320" height="380"></canvas>
     </div>
 
     <!-- TalkPill exacto de capri-desktop (Talk.cs PillFace: TYPE | TALK + 5 barras de onda + botón Mic Mute) -->
@@ -475,6 +472,7 @@
         // Estado del habla y sincronización
         let talkingUntil = 0;
         let isThinking = false;
+        let bubbleHideTimer = null;
         const CHARS_PER_SEC = 32;
 
         // Estado IA
@@ -804,7 +802,7 @@
             const drawH = baseSize * clip.height;
             const drawW = drawH * (clip.fw / clip.fh);
             const centerX = canvas.width / 2 + (clip.shiftX || 0);
-            const centerY = canvas.height - drawH / 2 - 8 + (clip.shiftY || 0);
+            const centerY = canvas.height - drawH / 2 - 46 + (clip.shiftY || 0);
 
             ctx.save();
             ctx.translate(centerX, centerY + breathe);
@@ -865,6 +863,16 @@
             if (currentClip === 'sleep') {
                 napping = false;
                 playClip('wake');
+            }
+
+            clearTimeout(bubbleHideTimer);
+            if (!thinking && cleanReply) {
+                const readDuration = Math.max(7500, Math.min(20000, cleanReply.length * 65 + 4500));
+                bubbleHideTimer = setTimeout(async () => {
+                    try {
+                        await invoke('show_bubble_window_cmd', { show: false });
+                    } catch (_) {}
+                }, readDuration);
             }
 
             try {

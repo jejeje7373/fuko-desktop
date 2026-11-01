@@ -12,8 +12,8 @@
       {
         "label": "overlay_window",
         "title": "Fuko",
-        "width": 270,
-        "height": 290,
+        "width": 320,
+        "height": 380,
         "resizable": false,
         "decorations": false,
         "transparent": true,
@@ -25,14 +25,14 @@
       {
         "label": "bubble_window",
         "title": "Fuko Dialogue",
-        "width": 450,
+        "width": 440,
         "height": 260,
-        "resizable": true,
+        "resizable": false,
         "decorations": false,
         "transparent": true,
         "skipTaskbar": true,
         "alwaysOnTop": true,
-        "visible": true,
+        "visible": false,
         "url": "bubble.html"
       }
     ],

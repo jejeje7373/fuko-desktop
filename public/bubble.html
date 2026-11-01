@@ -3,17 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fuko // Diálogo Cyberpunk</title>
+    <title>Fuko Dialogue</title>
     <style>
         :root {
-            --bg: #09030f;
-            --panel: #140a1f;
-            --line: #7b3fe4;
-            --label: #ff2d6f;
-            --accent: #5ef6ff;
-            --accent-green: #3dff8f;
+            --bg: #07040d;
+            --capri-pink: #ff2d6f;
+            --capri-violet: #7b3fe4;
+            --capri-cyan: #5ef6ff;
+            --capri-green: #3dff8f;
             --muted: #a78ba9;
-            --title: #ffffff;
             --tab-h: 24px;
         }
 
@@ -25,36 +23,33 @@
         }
 
         html, body {
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             overflow: hidden;
             background: transparent !important;
             font-family: 'Share Tech Mono', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 4px;
+            padding: 3px;
         }
 
-        /* Contenedor Cyberpunk de la Burbuja (MtGhozt/Capri-Desktop) */
+        /* Contenedor Capri Bubble */
         .bubble {
             width: 100%;
             height: 100%;
             display: flex;
             flex-direction: column;
             color: #efe8ff;
-            filter: drop-shadow(0 0 12px rgba(255, 45, 111, 0.45)) drop-shadow(0 0 8px rgba(94, 246, 255, 0.3));
+            filter: drop-shadow(0 0 10px rgba(255, 45, 111, 0.4)) drop-shadow(0 0 6px rgba(94, 246, 255, 0.25));
         }
 
-        /* Pestaña superior Cyberpunk (Handle para arrastrar por toda la pantalla) */
+        /* Pestaña superior Cyberpunk (arrastrable) */
         .bubble__tab {
             position: relative;
             z-index: 2;
-            width: 58%;
-            min-height: var(--tab-h);
-            padding: 4px 10px 3px 12px;
-            background: rgba(11, 6, 18, 0.96);
-            color: var(--label);
+            width: 54%;
+            height: var(--tab-h);
+            padding: 4px 10px 4px 12px;
+            background: rgba(7, 4, 13, 0.95);
+            color: var(--capri-pink);
             clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 100%, 0 100%);
             box-shadow: inset 0 0 0 1px rgba(123, 63, 228, 0.85);
             display: flex;
@@ -68,7 +63,7 @@
         }
 
         .bubble__title {
-            font-size: 10px;
+            font-size: 9.5px;
             letter-spacing: 0.14em;
             text-transform: uppercase;
             font-weight: 700;
@@ -78,57 +73,57 @@
         .bubble__close-btn {
             background: transparent;
             border: none;
-            color: var(--label);
+            color: var(--capri-pink);
             font-size: 14px;
             line-height: 1;
             cursor: pointer;
             padding: 0 4px;
             font-weight: 700;
-            transition: transform 0.1s;
+            transition: transform 0.12s, color 0.12s;
         }
 
         .bubble__close-btn:hover {
-            transform: scale(1.2);
+            transform: scale(1.25);
             color: #fff;
         }
 
-        /* Cuerpo principal Cyberpunk */
+        /* Cuerpo principal de la placa Cyberpunk */
         .bubble__body {
             position: relative;
             margin-top: -1px;
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 7px;
-            padding: 10px 14px 10px 14px;
-            background: rgba(9, 4, 15, 0.94);
+            gap: 6px;
+            padding: 8px 12px 10px 12px;
+            background: rgba(7, 4, 13, 0.94);
             box-shadow:
                 inset 0 0 0 1px rgba(123, 63, 228, 0.85),
-                0 0 14px rgba(255, 45, 111, 0.3);
+                0 0 14px rgba(255, 45, 111, 0.28);
             clip-path: polygon(
                 0 0,
-                58% 0,
-                calc(58% + 16px) 0,
+                54% 0,
+                calc(54% + 16px) 0,
                 100% 0,
                 100% 100%,
                 0 100%
             );
         }
 
-        /* Brackets en las cuatro esquinas estilo HUD */
+        /* Brackets estilo HUD en las 4 esquinas */
         .bubble__brackets {
             pointer-events: none;
             position: absolute;
-            inset: 5px 6px;
+            inset: 4px 5px;
             background:
-                linear-gradient(var(--label), var(--label)) top left / 10px 1.5px no-repeat,
-                linear-gradient(var(--label), var(--label)) top left / 1.5px 10px no-repeat,
-                linear-gradient(var(--label), var(--label)) top right / 10px 1.5px no-repeat,
-                linear-gradient(var(--label), var(--label)) top right / 1.5px 10px no-repeat,
-                linear-gradient(var(--label), var(--label)) bottom left / 10px 1.5px no-repeat,
-                linear-gradient(var(--label), var(--label)) bottom left / 1.5px 10px no-repeat,
-                linear-gradient(var(--label), var(--label)) bottom right / 10px 1.5px no-repeat,
-                linear-gradient(var(--label), var(--label)) bottom right / 1.5px 10px no-repeat;
+                linear-gradient(var(--capri-pink), var(--capri-pink)) top left / 10px 1.5px no-repeat,
+                linear-gradient(var(--capri-pink), var(--capri-pink)) top left / 1.5px 10px no-repeat,
+                linear-gradient(var(--capri-pink), var(--capri-pink)) top right / 10px 1.5px no-repeat,
+                linear-gradient(var(--capri-pink), var(--capri-pink)) top right / 1.5px 10px no-repeat,
+                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom left / 10px 1.5px no-repeat,
+                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom left / 1.5px 10px no-repeat,
+                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom right / 10px 1.5px no-repeat,
+                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom right / 1.5px 10px no-repeat;
         }
 
         /* Scanlines CRT */
@@ -136,26 +131,27 @@
             pointer-events: none;
             position: absolute;
             inset: 0;
-            opacity: 0.18;
+            opacity: 0.16;
             background: repeating-linear-gradient(
                 0deg,
                 transparent 0 2px,
-                rgba(94, 246, 255, 0.12) 2px 3px
+                rgba(94, 246, 255, 0.14) 2px 3px
             );
         }
 
-        /* Header con Logo oficial de Capri y Badge de estado */
+        /* Header con Logo oficial Capri y Badges */
         .bubble__head {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 8px;
             cursor: grab;
+            padding-bottom: 2px;
         }
 
         .bubble__logo {
-            width: 26px;
-            height: 26px;
+            width: 24px;
+            height: 24px;
             flex: none;
             background: #110816;
             clip-path: polygon(18% 0, 100% 0, 100% 82%, 82% 100%, 0 100%, 0 18%);
@@ -179,9 +175,9 @@
         }
 
         .bubble__model {
-            font-size: 9.5px;
+            font-size: 9px;
             letter-spacing: 0.12em;
-            color: var(--accent);
+            color: var(--capri-cyan);
             text-transform: uppercase;
         }
 
@@ -189,43 +185,43 @@
             font-size: 9px;
             letter-spacing: 0.16em;
             text-transform: uppercase;
-            color: var(--line);
+            color: var(--capri-violet);
             font-weight: 700;
         }
 
         .bubble[data-state='LISTENING'] .bubble__badge { color: #e6c15a; }
-        .bubble[data-state='THINKING'] .bubble__badge { color: var(--label); animation: blinkBadge 0.7s steps(2, jump-none) infinite; }
-        .bubble[data-state='TALKING'] .bubble__badge { color: var(--accent-green); animation: blinkBadge 0.7s steps(2, jump-none) infinite; }
-        .bubble[data-state='ONLINE'] .bubble__badge { color: var(--accent); }
+        .bubble[data-state='THINKING'] .bubble__badge { color: var(--capri-pink); animation: blinkBadge 0.7s steps(2, jump-none) infinite; }
+        .bubble[data-state='TALKING'] .bubble__badge { color: var(--capri-green); animation: blinkBadge 0.7s steps(2, jump-none) infinite; }
+        .bubble[data-state='ONLINE'] .bubble__badge { color: var(--capri-cyan); }
 
         @keyframes blinkBadge {
             0%, 50% { opacity: 1; }
             51%, 100% { opacity: 0.35; }
         }
 
-        /* Bloque de texto separado para Fuko */
-        .bubble__speech-block {
+        /* Línea de texto con máquina de escribir */
+        .bubble__speech-area {
+            flex: 1;
+            min-height: 52px;
+            max-height: 86px;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
             gap: 2px;
-            background: rgba(20, 10, 32, 0.75);
-            border-left: 2.5px solid var(--label);
-            padding: 6px 10px;
-            box-shadow: inset 0 0 10px rgba(123, 63, 228, 0.2);
-            min-height: 48px;
-            max-height: 85px;
-            overflow-y: auto;
+            background: rgba(20, 10, 32, 0.6);
+            border-left: 2px solid var(--capri-pink);
+            padding: 5px 8px;
         }
 
         .bubble__speaker {
-            font-size: 9.5px;
+            font-size: 9px;
             font-weight: 700;
             letter-spacing: 0.12em;
-            color: var(--label);
+            color: var(--capri-pink);
         }
 
         .bubble__line {
-            font-size: 12.5px;
+            font-size: 12px;
             line-height: 1.4;
             color: #f7efff;
             overflow-wrap: anywhere;
@@ -234,31 +230,30 @@
         .bubble__cursor {
             display: inline-block;
             margin-left: 1px;
-            color: var(--label);
+            color: var(--capri-pink);
             animation: blinkBadge 0.8s steps(2, jump-none) infinite;
         }
 
-        /* Registro de interacción / turn log */
+        /* Registro de interacción previo */
         .bubble__log {
             margin: 0;
-            padding: 0;
+            padding: 2px 0 0;
             list-style: none;
-            max-height: 44px;
+            max-height: 38px;
             overflow-y: auto;
-            font-size: 10px;
+            font-size: 9.5px;
             line-height: 1.35;
             letter-spacing: 0.03em;
             border-top: 1px dashed rgba(123, 63, 228, 0.4);
-            padding-top: 3px;
         }
 
         .bubble__row {
             margin: 0;
             overflow-wrap: anywhere;
         }
-        .bubble__row.is-oido { color: var(--accent-green); }
+        .bubble__row.is-oido { color: var(--capri-green); }
         .bubble__row.is-pregunta { color: #e6c15a; }
-        .bubble__row.is-fuko { color: var(--accent); }
+        .bubble__row.is-fuko { color: var(--capri-cyan); }
         .bubble__row.is-sistema { color: #c9a6ff; }
 
         .bubble__tag {
@@ -266,13 +261,13 @@
             margin-right: 5px;
         }
 
-        /* Barra de entrada / prompt bar */
+        /* Prompt de entrada (> tú:) */
         .bubble__prompt {
             display: flex;
             align-items: center;
             gap: 6px;
             padding-top: 4px;
-            border-top: 1px solid rgba(123, 63, 228, 0.5);
+            border-top: 1px solid rgba(123, 63, 228, 0.45);
             margin-top: auto;
         }
 
@@ -281,7 +276,7 @@
             font-size: 11px;
             font-weight: 700;
             letter-spacing: 0.08em;
-            color: var(--line);
+            color: var(--capri-violet);
             pointer-events: none;
         }
 
@@ -294,7 +289,7 @@
             background: transparent;
             color: #fff;
             font-family: inherit;
-            font-size: 12px;
+            font-size: 11.5px;
             outline: none;
             user-select: text;
         }
@@ -305,11 +300,11 @@
 
         .bubble__mode-btn {
             flex: none;
-            font-size: 9px;
-            padding: 2px 7px;
+            font-size: 8.5px;
+            padding: 2px 6px;
             background: rgba(94, 246, 255, 0.14);
             border: 1px solid rgba(94, 246, 255, 0.5);
-            color: var(--accent);
+            color: var(--capri-cyan);
             cursor: pointer;
             letter-spacing: 0.08em;
             clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
@@ -318,8 +313,8 @@
 
         .bubble__mode-btn:hover {
             background: rgba(255, 45, 111, 0.25);
-            border-color: var(--label);
-            color: var(--label);
+            border-color: var(--capri-pink);
+            color: var(--capri-pink);
         }
     </style>
 </head>
@@ -329,7 +324,7 @@
         <!-- Pestaña draggable -->
         <div class="bubble__tab" data-tauri-drag-region>
             <span class="bubble__title" data-tauri-drag-region>FUKO.SYS // MENSAJE</span>
-            <button class="bubble__close-btn" id="bubble-close-btn" title="Minimizar">×</button>
+            <button class="bubble__close-btn" id="bubble-close-btn" title="Cerrar">×</button>
         </div>
 
         <div class="bubble__body">
@@ -338,7 +333,7 @@
 
             <header class="bubble__head" data-tauri-drag-region>
                 <figure class="bubble__logo" data-tauri-drag-region>
-                    <img src="icons/capri.png" alt="Capri / Fuko">
+                    <img src="icons/capri.png" alt="Fuko / Capri">
                 </figure>
                 <div class="bubble__meta" data-tauri-drag-region>
                     <span class="bubble__model" id="bubble-model">⚡ AUTO</span>
@@ -346,11 +341,11 @@
                 </div>
             </header>
 
-            <!-- Bloque de texto separado para Fuko -->
-            <div class="bubble__speech-block">
+            <!-- Bloque de texto para Fuko -->
+            <div class="bubble__speech-area">
                 <span class="bubble__speaker">FUKO &gt;</span>
                 <p class="bubble__line">
-                    <span class="bubble__text" id="bubble-reply">Aquí estoy, humanito. Conectada a tu cerebro y a OpenClaw.</span><span class="bubble__cursor" id="bubble-caret" aria-hidden="true">▌</span>
+                    <span class="bubble__text" id="bubble-reply"></span><span class="bubble__cursor" id="bubble-caret" aria-hidden="true">▌</span>
                 </p>
             </div>
 
@@ -390,12 +385,11 @@
         };
         let currentBrainMode = 'auto';
 
-        // Máquina de escribir
-        let fullReplyText = 'Aquí estoy, humanito. Conectada a tu cerebro y a OpenClaw.';
-        let revealedChars = fullReplyText.length;
+        let fullReplyText = '';
+        let revealedChars = 0;
         let isThinking = false;
         let typeTimer = null;
-        const CHARS_PER_SEC = 38;
+        const CHARS_PER_SEC = 42;
 
         function addLogEntry(kind, text) {
             if (!bubbleLog || !text) return;
@@ -413,7 +407,7 @@
             li.appendChild(tag);
             li.appendChild(body);
             bubbleLog.appendChild(li);
-            while (bubbleLog.children.length > 5) {
+            while (bubbleLog.children.length > 4) {
                 bubbleLog.removeChild(bubbleLog.firstChild);
             }
             bubbleLog.scrollTop = bubbleLog.scrollHeight;
@@ -431,8 +425,7 @@
             clearInterval(typeTimer);
             isThinking = false;
 
-            // Extraer y procesar tags de ánimo ([burla], [emocion], [aburrida], [seria])
-            let clean = text || '';
+            let clean = (text || '').trim();
             let moodMatch = clean.match(/^\[(burla|emocion|aburrida|seria)\]\s*/i);
             if (moodMatch) {
                 clean = clean.replace(moodMatch[0], '');
@@ -451,7 +444,7 @@
             revealedChars = 0;
             bubbleReply.innerText = '';
             setBubbleState('HABLANDO');
-            addLogEntry('fuko', clean);
+            if (clean) addLogEntry('fuko', clean);
 
             const intervalMs = Math.round(1000 / CHARS_PER_SEC);
             typeTimer = setInterval(() => {
@@ -514,13 +507,24 @@
             } catch (_) {}
         });
 
-        // Eventos de Tauri recibidos
+        // Eventos recibidos desde el avatar / sistema
         listen('avatar_speak', (e) => {
             const data = e.payload || {};
             const msg = typeof data === 'string' ? data : (data.message || '');
             const model = typeof data === 'object' ? (data.model || '') : '';
-            invoke('show_bubble_window_cmd', { show: true });
-            startTypewriter(msg, model);
+            const thinking = typeof data === 'object' ? !!data.thinking : false;
+            const heard = typeof data === 'object' ? (data.heard || '') : '';
+
+            if (heard) addLogEntry('pregunta', heard);
+
+            if (thinking) {
+                isThinking = true;
+                setBubbleState('PENSANDO');
+                bubbleReply.innerText = 'pensando...';
+                bubbleCaret.style.display = 'inline-block';
+            } else {
+                startTypewriter(msg, model);
+            }
         });
 
         listen('ears_speech_recognized', (e) => {
@@ -532,8 +536,7 @@
         });
 
         listen('focus_bubble_input', () => {
-            invoke('show_bubble_window_cmd', { show: true, focus: true });
-            setTimeout(() => bubbleInput.focus(), 80);
+            setTimeout(() => bubbleInput.focus(), 60);
         });
 
         listen('ai_status_updated', (e) => {
@@ -544,7 +547,7 @@
             }
         });
 
-        // Al iniciar, cargar estado inicial
+        // Inicializar modo IA
         (async () => {
             try {
                 const st = await invoke('get_ai_status_cmd');

@@ -8,11 +8,11 @@ use tauri::{
 };
 
 pub const WINDOW_NAME: &str = "overlay_window";
-pub const OVERLAY_WIDTH: i32 = 270;
-pub const OVERLAY_HEIGHT: i32 = 290;
+pub const OVERLAY_WIDTH: i32 = 320;
+pub const OVERLAY_HEIGHT: i32 = 380;
 
 pub const BUBBLE_WINDOW_NAME: &str = "bubble_window";
-pub const BUBBLE_WIDTH: i32 = 450;
+pub const BUBBLE_WIDTH: i32 = 440;
 pub const BUBBLE_HEIGHT: i32 = 260;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -141,7 +141,7 @@ pub fn setup_window<R: tauri::Runtime>(app_handle: &AppHandle<R>) -> Result<(), 
         }));
         let _ = existing_b.set_always_on_top(true);
         let _ = existing_b.set_skip_taskbar(true);
-        let _ = existing_b.show();
+        let _ = existing_b.hide();
         existing_b
     } else {
         WebviewWindowBuilder::new(
@@ -150,8 +150,8 @@ pub fn setup_window<R: tauri::Runtime>(app_handle: &AppHandle<R>) -> Result<(), 
             WebviewUrl::App("bubble.html".into()),
         )
         .title("Fuko Dialogue")
-        .visible(true)
-        .resizable(true)
+        .visible(false)
+        .resizable(false)
         .decorations(false)
         .transparent(true)
         .skip_taskbar(true)
