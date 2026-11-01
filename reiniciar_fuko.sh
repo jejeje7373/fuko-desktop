@@ -33,7 +33,7 @@ fi
 chmod +x "$LAUNCHER"
 
 echo -e "${BLUE}[3/3] Iniciando Fuko en segundo plano...${NC}"
-nohup "$LAUNCHER" > "$HOME/.openclaw/workspace/claudia-desktop/fuko.log" 2>&1 &
+nohup setsid "$LAUNCHER" > "$HOME/.openclaw/workspace/claudia-desktop/fuko.log" 2>&1 < /dev/null &
 PID=$!
 
 sleep 1.5

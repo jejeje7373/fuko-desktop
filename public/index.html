@@ -386,7 +386,13 @@
         <div class="menu-item" data-action="soul"><span>🧬 Configurar SOUL.md &amp; OpenClaw</span></div>
         <div class="menu-item" data-action="skills"><span>🧩 Ver Skills (OpenClaw + AGY)</span></div>
         <div class="menu-sep"></div>
+        <div class="menu-item" data-action="toggle-floating">
+            <span>🪶 Flotar en el aire (Sin gravedad)</span>
+            <span class="sub" id="menu-floating-val">Desactivado</span>
+        </div>
+        <div class="menu-item" data-action="sit-active-window"><span>🪑 Posarse en ventana activa</span></div>
         <div class="menu-item" data-action="toggle-sit"><span id="menu-sit-text">🪑 Sentarse aquí</span></div>
+        <div class="menu-item" data-action="drop-floor"><span>⬇️ Bajar al suelo</span></div>
         <div class="menu-item" data-action="walk-now"><span>🐾 Caminar por la pantalla</span></div>
         <div class="menu-item" data-action="toggle-dance"><span id="menu-dance-text">🎵 Bailar</span></div>
         <div class="menu-item" data-action="teleport"><span>⚡ Glitch / Teletransportar</span></div>
@@ -536,10 +542,130 @@
         let fallSpeed = 0;
         let fallStep = getNow();
 
-        let seated = false; // Modo perch (sentada) vs de pie
+        let seated = false; // Modo perch (sentada en repisa/ventana) vs de pie
         let dancing = false;
         let musicPlaying = false;
         let napping = false;
+
+        // FÍSICAS AVANZADAS: MODO FLOTACIÓN EN EL AIRE Y BORDES DE VENTANAS
+        let floatingMode = false; // true = levita en el aire donde la dejes; false = gravedad normal
+        let openLedges = [];      // Ventanas abiertas detectadas vía D-Bus
+        let currentSeat = null;   // Ventana sobre la que está sentada actualmente
+
+        // Sincronizar repisas/bordes de ventanas abiertas
+        async function refreshLedges() {
+            try {
+                const ledges = await invoke('get_window_ledges_cmd');
+                if (Array.isArray(ledges)) {
+                    openLedges = ledges;
+                }
+            } catch (_) {}
+        }
+        setInterval(refreshLedges, 800);
+        refreshLedges();
+
+        function findLedgeBelow(hipX, hipY) {
+            let best = null;
+            for (const l of openLedges) {
+                if (hipX >= l.x - 40 && hipX <= l.x + l.width + 40) {
+                    if (l.y >= hipY - 60 && l.y <= geom.floor_y + 100) {
+                        if (!best || l.y < best.y) {
+                            best = l;
+                        }
+                    }
+                }
+            }
+            return best;
+        }
+
+        function findLedgeAt(hipX, hipY) {
+            for (const l of openLedges) {
+                if (hipX >= l.x - 40 && hipX <= l.x + l.width + 40) {
+                    if (Math.abs(hipY - l.y) <= 160) {
+                        return l;
+                    }
+                }
+            }
+            return null;
+        }
+
+        function sitOnLedge(ledge) {
+            falling = false;
+            walking = false;
+            seated = true;
+            currentSeat = {
+                title: ledge.title,
+                wm_class: ledge.wm_class,
+                x: ledge.x,
+                y: ledge.y,
+                width: ledge.width,
+                height: ledge.height
+            };
+
+            const sitX = Math.max(ledge.x + 80, Math.min(geom.win_x + 180, ledge.x + ledge.width - 100));
+            const targetWinX = sitX - 180;
+
+            const stageEl = document.getElementById('pet-stage');
+            if (ledge.y < 350) {
+                const winY = 24;
+                const offsetInside = Math.max(20, Math.min(300, ledge.y - 24 + 140));
+                stageEl.style.bottom = 'auto';
+                stageEl.style.top = `${offsetInside - 180}px`;
+                moveWindowTo(targetWinX, winY);
+            } else {
+                stageEl.style.top = 'auto';
+                stageEl.style.bottom = '24px';
+                const targetWinY = ledge.y - 370;
+                moveWindowTo(targetWinX, targetWinY);
+            }
+
+            playClip('perch_glitch');
+            const cleanTitle = (ledge.title || ledge.wm_class || 'ventana').slice(0, 26);
+            showCapriBubble('(posada)', `Posada en ${cleanTitle}...`, 'perch');
+        }
+
+        function standUp(drop = true) {
+            seated = false;
+            currentSeat = null;
+            const stageEl = document.getElementById('pet-stage');
+            stageEl.style.top = 'auto';
+            stageEl.style.bottom = '24px';
+            playClip('glitch');
+            if (drop && !floatingMode) {
+                startFall();
+            }
+        }
+
+        // Seguimiento dinámico de la ventana donde está sentada
+        setInterval(async () => {
+            if (!seated || !currentSeat || dragging || pointerPressed) return;
+            try {
+                const ledges = await invoke('get_window_ledges_cmd');
+                if (!Array.isArray(ledges)) return;
+                openLedges = ledges;
+
+                const matched = ledges.find(l => 
+                    l.title === currentSeat.title || 
+                    (l.wm_class && l.wm_class === currentSeat.wm_class)
+                );
+
+                if (!matched) {
+                    showCapriBubble('(ventana)', 'La ventana se minimizó o cerró.', 'capri');
+                    standUp(true);
+                    return;
+                }
+
+                const dx = matched.x - currentSeat.x;
+                const dy = matched.y - currentSeat.y;
+                if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+                    currentSeat.x = matched.x;
+                    currentSeat.y = matched.y;
+                    currentSeat.width = matched.width;
+                    currentSeat.height = matched.height;
+                    sitOnLedge(matched);
+                }
+            } catch (_) {}
+        }, 500);
 
         // Caminata autónoma (Walk / CheckWander)
         let walking = false;
@@ -637,6 +763,7 @@
         // 3. FÍSICAS DE GRAVEDAD Y CAMINATA AUTÓNOMA (Fall / Tumble / Walk / Wander)
         // =========================================================================
         function startFall() {
+            if (floatingMode) return;
             walking = false;
             seated = false;
             falling = true;
@@ -646,17 +773,42 @@
         }
 
         function updateFall(now) {
+            if (floatingMode) {
+                falling = false;
+                return;
+            }
             const dt = Math.max(0, Math.min(0.05, now - fallStep));
             fallStep = now;
             fallSpeed += 2500 * dt; // Aceleración gravitatoria de Capri
             const dropPx = Math.ceil(fallSpeed * dt);
-            const targetY = geom.floor_y;
 
-            if (geom.win_y + dropPx >= targetY) {
+            const hipX = geom.win_x + 180;
+            const hipY = geom.win_y + 370;
+
+            // Buscar si hay una repisa de ventana directamente debajo
+            const ledge = findLedgeBelow(hipX, hipY);
+            let targetFloorY = geom.floor_y;
+            let hitLedge = false;
+
+            if (ledge) {
+                const ledgeWinY = ledge.y >= 350 ? (ledge.y - 370) : 24;
+                if (ledgeWinY < targetFloorY) {
+                    targetFloorY = ledgeWinY;
+                    hitLedge = true;
+                }
+            }
+
+            if (geom.win_y + dropPx >= targetFloorY) {
                 falling = false;
-                moveWindowTo(geom.win_x, targetY);
-                // Al aterrizar hace el pequeño glitch de aterrizaje como Capri y pasa a idle
-                playClip('glitch');
+                if (hitLedge && ledge) {
+                    sitOnLedge(ledge);
+                } else {
+                    const stageEl = document.getElementById('pet-stage');
+                    stageEl.style.top = 'auto';
+                    stageEl.style.bottom = '24px';
+                    moveWindowTo(geom.win_x, geom.floor_y);
+                    playClip('glitch');
+                }
             } else {
                 moveWindowTo(geom.win_x, geom.win_y + dropPx);
             }
@@ -730,6 +882,7 @@
             if (wanderLevel <= 0) return;
             if (dragging || pointerPressed || falling || walking || outroCallback || napping || isThinking) return;
             if (typer.classList.contains('open')) return;
+            if (seated || floatingMode) return; // Si está posada en ventana o flotando en el aire, no cae al vacío
 
             const pace = WANDER_PACES[wanderLevel] || 0.5;
             if (nextWander < 0) {
@@ -1040,11 +1193,28 @@
 
             if (dragging) {
                 dragging = false;
-                // Si mantiene Shift presionado al soltarla, se queda sentada ahí mismo (como en Capri)
-                if (e.shiftKey) {
-                    seated = true;
-                    playClip('perch_glitch');
+                const hipX = geom.win_x + 180;
+                const hipY = geom.win_y + 370;
+
+                // 1. Revisar si se soltó sobre o cerca de una ventana abierta
+                const nearbyLedge = findLedgeAt(hipX, hipY) || findLedgeBelow(hipX, hipY - 90);
+                if (nearbyLedge && Math.abs(hipY - nearbyLedge.y) < 180) {
+                    sitOnLedge(nearbyLedge);
+                } else if (floatingMode || e.shiftKey) {
+                    // MANTENERSE EN EL AIRE (Modo Flotación o con tecla Shift)
+                    falling = false;
+                    seated = false;
+                    currentSeat = null;
+                    const stageEl = document.getElementById('pet-stage');
+                    stageEl.style.top = 'auto';
+                    stageEl.style.bottom = '24px';
+                    playClip('idle');
+                    showCapriBubble('(flotando)', 'Flotando en el aire. ¡No me caigo!', 'capri');
                 } else {
+                    // Cae por gravedad hacia una ventana debajo o al suelo
+                    const stageEl = document.getElementById('pet-stage');
+                    stageEl.style.top = 'auto';
+                    stageEl.style.bottom = '24px';
                     startFall();
                 }
             } else {
@@ -1595,6 +1765,7 @@
         // =========================================================================
         window.addEventListener('contextmenu', (e) => {
             e.preventDefault();
+            document.getElementById('menu-floating-val').innerText = floatingMode ? 'Activo 🪶' : 'Desactivado';
             document.getElementById('menu-sit-text').innerText = seated ? '🧍 Levantarse' : '🪑 Sentarse aquí';
             document.getElementById('menu-dance-text').innerText = dancing ? '⏹ Dejar de bailar' : '🎵 Bailar';
             document.getElementById('menu-sleep-text').innerText = (currentClip === 'sleep') ? '☀️ Despertar' : '💤 Ir a dormir';
@@ -1641,10 +1812,50 @@
                         try { await invoke('set_tts_enabled_cmd', { enabled: ttsVoiceEnabled }); } catch (_) {}
                         showCapriBubble('(voz tts)', ttsVoiceEnabled ? 'Voz Piper TTS activada.' : 'Voz en silencio (solo texto).', 'piper-tts');
                         break;
+                    case 'toggle-floating':
+                        floatingMode = !floatingMode;
+                        document.getElementById('menu-floating-val').innerText = floatingMode ? 'Activo 🪶' : 'Desactivado';
+                        if (floatingMode) {
+                            falling = false;
+                            showCapriBubble('(flotación)', 'Modo flotación activado: me mantengo en el aire donde me dejes.', 'capri');
+                        } else {
+                            showCapriBubble('(gravedad)', 'Gravedad activada: caeré a las ventanas o al suelo.', 'capri');
+                            if (!seated) startFall();
+                        }
+                        break;
+                    case 'sit-active-window':
+                        try {
+                            const active = await invoke('get_active_window_cmd');
+                            if (active && active.width > 150) {
+                                sitOnLedge(active);
+                            } else if (openLedges.length > 0) {
+                                sitOnLedge(openLedges[0]);
+                            } else {
+                                showCapriBubble('(ventanas)', 'No detecté ventanas abiertas para posarme.', 'capri');
+                            }
+                        } catch (e) {
+                            showCapriBubble('(ventanas)', 'Error detectando ventana activa: ' + e, 'error');
+                        }
+                        break;
+                    case 'drop-floor':
+                        floatingMode = false;
+                        document.getElementById('menu-floating-val').innerText = 'Desactivado';
+                        standUp(true);
+                        break;
                     case 'toggle-sit':
-                        walking = false;
-                        seated = !seated;
-                        playClip(seated ? 'perch_glitch' : 'glitch');
+                        if (seated) {
+                            standUp(true);
+                        } else {
+                            const hipX = geom.win_x + 180;
+                            const hipY = geom.win_y + 370;
+                            const ledge = findLedgeAt(hipX, hipY) || findLedgeBelow(hipX, hipY - 60);
+                            if (ledge) {
+                                sitOnLedge(ledge);
+                            } else {
+                                seated = true;
+                                playClip('perch_glitch');
+                            }
+                        }
                         break;
                     case 'walk-now':
                         startStroll();

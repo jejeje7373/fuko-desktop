@@ -197,3 +197,89 @@ pub async fn quit_app_cmd(app_handle: AppHandle<tauri::Wry>) -> Result<(), Strin
     app_handle.exit(0);
     Ok(())
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WindowLedge {
+    pub title: String,
+    pub wm_class: String,
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
+    #[serde(default)]
+    pub maximized: bool,
+}
+
+/// Obtiene la lista de repisas/bordes de ventanas abiertas (Wayland vía ClaudiaPerch)
+#[tauri::command]
+pub async fn get_window_ledges_cmd() -> Result<Vec<WindowLedge>, String> {
+    let out = tokio::process::Command::new("gdbus")
+        .args([
+            "call",
+            "--session",
+            "--dest",
+            "org.openclaw.ClaudiaPerch",
+            "--object-path",
+            "/org/openclaw/ClaudiaPerch",
+            "--method",
+            "org.openclaw.ClaudiaPerch.GetLedges",
+        ])
+        .output()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let raw = String::from_utf8_lossy(&out.stdout);
+    if let (Some(start), Some(end)) = (raw.find('['), raw.rfind(']')) {
+        let slice = &raw[start..=end];
+        let unescaped = slice.replace("\\\"", "\"");
+        if let Ok(ledges) = serde_json::from_str::<Vec<WindowLedge>>(&unescaped) {
+            let filtered: Vec<WindowLedge> = ledges
+                .into_iter()
+                .filter(|l| {
+                    let w_lower = l.wm_class.to_lowercase();
+                    let t_lower = l.title.to_lowercase();
+                    w_lower != "gjs"
+                        && !w_lower.contains("claudia")
+                        && !w_lower.contains("fuko")
+                        && !t_lower.contains("desktop icons")
+                        && l.width > 200
+                        && l.height > 100
+                })
+                .collect();
+            return Ok(filtered);
+        }
+    }
+    Ok(vec![])
+}
+
+/// Obtiene la ventana actualmente activa/enfocada
+#[tauri::command]
+pub async fn get_active_window_cmd() -> Result<Option<WindowLedge>, String> {
+    let out = tokio::process::Command::new("gdbus")
+        .args([
+            "call",
+            "--session",
+            "--dest",
+            "org.openclaw.ClaudiaPerch",
+            "--object-path",
+            "/org/openclaw/ClaudiaPerch",
+            "--method",
+            "org.openclaw.ClaudiaPerch.GetActiveWindow",
+        ])
+        .output()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let raw = String::from_utf8_lossy(&out.stdout);
+    if let (Some(start), Some(end)) = (raw.find('{'), raw.rfind('}')) {
+        let slice = &raw[start..=end];
+        let unescaped = slice.replace("\\\"", "\"");
+        if let Ok(win) = serde_json::from_str::<WindowLedge>(&unescaped) {
+            if win.width > 150 && win.height > 100 {
+                return Ok(Some(win));
+            }
+        }
+    }
+    Ok(None)
+}
+
