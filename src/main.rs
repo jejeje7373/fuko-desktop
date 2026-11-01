@@ -158,6 +158,9 @@ pub fn run() {
             // Window & Physics commands
             overlay_window::get_desktop_geometry_cmd,
             overlay_window::move_overlay_window_cmd,
+            overlay_window::show_bubble_window_cmd,
+            overlay_window::position_bubble_near_avatar_cmd,
+            overlay_window::move_bubble_window_cmd,
             overlay_window::get_window_ledges_cmd,
             overlay_window::get_active_window_cmd,
             overlay_window::open_mainframe_cmd,

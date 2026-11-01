@@ -11,9 +11,9 @@
     "windows": [
       {
         "label": "overlay_window",
-        "title": "Claudia",
-        "width": 360,
-        "height": 420,
+        "title": "Fuko",
+        "width": 270,
+        "height": 290,
         "resizable": false,
         "decorations": false,
         "transparent": true,
@@ -21,6 +21,19 @@
         "alwaysOnTop": true,
         "visible": true,
         "url": "index.html"
+      },
+      {
+        "label": "bubble_window",
+        "title": "Fuko Dialogue",
+        "width": 450,
+        "height": 260,
+        "resizable": true,
+        "decorations": false,
+        "transparent": true,
+        "skipTaskbar": true,
+        "alwaysOnTop": true,
+        "visible": true,
+        "url": "bubble.html"
       }
     ],
     "security": {

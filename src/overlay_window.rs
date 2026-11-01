@@ -8,8 +8,12 @@ use tauri::{
 };
 
 pub const WINDOW_NAME: &str = "overlay_window";
-pub const OVERLAY_WIDTH: i32 = 360;
-pub const OVERLAY_HEIGHT: i32 = 420;
+pub const OVERLAY_WIDTH: i32 = 270;
+pub const OVERLAY_HEIGHT: i32 = 290;
+
+pub const BUBBLE_WINDOW_NAME: &str = "bubble_window";
+pub const BUBBLE_WIDTH: i32 = 450;
+pub const BUBBLE_HEIGHT: i32 = 260;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DesktopGeometry {
@@ -78,8 +82,8 @@ pub fn setup_window<R: tauri::Runtime>(app_handle: &AppHandle<R>) -> Result<(), 
     let geom = query_geometry(app_handle);
 
     // En Capri Desktop, al iniciar aparece arriba/centro-derecha y cae con gravedad hasta el suelo (floor_y)
-    let start_x = (geom.screen_width as f64 * 0.68) as i32;
-    let start_y = (geom.screen_height as f64 * 0.18) as i32;
+    let start_x = (geom.screen_width as f64 * 0.72) as i32;
+    let start_y = (geom.screen_height as f64 * 0.22) as i32;
 
     let window = if let Some(existing) = app_handle.get_webview_window(WINDOW_NAME) {
         let _ = existing.set_size(tauri::Size::Physical(tauri::PhysicalSize {
@@ -122,6 +126,42 @@ pub fn setup_window<R: tauri::Runtime>(app_handle: &AppHandle<R>) -> Result<(), 
         }
     });
 
+    // Ventana de Diálogo Cyberpunk Separada (MtGhozt/Capri-Desktop)
+    let bubble_start_x = (start_x - BUBBLE_WIDTH - 24).max(16);
+    let bubble_start_y = (start_y - 20).max(36);
+
+    let _bubble_win = if let Some(existing_b) = app_handle.get_webview_window(BUBBLE_WINDOW_NAME) {
+        let _ = existing_b.set_size(tauri::Size::Physical(tauri::PhysicalSize {
+            width: BUBBLE_WIDTH as u32,
+            height: BUBBLE_HEIGHT as u32,
+        }));
+        let _ = existing_b.set_position(Position::Physical(PhysicalPosition {
+            x: bubble_start_x,
+            y: bubble_start_y,
+        }));
+        let _ = existing_b.set_always_on_top(true);
+        let _ = existing_b.set_skip_taskbar(true);
+        let _ = existing_b.show();
+        existing_b
+    } else {
+        WebviewWindowBuilder::new(
+            app_handle,
+            BUBBLE_WINDOW_NAME,
+            WebviewUrl::App("bubble.html".into()),
+        )
+        .title("Fuko Dialogue")
+        .visible(true)
+        .resizable(true)
+        .decorations(false)
+        .transparent(true)
+        .skip_taskbar(true)
+        .always_on_top(true)
+        .inner_size(BUBBLE_WIDTH as f64, BUBBLE_HEIGHT as f64)
+        .position(bubble_start_x as f64, bubble_start_y as f64)
+        .build()
+        .map_err(|e| format!("Failed to build bubble window: {}", e))?
+    };
+
     Ok(())
 }
 
@@ -159,6 +199,63 @@ pub async fn move_overlay_window_cmd(
         window
             .set_position(Position::Physical(PhysicalPosition { x, y }))
             .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn show_bubble_window_cmd(
+    show: bool,
+    focus: Option<bool>,
+    app_handle: AppHandle<tauri::Wry>,
+) -> Result<(), String> {
+    if let Some(bw) = app_handle.get_webview_window(BUBBLE_WINDOW_NAME) {
+        if show {
+            let _ = bw.show();
+            if focus.unwrap_or(false) {
+                let _ = bw.set_focus();
+            }
+        } else {
+            let _ = bw.hide();
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn position_bubble_near_avatar_cmd(
+    app_handle: AppHandle<tauri::Wry>,
+) -> Result<(), String> {
+    let geom = query_geometry(&app_handle);
+    if let Some(bw) = app_handle.get_webview_window(BUBBLE_WINDOW_NAME) {
+        let (target_x, target_y) = if geom.win_x > geom.screen_width / 2 {
+            (
+                (geom.win_x - BUBBLE_WIDTH - 24).max(16),
+                (geom.win_y - 20).clamp(36, geom.screen_height - BUBBLE_HEIGHT - 20),
+            )
+        } else {
+            (
+                (geom.win_x + OVERLAY_WIDTH + 24).min(geom.screen_width - BUBBLE_WIDTH - 16),
+                (geom.win_y - 20).clamp(36, geom.screen_height - BUBBLE_HEIGHT - 20),
+            )
+        };
+        let _ = bw.set_position(Position::Physical(PhysicalPosition {
+            x: target_x,
+            y: target_y,
+        }));
+        let _ = bw.show();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn move_bubble_window_cmd(
+    x: i32,
+    y: i32,
+    app_handle: AppHandle<tauri::Wry>,
+) -> Result<(), String> {
+    if let Some(bw) = app_handle.get_webview_window(BUBBLE_WINDOW_NAME) {
+        let _ = bw.set_position(Position::Physical(PhysicalPosition { x, y }));
     }
     Ok(())
 }

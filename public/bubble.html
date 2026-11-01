@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuko // Diálogo Cyberpunk</title>
+    <style>
+        :root {
+            --bg: #09030f;
+            --panel: #140a1f;
+            --line: #7b3fe4;
+            --label: #ff2d6f;
+            --accent: #5ef6ff;
+            --accent-green: #3dff8f;
+            --muted: #a78ba9;
+            --title: #ffffff;
+            --tab-h: 24px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: transparent !important;
+            font-family: 'Share Tech Mono', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+        }
+
+        /* Contenedor Cyberpunk de la Burbuja (MtGhozt/Capri-Desktop) */
+        .bubble {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            color: #efe8ff;
+            filter: drop-shadow(0 0 12px rgba(255, 45, 111, 0.45)) drop-shadow(0 0 8px rgba(94, 246, 255, 0.3));
+        }
+
+        /* Pestaña superior Cyberpunk (Handle para arrastrar por toda la pantalla) */
+        .bubble__tab {
+            position: relative;
+            z-index: 2;
+            width: 58%;
+            min-height: var(--tab-h);
+            padding: 4px 10px 3px 12px;
+            background: rgba(11, 6, 18, 0.96);
+            color: var(--label);
+            clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 100%, 0 100%);
+            box-shadow: inset 0 0 0 1px rgba(123, 63, 228, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: grab;
+        }
+
+        .bubble__tab:active {
+            cursor: grabbing;
+        }
+
+        .bubble__title {
+            font-size: 10px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            font-weight: 700;
+            pointer-events: none;
+        }
+
+        .bubble__close-btn {
+            background: transparent;
+            border: none;
+            color: var(--label);
+            font-size: 14px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0 4px;
+            font-weight: 700;
+            transition: transform 0.1s;
+        }
+
+        .bubble__close-btn:hover {
+            transform: scale(1.2);
+            color: #fff;
+        }
+
+        /* Cuerpo principal Cyberpunk */
+        .bubble__body {
+            position: relative;
+            margin-top: -1px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            padding: 10px 14px 10px 14px;
+            background: rgba(9, 4, 15, 0.94);
+            box-shadow:
+                inset 0 0 0 1px rgba(123, 63, 228, 0.85),
+                0 0 14px rgba(255, 45, 111, 0.3);
+            clip-path: polygon(
+                0 0,
+                58% 0,
+                calc(58% + 16px) 0,
+                100% 0,
+                100% 100%,
+                0 100%
+            );
+        }
+
+        /* Brackets en las cuatro esquinas estilo HUD */
+        .bubble__brackets {
+            pointer-events: none;
+            position: absolute;
+            inset: 5px 6px;
+            background:
+                linear-gradient(var(--label), var(--label)) top left / 10px 1.5px no-repeat,
+                linear-gradient(var(--label), var(--label)) top left / 1.5px 10px no-repeat,
+                linear-gradient(var(--label), var(--label)) top right / 10px 1.5px no-repeat,
+                linear-gradient(var(--label), var(--label)) top right / 1.5px 10px no-repeat,
+                linear-gradient(var(--label), var(--label)) bottom left / 10px 1.5px no-repeat,
+                linear-gradient(var(--label), var(--label)) bottom left / 1.5px 10px no-repeat,
+                linear-gradient(var(--label), var(--label)) bottom right / 10px 1.5px no-repeat,
+                linear-gradient(var(--label), var(--label)) bottom right / 1.5px 10px no-repeat;
+        }
+
+        /* Scanlines CRT */
+        .bubble__scan {
+            pointer-events: none;
+            position: absolute;
+            inset: 0;
+            opacity: 0.18;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent 0 2px,
+                rgba(94, 246, 255, 0.12) 2px 3px
+            );
+        }
+
+        /* Header con Logo oficial de Capri y Badge de estado */
+        .bubble__head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            cursor: grab;
+        }
+
+        .bubble__logo {
+            width: 26px;
+            height: 26px;
+            flex: none;
+            background: #110816;
+            clip-path: polygon(18% 0, 100% 0, 100% 82%, 82% 100%, 0 100%, 0 18%);
+            border: 1px solid rgba(123, 63, 228, 0.7);
+            pointer-events: none;
+        }
+
+        .bubble__logo img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            clip-path: polygon(18% 0, 100% 0, 100% 82%, 82% 100%, 0 100%, 0 18%);
+        }
+
+        .bubble__meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .bubble__model {
+            font-size: 9.5px;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+            text-transform: uppercase;
+        }
+
+        .bubble__badge {
+            font-size: 9px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--line);
+            font-weight: 700;
+        }
+
+        .bubble[data-state='LISTENING'] .bubble__badge { color: #e6c15a; }
+        .bubble[data-state='THINKING'] .bubble__badge { color: var(--label); animation: blinkBadge 0.7s steps(2, jump-none) infinite; }
+        .bubble[data-state='TALKING'] .bubble__badge { color: var(--accent-green); animation: blinkBadge 0.7s steps(2, jump-none) infinite; }
+        .bubble[data-state='ONLINE'] .bubble__badge { color: var(--accent); }
+
+        @keyframes blinkBadge {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.35; }
+        }
+
+        /* Bloque de texto separado para Fuko */
+        .bubble__speech-block {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            background: rgba(20, 10, 32, 0.75);
+            border-left: 2.5px solid var(--label);
+            padding: 6px 10px;
+            box-shadow: inset 0 0 10px rgba(123, 63, 228, 0.2);
+            min-height: 48px;
+            max-height: 85px;
+            overflow-y: auto;
+        }
+
+        .bubble__speaker {
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            color: var(--label);
+        }
+
+        .bubble__line {
+            font-size: 12.5px;
+            line-height: 1.4;
+            color: #f7efff;
+            overflow-wrap: anywhere;
+        }
+
+        .bubble__cursor {
+            display: inline-block;
+            margin-left: 1px;
+            color: var(--label);
+            animation: blinkBadge 0.8s steps(2, jump-none) infinite;
+        }
+
+        /* Registro de interacción / turn log */
+        .bubble__log {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            max-height: 44px;
+            overflow-y: auto;
+            font-size: 10px;
+            line-height: 1.35;
+            letter-spacing: 0.03em;
+            border-top: 1px dashed rgba(123, 63, 228, 0.4);
+            padding-top: 3px;
+        }
+
+        .bubble__row {
+            margin: 0;
+            overflow-wrap: anywhere;
+        }
+        .bubble__row.is-oido { color: var(--accent-green); }
+        .bubble__row.is-pregunta { color: #e6c15a; }
+        .bubble__row.is-fuko { color: var(--accent); }
+        .bubble__row.is-sistema { color: #c9a6ff; }
+
+        .bubble__tag {
+            font-weight: 700;
+            margin-right: 5px;
+        }
+
+        /* Barra de entrada / prompt bar */
+        .bubble__prompt {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding-top: 4px;
+            border-top: 1px solid rgba(123, 63, 228, 0.5);
+            margin-top: auto;
+        }
+
+        .bubble__you {
+            flex: none;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: var(--line);
+            pointer-events: none;
+        }
+
+        .bubble__field {
+            flex: 1;
+            min-width: 0;
+            appearance: none;
+            border: 0;
+            padding: 3px 0;
+            background: transparent;
+            color: #fff;
+            font-family: inherit;
+            font-size: 12px;
+            outline: none;
+            user-select: text;
+        }
+
+        .bubble__field::placeholder {
+            color: rgba(167, 139, 169, 0.55);
+        }
+
+        .bubble__mode-btn {
+            flex: none;
+            font-size: 9px;
+            padding: 2px 7px;
+            background: rgba(94, 246, 255, 0.14);
+            border: 1px solid rgba(94, 246, 255, 0.5);
+            color: var(--accent);
+            cursor: pointer;
+            letter-spacing: 0.08em;
+            clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
+            transition: all 0.12s;
+        }
+
+        .bubble__mode-btn:hover {
+            background: rgba(255, 45, 111, 0.25);
+            border-color: var(--label);
+            color: var(--label);
+        }
+    </style>
+</head>
+<body>
+
+    <aside id="bubble" class="bubble" data-state="ONLINE">
+        <!-- Pestaña draggable -->
+        <div class="bubble__tab" data-tauri-drag-region>
+            <span class="bubble__title" data-tauri-drag-region>FUKO.SYS // MENSAJE</span>
+            <button class="bubble__close-btn" id="bubble-close-btn" title="Minimizar">×</button>
+        </div>
+
+        <div class="bubble__body">
+            <div class="bubble__brackets" aria-hidden="true"></div>
+            <div class="bubble__scan" aria-hidden="true"></div>
+
+            <header class="bubble__head" data-tauri-drag-region>
+                <figure class="bubble__logo" data-tauri-drag-region>
+                    <img src="icons/capri.png" alt="Capri / Fuko">
+                </figure>
+                <div class="bubble__meta" data-tauri-drag-region>
+                    <span class="bubble__model" id="bubble-model">⚡ AUTO</span>
+                    <span class="bubble__badge bubble__state" id="bubble-state">EN ESPERA</span>
+                </div>
+            </header>
+
+            <!-- Bloque de texto separado para Fuko -->
+            <div class="bubble__speech-block">
+                <span class="bubble__speaker">FUKO &gt;</span>
+                <p class="bubble__line">
+                    <span class="bubble__text" id="bubble-reply">Aquí estoy, humanito. Conectada a tu cerebro y a OpenClaw.</span><span class="bubble__cursor" id="bubble-caret" aria-hidden="true">▌</span>
+                </p>
+            </div>
+
+            <!-- Registro de interacciones previas -->
+            <ol class="bubble__log" id="bubble-log" aria-live="polite"></ol>
+
+            <!-- Prompt de entrada -->
+            <div class="bubble__prompt">
+                <span class="bubble__you">TÚ &gt;</span>
+                <input class="bubble__field" id="bubble-input" type="text" maxlength="500" placeholder="escribe algo… (Enter para enviar)" autocomplete="off" spellcheck="false">
+                <span class="bubble__mode-btn" id="bubble-mode-pill" title="Click para alternar motor IA">⚡ AUTO</span>
+            </div>
+        </div>
+    </aside>
+
+    <script>
+        const tauri = window.__TAURI__ || null;
+        const invoke = tauri ? tauri.core.invoke : async () => ({});
+        const listen = tauri ? tauri.event.listen : () => {};
+
+        const bubbleEl = document.getElementById('bubble');
+        const bubbleModel = document.getElementById('bubble-model');
+        const bubbleState = document.getElementById('bubble-state');
+        const bubbleReply = document.getElementById('bubble-reply');
+        const bubbleCaret = document.getElementById('bubble-caret');
+        const bubbleLog = document.getElementById('bubble-log');
+        const bubbleInput = document.getElementById('bubble-input');
+        const bubbleModePill = document.getElementById('bubble-mode-pill');
+        const bubbleCloseBtn = document.getElementById('bubble-close-btn');
+
+        const BRAIN_MODES = ['auto', 'argon', 'openclaw', 'ollama'];
+        const BRAIN_LABELS = {
+            auto: '⚡ AUTO',
+            argon: '💎 GEMINI 4 ARGON',
+            openclaw: '🦞 OPENCLAW',
+            ollama: '🏠 OLLAMA'
+        };
+        let currentBrainMode = 'auto';
+
+        // Máquina de escribir
+        let fullReplyText = 'Aquí estoy, humanito. Conectada a tu cerebro y a OpenClaw.';
+        let revealedChars = fullReplyText.length;
+        let isThinking = false;
+        let typeTimer = null;
+        const CHARS_PER_SEC = 38;
+
+        function addLogEntry(kind, text) {
+            if (!bubbleLog || !text) return;
+            const li = document.createElement('li');
+            li.className = `bubble__row is-${kind}`;
+            const tag = document.createElement('span');
+            tag.className = 'bubble__tag';
+            let label = '[TÚ]';
+            if (kind === 'oido') label = '[OÍDO]';
+            else if (kind === 'fuko') label = '[FUKO]';
+            else if (kind === 'sistema') label = '[SISTEMA]';
+            tag.textContent = label;
+            const body = document.createElement('span');
+            body.textContent = ` ${text}`;
+            li.appendChild(tag);
+            li.appendChild(body);
+            bubbleLog.appendChild(li);
+            while (bubbleLog.children.length > 5) {
+                bubbleLog.removeChild(bubbleLog.firstChild);
+            }
+            bubbleLog.scrollTop = bubbleLog.scrollHeight;
+        }
+
+        function setBubbleState(stateName) {
+            bubbleState.innerText = stateName;
+            if (stateName === 'PENSANDO') bubbleEl.setAttribute('data-state', 'THINKING');
+            else if (stateName === 'HABLANDO') bubbleEl.setAttribute('data-state', 'TALKING');
+            else if (stateName === 'LISTENING') bubbleEl.setAttribute('data-state', 'LISTENING');
+            else bubbleEl.setAttribute('data-state', 'ONLINE');
+        }
+
+        function startTypewriter(text, model = '') {
+            clearInterval(typeTimer);
+            isThinking = false;
+
+            // Extraer y procesar tags de ánimo ([burla], [emocion], [aburrida], [seria])
+            let clean = text || '';
+            let moodMatch = clean.match(/^\[(burla|emocion|aburrida|seria)\]\s*/i);
+            if (moodMatch) {
+                clean = clean.replace(moodMatch[0], '');
+            }
+
+            if (model) {
+                let badge = model;
+                if (model.includes('argon')) badge = 'GEMINI 4 ARGON';
+                else if (model.includes('nemotron')) badge = 'OPENCLAW NEMOTRON';
+                else if (model.includes('bolt')) badge = 'OPENCLAW BOLT';
+                else if (model.includes('skills')) badge = 'SKILLS+HANDS';
+                bubbleModel.innerText = badge;
+            }
+
+            fullReplyText = clean;
+            revealedChars = 0;
+            bubbleReply.innerText = '';
+            setBubbleState('HABLANDO');
+            addLogEntry('fuko', clean);
+
+            const intervalMs = Math.round(1000 / CHARS_PER_SEC);
+            typeTimer = setInterval(() => {
+                revealedChars = Math.min(fullReplyText.length, revealedChars + 1);
+                bubbleReply.innerText = fullReplyText.slice(0, revealedChars);
+                if (revealedChars >= fullReplyText.length) {
+                    clearInterval(typeTimer);
+                    bubbleCaret.style.display = 'none';
+                    setBubbleState('EN ESPERA');
+                } else {
+                    bubbleCaret.style.display = 'inline-block';
+                }
+            }, intervalMs);
+        }
+
+        async function submitUserMessage() {
+            const text = bubbleInput.value.trim();
+            if (!text || isThinking) return;
+            bubbleInput.value = '';
+
+            addLogEntry('pregunta', text);
+            isThinking = true;
+            setBubbleState('PENSANDO');
+            bubbleReply.innerText = 'pensando...';
+            bubbleCaret.style.display = 'inline-block';
+
+            try {
+                const res = await invoke('send_chat_message', {
+                    message: text,
+                    mode: currentBrainMode
+                });
+                startTypewriter(res.reply, res.model_used);
+            } catch (err) {
+                startTypewriter(`Mi cromo tuvo un glitch: ${err}`, 'error');
+            }
+        }
+
+        bubbleInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitUserMessage();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                invoke('show_bubble_window_cmd', { show: false });
+            }
+        });
+
+        bubbleCloseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            invoke('show_bubble_window_cmd', { show: false });
+        });
+
+        bubbleModePill.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const nextIdx = (BRAIN_MODES.indexOf(currentBrainMode) + 1) % BRAIN_MODES.length;
+            currentBrainMode = BRAIN_MODES[nextIdx];
+            bubbleModePill.innerText = BRAIN_LABELS[currentBrainMode] || '⚡ AUTO';
+            try {
+                await invoke('set_ai_mode_cmd', { mode: currentBrainMode });
+            } catch (_) {}
+        });
+
+        // Eventos de Tauri recibidos
+        listen('avatar_speak', (e) => {
+            const data = e.payload || {};
+            const msg = typeof data === 'string' ? data : (data.message || '');
+            const model = typeof data === 'object' ? (data.model || '') : '';
+            invoke('show_bubble_window_cmd', { show: true });
+            startTypewriter(msg, model);
+        });
+
+        listen('ears_speech_recognized', (e) => {
+            const heard = String(e.payload || '').trim();
+            if (heard) {
+                addLogEntry('oido', heard);
+                setBubbleState('PENSANDO');
+            }
+        });
+
+        listen('focus_bubble_input', () => {
+            invoke('show_bubble_window_cmd', { show: true, focus: true });
+            setTimeout(() => bubbleInput.focus(), 80);
+        });
+
+        listen('ai_status_updated', (e) => {
+            const st = e.payload || {};
+            if (st.mode && BRAIN_MODES.includes(st.mode)) {
+                currentBrainMode = st.mode;
+                bubbleModePill.innerText = BRAIN_LABELS[currentBrainMode] || '⚡ AUTO';
+            }
+        });
+
+        // Al iniciar, cargar estado inicial
+        (async () => {
+            try {
+                const st = await invoke('get_ai_status_cmd');
+                if (st && st.mode) {
+                    currentBrainMode = st.mode;
+                    bubbleModePill.innerText = BRAIN_LABELS[currentBrainMode] || '⚡ AUTO';
+                }
+            } catch (_) {}
+        })();
+    </script>
+</body>
+</html>

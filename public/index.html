@@ -22,298 +22,23 @@
         }
 
         /* =========================================================
-           CAPRI CYBERPUNK MESSAGE BUBBLE & SEPARATED TEXT BLOCK
-           (Adaptado fielmente de MtGhozt/Capri-Desktop)
-           ========================================================= */
-        .bubble {
-            --tab-h: 22px;
-            --capri-pink: #ff2d6f;
-            --capri-violet: #7b3fe4;
-            --capri-green: #3dff8f;
-            --capri-cyan: #5ef6ff;
-            position: absolute;
-            top: 8px;
-            left: 10px;
-            right: 10px;
-            z-index: 2000;
-            color: #efe8ff;
-            font-family: 'Share Tech Mono', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
-            pointer-events: none;
-            opacity: 0;
-            transform: translateY(6px);
-            transition: opacity 0.16s ease, transform 0.16s ease;
-            filter: drop-shadow(0 0 12px rgba(255, 45, 111, 0.45)) drop-shadow(0 0 8px rgba(94, 246, 255, 0.3));
-        }
-
-        .bubble.visible {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
-        }
-
-        .bubble__tab {
-            position: relative;
-            z-index: 1;
-            width: 52%;
-            min-height: var(--tab-h);
-            padding: 4px 12px 3px 10px;
-            background: rgba(11, 6, 18, 0.94);
-            color: var(--capri-pink);
-            clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 100%, 0 100%);
-            box-shadow: inset 0 0 0 1px rgba(123, 63, 228, 0.85);
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .bubble__title {
-            display: block;
-            font-size: 9.5px;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            font-weight: 700;
-        }
-
-        .bubble__body {
-            position: relative;
-            margin-top: -1px;
-            display: flex;
-            flex-direction: column;
-            gap: 7px;
-            padding: 9px 12px 10px 12px;
-            background: rgba(9, 4, 15, 0.94);
-            box-shadow:
-                inset 0 0 0 1px rgba(123, 63, 228, 0.85),
-                0 0 14px rgba(255, 45, 111, 0.3);
-            clip-path: polygon(
-                0 0,
-                52% 0,
-                calc(52% + 16px) 0,
-                100% 0,
-                100% 100%,
-                0 100%
-            );
-        }
-
-        .bubble__brackets {
-            pointer-events: none;
-            position: absolute;
-            inset: 4px 5px;
-            background:
-                linear-gradient(var(--capri-pink), var(--capri-pink)) top left / 10px 1.5px no-repeat,
-                linear-gradient(var(--capri-pink), var(--capri-pink)) top left / 1.5px 10px no-repeat,
-                linear-gradient(var(--capri-pink), var(--capri-pink)) top right / 10px 1.5px no-repeat,
-                linear-gradient(var(--capri-pink), var(--capri-pink)) top right / 1.5px 10px no-repeat,
-                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom left / 10px 1.5px no-repeat,
-                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom left / 1.5px 10px no-repeat,
-                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom right / 10px 1.5px no-repeat,
-                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom right / 1.5px 10px no-repeat;
-        }
-
-        .bubble__scan {
-            pointer-events: none;
-            position: absolute;
-            inset: 0;
-            opacity: 0.2;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent 0 2px,
-                rgba(94, 246, 255, 0.12) 2px 3px
-            );
-        }
-
-        .bubble__head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-        }
-
-        .bubble__logo {
-            margin: 0;
-            width: 28px;
-            height: 28px;
-            flex: none;
-            background: #110816;
-            clip-path: polygon(18% 0, 100% 0, 100% 82%, 82% 100%, 0 100%, 0 18%);
-            border: 1px solid rgba(123, 63, 228, 0.7);
-        }
-
-        .bubble__logo img {
-            display: block;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            clip-path: polygon(18% 0, 100% 0, 100% 82%, 82% 100%, 0 100%, 0 18%);
-        }
-
-        .bubble__meta {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .bubble__model {
-            font-size: 9px;
-            letter-spacing: 0.12em;
-            color: var(--capri-cyan);
-            text-transform: uppercase;
-        }
-
-        .bubble__badge {
-            font-size: 8.5px;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-            color: var(--capri-violet);
-            font-weight: 700;
-        }
-
-        .bubble[data-state='LISTENING'] .bubble__badge { color: #e6c15a; }
-        .bubble[data-state='THINKING'] .bubble__badge { color: var(--capri-pink); animation: blinkBadge 0.7s steps(2, jump-none) infinite; }
-        .bubble[data-state='TALKING'] .bubble__badge { color: var(--capri-green); animation: blinkBadge 0.7s steps(2, jump-none) infinite; }
-        .bubble[data-state='ONLINE'] .bubble__badge { color: var(--capri-cyan); }
-
-        @keyframes blinkBadge {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.35; }
-        }
-
-        /* Bloque de texto separado para Fuko (MtGhozt/Capri-Desktop) */
-        .bubble__speech-block {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            background: rgba(20, 10, 32, 0.75);
-            border-left: 2.5px solid var(--capri-pink);
-            padding: 6px 9px;
-            box-shadow: inset 0 0 10px rgba(123, 63, 228, 0.2);
-        }
-
-        .bubble__speaker {
-            font-size: 9.5px;
-            font-weight: 700;
-            letter-spacing: 0.12em;
-            color: var(--capri-pink);
-        }
-
-        .bubble__line {
-            margin: 0;
-            min-height: 2em;
-            font-size: 12.5px;
-            line-height: 1.4;
-            color: #f7efff;
-            overflow-wrap: anywhere;
-        }
-
-        .bubble__cursor {
-            display: inline-block;
-            margin-left: 1px;
-            color: var(--capri-pink);
-            animation: blinkBadge 0.8s steps(2, jump-none) infinite;
-        }
-
-        /* Registro de interacción / turn log separado */
-        .bubble__log {
-            margin: 0;
-            padding: 0;
-            list-style: none;
-            max-height: 48px;
-            overflow-y: auto;
-            font-size: 10px;
-            line-height: 1.35;
-            letter-spacing: 0.03em;
-            border-top: 1px dashed rgba(123, 63, 228, 0.4);
-            padding-top: 3px;
-        }
-
-        .bubble__row {
-            margin: 0;
-            overflow-wrap: anywhere;
-        }
-        .bubble__row.is-oido { color: var(--capri-green); }
-        .bubble__row.is-pregunta { color: #e6c15a; }
-        .bubble__row.is-fuko { color: var(--capri-cyan); }
-        .bubble__row.is-sistema { color: #c9a6ff; }
-
-        .bubble__tag {
-            font-weight: 700;
-            margin-right: 5px;
-        }
-
-        /* Barra de entrada / prompt bar separada abajo */
-        .bubble__prompt {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding-top: 4px;
-            border-top: 1px solid rgba(123, 63, 228, 0.5);
-        }
-
-        .bubble__you {
-            flex: none;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            color: var(--capri-violet);
-            pointer-events: none;
-        }
-
-        .bubble__field {
-            flex: 1;
-            min-width: 0;
-            appearance: none;
-            border: 0;
-            padding: 2px 0;
-            background: transparent;
-            color: #fff;
-            font-family: inherit;
-            font-size: 12px;
-            outline: none;
-            user-select: text;
-            pointer-events: auto;
-        }
-
-        .bubble__field::placeholder {
-            color: rgba(167, 139, 169, 0.55);
-        }
-
-        .bubble__mode-btn {
-            flex: none;
-            font-size: 9px;
-            padding: 2px 6px;
-            background: rgba(94, 246, 255, 0.14);
-            border: 1px solid rgba(94, 246, 255, 0.5);
-            color: var(--capri-cyan);
-            cursor: pointer;
-            letter-spacing: 0.08em;
-            clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
-            transition: all 0.12s;
-        }
-
-        .bubble__mode-btn:hover {
-            background: rgba(255, 45, 111, 0.25);
-            border-color: var(--capri-pink);
-            color: var(--capri-pink);
-        }
-
-        /* =========================================================
            AVATAR STAGE & CANVAS (240px Capri Scale)
            ========================================================= */
         #pet-stage {
             position: absolute;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 240px;
-            height: 248px;
+            top: 0;
+            left: 0;
+            width: 270px;
+            height: 290px;
             display: flex;
-            align-items: flex-end;
+            align-items: center;
             justify-content: center;
             z-index: 1000;
         }
 
         #avatar-canvas {
-            width: 240px;
-            height: 248px;
+            width: 260px;
+            height: 270px;
             cursor: grab;
             filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
         }
@@ -424,38 +149,6 @@
 </head>
 <body>
 
-    <!-- Burbuja Cyberpunk de Capri / Fuko con Bloque de Texto Separado (MtGhozt/Capri-Desktop) -->
-    <aside id="capri-bubble" class="bubble" title="Click para cerrar">
-        <div class="bubble__tab" id="bubble-tab">
-            <span class="bubble__title">FUKO.SYS // MENSAJE</span>
-        </div>
-        <div class="bubble__body">
-            <div class="bubble__brackets" aria-hidden="true"></div>
-            <div class="bubble__scan" aria-hidden="true"></div>
-            <header class="bubble__head">
-                <figure class="bubble__logo">
-                    <img src="icons/capri.png" alt="Capri / Fuko">
-                </figure>
-                <div class="bubble__meta">
-                    <span class="bubble__model" id="bubble-model">⚡ AUTO</span>
-                    <span class="bubble__badge bubble__state" id="bubble-state">EN ESPERA</span>
-                </div>
-            </header>
-            <div class="bubble__speech-block">
-                <span class="bubble__speaker">FUKO &gt;</span>
-                <p class="bubble__line">
-                    <span class="bubble__text" id="bubble-reply"></span><span class="bubble__cursor" id="bubble-caret" aria-hidden="true">▌</span>
-                </p>
-            </div>
-            <ol class="bubble__log" id="bubble-log" aria-live="polite"></ol>
-            <div class="bubble__prompt" id="capri-typer">
-                <span class="bubble__you">TÚ &gt;</span>
-                <input class="bubble__field" id="typer-input" type="text" maxlength="500" placeholder="escribe algo… (Enter para enviar)" autocomplete="off" spellcheck="false">
-                <span class="bubble__mode-btn" id="typer-mode-pill" title="Click para cambiar motor IA (Auto / Argon / Nemotron)">⚡ AUTO</span>
-            </div>
-        </div>
-    </aside>
-
     <!-- Escenario del personaje (sin botones flotantes invasivos) -->
     <div id="pet-stage">
         <canvas id="avatar-canvas" width="260" height="270"></canvas>
@@ -522,17 +215,6 @@
 
         const canvas = document.getElementById('avatar-canvas');
         const ctx = canvas.getContext('2d');
-        const bubble = document.getElementById('capri-bubble');
-        const bubblePrompt = document.getElementById('bubble-prompt');
-        const bubbleModel = document.getElementById('bubble-model');
-        const bubbleReply = document.getElementById('bubble-reply');
-        const bubbleCaret = document.getElementById('bubble-caret');
-        const bubbleState = document.getElementById('bubble-state');
-        const bubbleLog = document.getElementById('bubble-log');
-        const bubbleTab = document.getElementById('bubble-tab');
-        const typer = document.getElementById('capri-typer');
-        const typerInput = document.getElementById('typer-input');
-        const typerModePill = document.getElementById('typer-mode-pill');
         const talkPillWrap = document.getElementById('talk-pill-wrap');
         const talkPillCanvas = document.getElementById('talk-pill-canvas');
         const pillCtx = talkPillCanvas.getContext('2d');
@@ -790,13 +472,9 @@
         let lastPetWay = 0;
         let lastPetAt = -60;
 
-        // Estado del globo de diálogo y máquina de escribir (Talk.cs)
-        let bubbleVisible = false;
-        let fullReplyText = '';
-        let revealedChars = 0;
-        let revealStart = 0;
+        // Estado del habla y sincronización
+        let talkingUntil = 0;
         let isThinking = false;
-        let bubbleHideTimer = null;
         const CHARS_PER_SEC = 32;
 
         // Estado IA
@@ -976,7 +654,7 @@
         function checkWander(now) {
             if (wanderLevel <= 0) return;
             if (dragging || pointerPressed || falling || walking || outroCallback || napping || isThinking) return;
-            if (typer.classList.contains('open')) return;
+            if (isTalkingNow(now)) return;
             if (seated || floatingMode) return; // Si está posada en ventana o flotando en el aire, no cae al vacío
 
             const pace = WANDER_PACES[wanderLevel] || 0.5;
@@ -999,10 +677,7 @@
         // 4. ADVANCE & RENDER LOOP (Pet.cs Advance + Body.Render)
         // =========================================================================
         function isTalkingNow(now) {
-            if (!bubbleVisible || isThinking) return false;
-            const elapsed = now - revealStart;
-            const chars = Math.floor(elapsed * CHARS_PER_SEC);
-            return chars < fullReplyText.length;
+            return now < talkingUntil && !isThinking;
         }
 
         function mouthFrame(now) {
@@ -1114,9 +789,6 @@
             const breathe = settled ? Math.sin(now * 1.75) * 2.2 : 0;
             const tilt = settled ? Math.sin(now * 0.95) * 0.65 : 0;
 
-            // Actualizar texto máquina de escribir en el globo
-            updateBubbleTypewriter(now);
-
             // Dibujar en Canvas
             drawBody(shownKey, cell, breathe, tilt, isTalkingNow(now) ? mouthFrame(now) : -1);
         }
@@ -1165,35 +837,10 @@
         }
 
         // =========================================================================
-        // 5. GLOBO CYBERPUNK CON BLOQUE DE TEXTO SEPARADO (MtGhozt/Capri-Desktop)
+        // 5. DIÁLOGO Y BLOQUE DE TEXTO SEPARADO DEL PERSONAJE (MtGhozt/Capri-Desktop)
         // =========================================================================
-        function addBubbleLogEntry(kind, text) {
-            if (!bubbleLog || !text) return;
-            const li = document.createElement('li');
-            li.className = `bubble__row is-${kind}`;
-            const tag = document.createElement('span');
-            tag.className = 'bubble__tag';
-            let label = '[TÚ]';
-            if (kind === 'oido') label = '[OÍDO]';
-            else if (kind === 'fuko') label = '[FUKO]';
-            else if (kind === 'sistema') label = '[SISTEMA]';
-            tag.textContent = label;
-            const body = document.createElement('span');
-            body.textContent = ` ${text}`;
-            li.appendChild(tag);
-            li.appendChild(body);
-            bubbleLog.appendChild(li);
-            while (bubbleLog.children.length > 5) {
-                bubbleLog.removeChild(bubbleLog.firstChild);
-            }
-            bubbleLog.scrollTop = bubbleLog.scrollHeight;
-        }
-
-        function showCapriBubble(heard, reply, model = '', thinking = false) {
+        async function showCapriBubble(heard, reply, model = '', thinking = false) {
             const cleanHeard = (heard || '').replace(/^>\s*tú:\s*/i, '').trim();
-            if (cleanHeard && !thinking) {
-                addBubbleLogEntry('pregunta', cleanHeard);
-            }
 
             // Detectar y procesar etiquetas de ánimo ocultas ([burla], [emocion], [aburrida], [seria])
             let cleanReply = reply || '';
@@ -1207,31 +854,12 @@
                 else if (mood === 'seria') playClip('idle');
             }
 
-            if (model) {
-                let badge = model;
-                if (model.includes('argon')) badge = 'GEMINI 4 ARGON';
-                else if (model.includes('nemotron')) badge = 'OPENCLAW NEMOTRON';
-                else if (model.includes('bolt')) badge = 'OPENCLAW BOLT';
-                else if (model.includes('skills')) badge = 'SKILLS+HANDS';
-                bubbleModel.innerText = badge;
-            }
-
             isThinking = thinking;
-            fullReplyText = thinking ? '...' : cleanReply;
-            revealedChars = 0;
-            revealStart = getNow();
-            bubbleVisible = true;
-            bubble.classList.add('visible');
-
-            if (bubbleState) {
-                if (thinking) {
-                    bubbleState.innerText = 'PENSANDO';
-                    bubble.setAttribute('data-state', 'THINKING');
-                } else {
-                    bubbleState.innerText = 'HABLANDO';
-                    bubble.setAttribute('data-state', 'TALKING');
-                    if (cleanReply) addBubbleLogEntry('fuko', cleanReply);
-                }
+            const now = getNow();
+            if (!thinking && cleanReply) {
+                talkingUntil = now + Math.max(1.8, Math.min(10.0, cleanReply.length / CHARS_PER_SEC));
+            } else {
+                talkingUntil = 0;
             }
 
             if (currentClip === 'sleep') {
@@ -1239,49 +867,21 @@
                 playClip('wake');
             }
 
-            clearTimeout(bubbleHideTimer);
-            if (!thinking) {
-                const readDuration = Math.max(7500, Math.min(20000, fullReplyText.length * 75 + 4500));
-                bubbleHideTimer = setTimeout(() => {
-                    bubbleVisible = false;
-                    bubble.classList.remove('visible');
-                    if (bubbleState) {
-                        bubbleState.innerText = 'EN ESPERA';
-                        bubble.setAttribute('data-state', 'ONLINE');
-                    }
-                }, readDuration);
+            try {
+                // Colocar el bloque de texto con separación estética respecto al personaje
+                await invoke('position_bubble_near_avatar_cmd');
+                await invoke('show_bubble_window_cmd', { show: true });
+                if (tauri && tauri.event) {
+                    await tauri.event.emit('avatar_speak', {
+                        heard: cleanHeard,
+                        message: cleanReply || (thinking ? 'pensando...' : ''),
+                        model: model,
+                        thinking: thinking
+                    });
+                }
+            } catch (err) {
+                console.warn('Error mostrando diálogo separado:', err);
             }
-        }
-
-        function updateBubbleTypewriter(now) {
-            if (!bubbleVisible) return;
-            if (isThinking) {
-                const dots = '.'.repeat(1 + (Math.floor(now * 3) % 3));
-                bubbleReply.innerText = `pensando${dots}`;
-                bubbleCaret.style.display = 'inline-block';
-                return;
-            }
-            const elapsed = now - revealStart;
-            const count = Math.min(fullReplyText.length, Math.max(1, Math.floor(elapsed * CHARS_PER_SEC)));
-            if (count !== revealedChars) {
-                revealedChars = count;
-                bubbleReply.innerText = fullReplyText.slice(0, revealedChars);
-            }
-            const isDone = revealedChars >= fullReplyText.length;
-            bubbleCaret.style.display = isDone ? 'none' : 'inline-block';
-            if (isDone && bubbleState && bubbleState.innerText === 'HABLANDO') {
-                bubbleState.innerText = 'EN ESPERA';
-                bubble.setAttribute('data-state', 'ONLINE');
-            }
-        }
-
-        if (bubbleTab) {
-            bubbleTab.addEventListener('click', (e) => {
-                e.stopPropagation();
-                bubbleVisible = false;
-                bubble.classList.remove('visible');
-                clearTimeout(bubbleHideTimer);
-            });
         }
 
         // =========================================================================
@@ -1843,49 +1443,26 @@
         })();
 
         // =========================================================================
-        // 7.5. INPUT BAR (> tú:) Y CONEXIÓN A OPENCLAW + GEMINI 4 ARGON
+        // 7.5. DIÁLOGO SEPARADO Y CONEXIÓN A OPENCLAW + GEMINI 4 ARGON
         // =========================================================================
-        function toggleTyper(force = null) {
-            const open = force !== null ? force : !bubbleVisible;
-            bubbleVisible = open;
-            bubble.classList.toggle('visible', open);
-            if (open) {
-                typerInput.focus();
-                clearTimeout(bubbleHideTimer);
-                if (bubbleState) {
-                    bubbleState.innerText = 'EN ESPERA';
-                    bubble.setAttribute('data-state', 'ONLINE');
+        async function toggleTyper(force = null) {
+            try {
+                await invoke('position_bubble_near_avatar_cmd');
+                await invoke('show_bubble_window_cmd', { show: force !== null ? force : true, focus: true });
+                if (tauri && tauri.event) {
+                    await tauri.event.emit('focus_bubble_input', {});
                 }
+            } catch (err) {
+                console.warn('Error al enfocar bloque de texto:', err);
             }
         }
-
-        typerModePill.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const nextIdx = (BRAIN_MODES.indexOf(currentBrainMode) + 1) % BRAIN_MODES.length;
-            currentBrainMode = BRAIN_MODES[nextIdx];
-            updateBrainUI();
-            try {
-                await invoke('set_ai_mode_cmd', { mode: currentBrainMode });
-            } catch (_) {}
-        });
 
         function updateBrainUI() {
-            typerModePill.innerText = BRAIN_LABELS[currentBrainMode] || '⚡ AUTO';
-            document.getElementById('menu-brain-val').innerText = BRAIN_MENU_NAMES[currentBrainMode] || currentBrainMode;
+            const menuBrainVal = document.getElementById('menu-brain-val');
+            if (menuBrainVal) {
+                menuBrainVal.innerText = BRAIN_MENU_NAMES[currentBrainMode] || currentBrainMode;
+            }
         }
-
-        typerInput.addEventListener('keydown', async (e) => {
-            if (e.key === 'Escape') {
-                toggleTyper(false);
-                return;
-            }
-            if (e.key === 'Enter') {
-                const text = typerInput.value.trim();
-                if (!text) return;
-                typerInput.value = '';
-                await sendToClaudia(text);
-            }
-        });
 
         async function sendToClaudia(text) {
             // Comandos rápidos naturales estilo Capri
