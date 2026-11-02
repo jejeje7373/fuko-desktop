@@ -1,562 +1,731 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fuko Dialogue</title>
-    <style>
-        :root {
-            --bg: #07040d;
-            --capri-pink: #ff2d6f;
-            --capri-violet: #7b3fe4;
-            --capri-cyan: #5ef6ff;
-            --capri-green: #3dff8f;
-            --muted: #a78ba9;
-            --tab-h: 24px;
-        }
+  <meta charset="UTF-8">
+  <title>Capri Dialogue</title>
+  <style>
+    :root {
+      --bg: #07040d;
+      --capri-pink: #ff2d6f;
+      --capri-violet: #7b3fe4;
+      --capri-cyan: #5ef6ff;
+      --capri-green: #3dff8f;
+      --muted: #a78ba9;
+      --tab-h: 24px;
+    }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
 
-        html, body {
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-            background: transparent !important;
-            font-family: 'Share Tech Mono', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
-            padding: 3px;
-        }
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: transparent !important;
+      font-family: 'Share Tech Mono', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+      padding: 3px;
+    }
 
-        /* Contenedor Capri Bubble */
-        .bubble {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            color: #efe8ff;
-            filter: drop-shadow(0 0 10px rgba(255, 45, 111, 0.4)) drop-shadow(0 0 6px rgba(94, 246, 255, 0.25));
-        }
+    .bubble {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      color: #efe8ff;
+      filter: drop-shadow(0 0 10px rgba(255, 45, 111, 0.35)) drop-shadow(0 0 6px rgba(94, 246, 255, 0.22));
+    }
 
-        /* Pestaña superior Cyberpunk (arrastrable) */
-        .bubble__tab {
-            position: relative;
-            z-index: 2;
-            width: 54%;
-            height: var(--tab-h);
-            padding: 4px 10px 4px 12px;
-            background: rgba(7, 4, 13, 0.95);
-            color: var(--capri-pink);
-            clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 100%, 0 100%);
-            box-shadow: inset 0 0 0 1px rgba(123, 63, 228, 0.85);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: grab;
-        }
+    .bubble__tab {
+      position: relative;
+      z-index: 2;
+      width: 58%;
+      height: var(--tab-h);
+      padding: 4px 10px 4px 12px;
+      background: rgba(7, 4, 13, 0.96);
+      color: var(--capri-pink);
+      clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 100%, 0 100%);
+      border-top: 1px solid rgba(255, 45, 111, 0.7);
+      border-left: 1px solid rgba(123, 63, 228, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: grab;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
 
-        .bubble__tab:active {
-            cursor: grabbing;
-        }
+    .bubble__tab:active {
+      cursor: grabbing;
+    }
 
-        .bubble__title {
-            font-size: 9.5px;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            font-weight: 700;
-            pointer-events: none;
-        }
+    .bubble__close-btn {
+      background: transparent;
+      border: 1px solid rgba(255, 45, 111, 0.45);
+      color: var(--capri-pink);
+      font-family: inherit;
+      font-size: 10px;
+      line-height: 1;
+      padding: 1px 5px;
+      cursor: pointer;
+      margin-right: 8px;
+    }
 
-        .bubble__close-btn {
-            background: transparent;
-            border: none;
-            color: var(--capri-pink);
-            font-size: 14px;
-            line-height: 1;
-            cursor: pointer;
-            padding: 0 4px;
-            font-weight: 700;
-            transition: transform 0.12s, color 0.12s;
-        }
+    .bubble__close-btn:hover {
+      background: var(--capri-pink);
+      color: #07040d;
+    }
 
-        .bubble__close-btn:hover {
-            transform: scale(1.25);
-            color: #fff;
-        }
+    .bubble__body {
+      position: relative;
+      margin-top: -1px;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px 12px 10px 12px;
+      background: rgba(7, 4, 13, 0.95);
+      border: 1px solid rgba(123, 63, 228, 0.85);
+      box-shadow: inset 0 0 14px rgba(123, 63, 228, 0.25), 0 0 14px rgba(255, 45, 111, 0.25);
+    }
 
-        /* Cuerpo principal de la placa Cyberpunk */
-        .bubble__body {
-            position: relative;
-            margin-top: -1px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            padding: 8px 12px 10px 12px;
-            background: rgba(7, 4, 13, 0.94);
-            box-shadow:
-                inset 0 0 0 1px rgba(123, 63, 228, 0.85),
-                0 0 14px rgba(255, 45, 111, 0.28);
-            clip-path: polygon(
-                0 0,
-                54% 0,
-                calc(54% + 16px) 0,
-                100% 0,
-                100% 100%,
-                0 100%
-            );
-        }
+    .bubble__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(123, 63, 228, 0.35);
+      cursor: grab;
+    }
 
-        /* Brackets estilo HUD en las 4 esquinas */
-        .bubble__brackets {
-            pointer-events: none;
-            position: absolute;
-            inset: 4px 5px;
-            background:
-                linear-gradient(var(--capri-pink), var(--capri-pink)) top left / 10px 1.5px no-repeat,
-                linear-gradient(var(--capri-pink), var(--capri-pink)) top left / 1.5px 10px no-repeat,
-                linear-gradient(var(--capri-pink), var(--capri-pink)) top right / 10px 1.5px no-repeat,
-                linear-gradient(var(--capri-pink), var(--capri-pink)) top right / 1.5px 10px no-repeat,
-                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom left / 10px 1.5px no-repeat,
-                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom left / 1.5px 10px no-repeat,
-                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom right / 10px 1.5px no-repeat,
-                linear-gradient(var(--capri-pink), var(--capri-pink)) bottom right / 1.5px 10px no-repeat;
-        }
+    .bubble__meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+    }
 
-        /* Scanlines CRT */
-        .bubble__scan {
-            pointer-events: none;
-            position: absolute;
-            inset: 0;
-            opacity: 0.16;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent 0 2px,
-                rgba(94, 246, 255, 0.14) 2px 3px
-            );
-        }
+    .bubble__model {
+      color: var(--capri-cyan);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
 
-        /* Header con Logo oficial Capri y Badges */
-        .bubble__head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            cursor: grab;
-            padding-bottom: 2px;
-        }
+    .bubble__badge {
+      padding: 1px 6px;
+      font-size: 9.5px;
+      font-weight: 700;
+      border: 1px solid var(--capri-green);
+      color: var(--capri-green);
+      background: rgba(61, 255, 143, 0.1);
+      text-transform: uppercase;
+    }
 
-        .bubble__logo {
-            width: 24px;
-            height: 24px;
-            flex: none;
-            background: #110816;
-            clip-path: polygon(18% 0, 100% 0, 100% 82%, 82% 100%, 0 100%, 0 18%);
-            border: 1px solid rgba(123, 63, 228, 0.7);
-            pointer-events: none;
-        }
+    .bubble[data-state="PENSANDO"] .bubble__badge {
+      border-color: var(--capri-cyan);
+      color: var(--capri-cyan);
+      background: rgba(94, 246, 255, 0.12);
+    }
 
-        .bubble__logo img {
-            display: block;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            clip-path: polygon(18% 0, 100% 0, 100% 82%, 82% 100%, 0 100%, 0 18%);
-        }
+    .bubble[data-state="HABLANDO"] .bubble__badge {
+      border-color: var(--capri-pink);
+      color: var(--capri-pink);
+      background: rgba(255, 45, 111, 0.14);
+    }
 
-        .bubble__meta {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            pointer-events: none;
-        }
+    /* Area principal de respuesta de Capri: siempre visible y con scroll propio */
+    .bubble__speech-area {
+      flex: 1;
+      min-height: 74px;
+      max-height: 118px;
+      overflow-y: auto;
+      padding: 6px 8px;
+      background: rgba(16, 10, 30, 0.85);
+      border-left: 2px solid var(--capri-pink);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
 
-        .bubble__model {
-            font-size: 9px;
-            letter-spacing: 0.12em;
-            color: var(--capri-cyan);
-            text-transform: uppercase;
-        }
+    .bubble__speaker {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--capri-pink);
+      letter-spacing: 0.06em;
+    }
 
-        .bubble__badge {
-            font-size: 9px;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-            color: var(--capri-violet);
-            font-weight: 700;
-        }
+    .bubble__line {
+      font-size: 13px;
+      line-height: 1.42;
+      color: #ffffff;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+      user-select: text;
+    }
 
-        .bubble[data-state='LISTENING'] .bubble__badge { color: #e6c15a; }
-        .bubble[data-state='THINKING'] .bubble__badge { color: var(--capri-pink); animation: blinkBadge 0.7s steps(2, jump-none) infinite; }
-        .bubble[data-state='TALKING'] .bubble__badge { color: var(--capri-green); animation: blinkBadge 0.7s steps(2, jump-none) infinite; }
-        .bubble[data-state='ONLINE'] .bubble__badge { color: var(--capri-cyan); }
+    .bubble__text {
+      color: #ffffff;
+    }
 
-        @keyframes blinkBadge {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.35; }
-        }
+    .bubble__noise {
+      color: var(--capri-cyan);
+      opacity: 0.75;
+    }
 
-        /* Línea de texto con máquina de escribir */
-        .bubble__speech-area {
-            flex: 1;
-            min-height: 52px;
-            max-height: 86px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            background: rgba(20, 10, 32, 0.6);
-            border-left: 2px solid var(--capri-pink);
-            padding: 5px 8px;
-        }
+    .bubble__cursor {
+      display: inline-block;
+      margin-left: 2px;
+      color: var(--capri-pink);
+      font-weight: 700;
+      animation: blinkCursor 0.75s steps(2, jump-none) infinite;
+    }
 
-        .bubble__speaker {
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: 0.12em;
-            color: var(--capri-pink);
-        }
+    @keyframes blinkCursor {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
 
-        .bubble__line {
-            font-size: 12px;
-            line-height: 1.4;
-            color: #f7efff;
-            overflow-wrap: anywhere;
-        }
+    .bubble__log {
+      margin: 0;
+      padding: 3px 0 0;
+      list-style: none;
+      max-height: 40px;
+      overflow-y: auto;
+      font-size: 9.5px;
+      line-height: 1.35;
+      letter-spacing: 0.02em;
+      border-top: 1px dashed rgba(123, 63, 228, 0.4);
+      color: var(--muted);
+    }
 
-        .bubble__cursor {
-            display: inline-block;
-            margin-left: 1px;
-            color: var(--capri-pink);
-            animation: blinkBadge 0.8s steps(2, jump-none) infinite;
-        }
+    .bubble__row {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
-        /* Registro de interacción previo */
-        .bubble__log {
-            margin: 0;
-            padding: 2px 0 0;
-            list-style: none;
-            max-height: 38px;
-            overflow-y: auto;
-            font-size: 9.5px;
-            line-height: 1.35;
-            letter-spacing: 0.03em;
-            border-top: 1px dashed rgba(123, 63, 228, 0.4);
-        }
+    .bubble__row.is-fuko .bubble__tag {
+      color: var(--capri-pink);
+      font-weight: 700;
+    }
 
-        .bubble__row {
-            margin: 0;
-            overflow-wrap: anywhere;
-        }
-        .bubble__row.is-oido { color: var(--capri-green); }
-        .bubble__row.is-pregunta { color: #e6c15a; }
-        .bubble__row.is-fuko { color: var(--capri-cyan); }
-        .bubble__row.is-sistema { color: #c9a6ff; }
+    .bubble__row.is-pregunta .bubble__tag,
+    .bubble__row.is-oido .bubble__tag {
+      color: var(--capri-cyan);
+      font-weight: 700;
+    }
 
-        .bubble__tag {
-            font-weight: 700;
-            margin-right: 5px;
-        }
+    .bubble__prompt {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      background: rgba(18, 12, 34, 0.95);
+      border: 1px solid rgba(94, 246, 255, 0.45);
+    }
 
-        /* Prompt de entrada (> tú:) */
-        .bubble__prompt {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding-top: 4px;
-            border-top: 1px solid rgba(123, 63, 228, 0.45);
-            margin-top: auto;
-        }
+    .bubble__you {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--capri-cyan);
+      white-space: nowrap;
+    }
 
-        .bubble__you {
-            flex: none;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            color: var(--capri-violet);
-            pointer-events: none;
-        }
+    .bubble__field {
+      flex: 1;
+      min-width: 0;
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 12px;
+      outline: none;
+      user-select: text;
+    }
 
-        .bubble__field {
-            flex: 1;
-            min-width: 0;
-            appearance: none;
-            border: 0;
-            padding: 3px 0;
-            background: transparent;
-            color: #fff;
-            font-family: inherit;
-            font-size: 11.5px;
-            outline: none;
-            user-select: text;
-        }
+    .bubble__mode-btn {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--capri-cyan);
+      border: 1px solid rgba(94, 246, 255, 0.5);
+      padding: 2px 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      text-transform: uppercase;
+    }
 
-        .bubble__field::placeholder {
-            color: rgba(167, 139, 169, 0.55);
-        }
+    .bubble__mode-btn:hover {
+      border-color: var(--capri-pink);
+      color: var(--capri-pink);
+    }
 
-        .bubble__mode-btn {
-            flex: none;
-            font-size: 8.5px;
-            padding: 2px 6px;
-            background: rgba(94, 246, 255, 0.14);
-            border: 1px solid rgba(94, 246, 255, 0.5);
-            color: var(--capri-cyan);
-            cursor: pointer;
-            letter-spacing: 0.08em;
-            clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
-            transition: all 0.12s;
-        }
-
-        .bubble__mode-btn:hover {
-            background: rgba(255, 45, 111, 0.25);
-            border-color: var(--capri-pink);
-            color: var(--capri-pink);
-        }
-    </style>
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--capri-violet);
+    }
+  </style>
 </head>
 <body>
+  <aside id="bubble" class="bubble" data-state="ONLINE">
+    <div class="bubble__tab" data-tauri-drag-region>
+      <span class="bubble__title" data-tauri-drag-region>CAPRI.SYS // DIALOGO</span>
+      <button class="bubble__close-btn" id="bubble-close-btn" title="Cerrar">X</button>
+    </div>
 
-    <aside id="bubble" class="bubble" data-state="ONLINE">
-        <!-- Pestaña draggable -->
-        <div class="bubble__tab" data-tauri-drag-region>
-            <span class="bubble__title" data-tauri-drag-region>FUKO.SYS // MENSAJE</span>
-            <button class="bubble__close-btn" id="bubble-close-btn" title="Cerrar">×</button>
+    <div class="bubble__body">
+      <header class="bubble__head" data-tauri-drag-region>
+        <div class="bubble__meta" data-tauri-drag-region>
+          <span class="bubble__model" id="bubble-model">[AUTO: OPENCLAW + ANTIGRAVITY]</span>
+          <span class="bubble__badge" id="bubble-state">EN ESPERA</span>
         </div>
+      </header>
 
-        <div class="bubble__body">
-            <div class="bubble__brackets" aria-hidden="true"></div>
-            <div class="bubble__scan" aria-hidden="true"></div>
+      <div class="bubble__speech-area" id="bubble-speech-area">
+        <span class="bubble__speaker">CAPRI &gt;</span>
+        <p class="bubble__line">
+          <span class="bubble__text" id="bubble-reply">Lista. Escribe o habla cuando quieras.</span><span class="bubble__noise" id="bubble-noise"></span><span class="bubble__cursor" id="bubble-caret">_</span>
+        </p>
+      </div>
 
-            <header class="bubble__head" data-tauri-drag-region>
-                <figure class="bubble__logo" data-tauri-drag-region>
-                    <img src="icons/capri.png" alt="Fuko / Capri">
-                </figure>
-                <div class="bubble__meta" data-tauri-drag-region>
-                    <span class="bubble__model" id="bubble-model">⚡ AUTO</span>
-                    <span class="bubble__badge bubble__state" id="bubble-state">EN ESPERA</span>
-                </div>
-            </header>
+      <ol class="bubble__log" id="bubble-log" aria-live="polite"></ol>
 
-            <!-- Bloque de texto para Fuko -->
-            <div class="bubble__speech-area">
-                <span class="bubble__speaker">FUKO &gt;</span>
-                <p class="bubble__line">
-                    <span class="bubble__text" id="bubble-reply"></span><span class="bubble__cursor" id="bubble-caret" aria-hidden="true">▌</span>
-                </p>
-            </div>
+      <div class="bubble__prompt">
+        <span class="bubble__you">TU &gt;</span>
+        <input class="bubble__field" id="bubble-input" type="text" maxlength="500" placeholder="escribe a Capri y presiona Enter..." autocomplete="off" />
+        <span class="bubble__mode-btn" id="bubble-mode-pill" title="Click para cambiar motor IA">AUTO</span>
+      </div>
+    </div>
+  </aside>
 
-            <!-- Registro de interacciones previas -->
-            <ol class="bubble__log" id="bubble-log" aria-live="polite"></ol>
+  <script>
+    const tauri = window.__TAURI__ || null;
+    const invoke = tauri ? tauri.core.invoke : async () => ({});
+    const listen = tauri ? tauri.event.listen : () => {};
+    const emit = tauri ? tauri.event.emit : async () => {};
 
-            <!-- Prompt de entrada -->
-            <div class="bubble__prompt">
-                <span class="bubble__you">TÚ &gt;</span>
-                <input class="bubble__field" id="bubble-input" type="text" maxlength="500" placeholder="escribe algo… (Enter para enviar)" autocomplete="off" spellcheck="false">
-                <span class="bubble__mode-btn" id="bubble-mode-pill" title="Click para alternar motor IA">⚡ AUTO</span>
-            </div>
-        </div>
-    </aside>
+    const bubble = document.getElementById('bubble');
+    const bubbleCloseBtn = document.getElementById('bubble-close-btn');
+    const bubbleModel = document.getElementById('bubble-model');
+    const bubbleState = document.getElementById('bubble-state');
+    const bubbleSpeechArea = document.getElementById('bubble-speech-area');
+    const bubbleReply = document.getElementById('bubble-reply');
+    const bubbleNoise = document.getElementById('bubble-noise');
+    const bubbleCaret = document.getElementById('bubble-caret');
+    const bubbleLog = document.getElementById('bubble-log');
+    const bubbleInput = document.getElementById('bubble-input');
+    const bubbleModePill = document.getElementById('bubble-mode-pill');
 
-    <script>
-        const tauri = window.__TAURI__ || null;
-        const invoke = tauri ? tauri.core.invoke : async () => ({});
-        const listen = tauri ? tauri.event.listen : () => {};
+    const BRAIN_MODES = ['auto', 'argon', 'openclaw', 'ollama'];
+    const BRAIN_LABELS = {
+      auto: 'AUTO',
+      argon: 'ANTIGRAVITY',
+      openclaw: 'OPENCLAW',
+      ollama: 'OLLAMA'
+    };
+    let currentBrainMode = 'auto';
 
-        const bubbleEl = document.getElementById('bubble');
-        const bubbleModel = document.getElementById('bubble-model');
-        const bubbleState = document.getElementById('bubble-state');
-        const bubbleReply = document.getElementById('bubble-reply');
-        const bubbleCaret = document.getElementById('bubble-caret');
-        const bubbleLog = document.getElementById('bubble-log');
-        const bubbleInput = document.getElementById('bubble-input');
-        const bubbleModePill = document.getElementById('bubble-mode-pill');
-        const bubbleCloseBtn = document.getElementById('bubble-close-btn');
+    // =========================================================================
+    // 1. SINTETIZADOR RETRO DE SONIDO CAPRI-DESKTOP (Port exacto de MtGhozt/Capri-Desktop voice.js)
+    // Cero voz humana: usa bleeps pentatónicos de 3 osciladores al hablar y al responder por texto
+    // =========================================================================
+    const BLIP_NOTES = [62, 65, 67, 69, 72, 74, 77, 79]; // Escala pentatónica La menor (MIDI)
+    const NOISE_CHARS = '...#$%&\\<>01XZ';
 
-        const BRAIN_MODES = ['auto', 'argon', 'openclaw', 'ollama'];
-        const BRAIN_LABELS = {
-            auto: '⚡ AUTO',
-            argon: '💎 GEMINI 4 ARGON',
-            openclaw: '🦞 OPENCLAW',
-            ollama: '🏠 OLLAMA'
-        };
-        let currentBrainMode = 'auto';
+    class CapriSynthVoice {
+      constructor() {
+        this.ctx = null;
+        this.master = null;
+        this.enabled = true;
+        this.lastBlip = 0;
+      }
 
-        let fullReplyText = '';
-        let revealedChars = 0;
-        let isThinking = false;
-        let typeTimer = null;
-        const CHARS_PER_SEC = 42;
+      ensureCtx() {
+        if (!this.enabled) return null;
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return null;
+          this.ctx = new AudioCtx();
+          this.master = this.ctx.createGain();
+          this.master.gain.value = 0.85;
+          this.master.connect(this.ctx.destination);
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+        return this.ctx;
+      }
 
-        function addLogEntry(kind, text) {
-            if (!bubbleLog || !text) return;
-            const li = document.createElement('li');
-            li.className = `bubble__row is-${kind}`;
-            const tag = document.createElement('span');
-            tag.className = 'bubble__tag';
-            let label = '[TÚ]';
-            if (kind === 'oido') label = '[OÍDO]';
-            else if (kind === 'fuko') label = '[FUKO]';
-            else if (kind === 'sistema') label = '[SISTEMA]';
-            tag.textContent = label;
-            const body = document.createElement('span');
-            body.textContent = ` ${text}`;
-            li.appendChild(tag);
-            li.appendChild(body);
-            bubbleLog.appendChild(li);
-            while (bubbleLog.children.length > 4) {
-                bubbleLog.removeChild(bubbleLog.firstChild);
-            }
-            bubbleLog.scrollTop = bubbleLog.scrollHeight;
+      midiToFreq(m) {
+        return 440 * Math.pow(2, (m - 69) / 12);
+      }
+
+      osc(type, freq, startTime, dur, peak) {
+        const c = this.ensureCtx();
+        if (!c || !this.master) return;
+        const o = c.createOscillator();
+        const g = c.createGain();
+        o.type = type;
+        o.frequency.setValueAtTime(freq, startTime);
+        g.gain.setValueAtTime(0.0001, startTime);
+        g.gain.linearRampToValueAtTime(peak, startTime + 0.004);
+        g.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
+        o.connect(g);
+        g.connect(this.master);
+        o.start(startTime);
+        o.stop(startTime + dur + 0.005);
+      }
+
+      // Sonido al teclear tú en la barra de texto (typeBlip de MtGhozt/Capri-Desktop)
+      typeBlip() {
+        const c = this.ensureCtx();
+        if (!c) return;
+        const freq = 600 + Math.random() * 300;
+        this.osc('square', freq, c.currentTime, 0.028, 0.055);
+      }
+
+      // Sonido no-humano de Capri al escribir cada letra de su respuesta (blip de MtGhozt/Capri-Desktop)
+      blip(mood = 'normal') {
+        const now = performance.now();
+        if (now - this.lastBlip < 45) return;
+        this.lastBlip = now;
+        const c = this.ensureCtx();
+        if (!c) return;
+
+        let note = BLIP_NOTES[Math.floor(Math.random() * BLIP_NOTES.length)];
+        if (mood === 'alert' || mood === 'emocion') note += 5;
+        else if (mood === 'error' || mood === 'aburrida') note -= 5;
+
+        const f = this.midiToFreq(note);
+        const t = c.currentTime;
+        // 1) Fundamental (square)
+        this.osc('square', f, t, 0.036, 0.042);
+        // 2) Quinta justa arriba (triangle, +4ms)
+        this.osc('triangle', f * 1.498, t + 0.004, 0.030, 0.030);
+        // 3) Octava abajo (square, +8ms)
+        this.osc('square', f * 0.501, t + 0.008, 0.030, 0.022);
+      }
+
+      // Arpegio cuando Capri empieza a responderte (para que sepas al instante que ya respondió)
+      replyStartArp() {
+        const c = this.ensureCtx();
+        if (!c) return;
+        const notes = [659, 784, 988, 1318]; // E5, G5, B5, E6 (wakeArp de Capri-Desktop)
+        const t = c.currentTime;
+        notes.forEach((freq, i) => {
+          this.osc('square', freq, t + i * 0.052, 0.05, 0.065);
+        });
+      }
+
+      // Chime corto al terminar de escribir la respuesta (done de Capri-Desktop)
+      replyDoneChime() {
+        const c = this.ensureCtx();
+        if (!c) return;
+        const t = c.currentTime;
+        this.osc('triangle', 880, t, 0.07, 0.05);
+        this.osc('triangle', 1174.66, t + 0.06, 0.09, 0.055);
+      }
+
+      errorBuzz() {
+        const c = this.ensureCtx();
+        if (!c) return;
+        const t = c.currentTime;
+        this.osc('sawtooth', 190, t, 0.12, 0.07);
+        this.osc('square', 145, t + 0.09, 0.16, 0.07);
+      }
+    }
+
+    const capriSynth = new CapriSynthVoice();
+
+    // Desbloquear Web Audio en cualquier interacción
+    window.addEventListener('pointerdown', () => capriSynth.ensureCtx());
+    window.addEventListener('keydown', () => capriSynth.ensureCtx());
+
+    // =========================================================================
+    // 2. LIMPIEZA DE EMOJIS Y ETIQUETAS (Regla de MtGhozt/Capri-Desktop: CERO emojis)
+    // =========================================================================
+    function stripEmojisAndTags(raw) {
+      if (!raw) return { clean: '', mood: 'normal' };
+      let text = String(raw);
+
+      let mood = 'normal';
+      if (/\[(burla|grin)\]/i.test(text)) mood = 'burla';
+      else if (/\[(emocion|dance|alert)\]/i.test(text)) mood = 'emocion';
+      else if (/\[(aburrida|sad|dangle)\]/i.test(text)) mood = 'aburrida';
+      else if (/\[(seria|idle)\]/i.test(text)) mood = 'seria';
+
+      // Quitar etiquetas de ánimo y etiquetas de acción [ACTION: ...] / [open:...] / [play:...]
+      text = text
+        .replace(/\[(burla|emocion|aburrida|seria|grin|dance|idle)\]/gi, '')
+        .replace(/\[ACTION:[^\]]*\]/gi, '')
+        .replace(/\[(open|play):[^\]]*\]/gi, '');
+
+      // Eliminar cualquier emoji Unicode
+      text = text.replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}\uFE0F\u200D]/gu, '');
+      return { clean: text.replace(/\s+/g, ' ').trim(), mood };
+    }
+
+    function setBubbleState(st) {
+      bubble.dataset.state = st;
+      bubbleState.innerText = st;
+    }
+
+    function addLogEntry(kind, rawText) {
+      const { clean } = stripEmojisAndTags(rawText);
+      if (!bubbleLog || !clean) return;
+      // Evitar duplicar la misma línea consecutiva en el log
+      if (bubbleLog.lastElementChild && bubbleLog.lastElementChild.dataset.raw === `${kind}:${clean}`) {
+        return;
+      }
+      const li = document.createElement('li');
+      li.className = `bubble__row is-${kind}`;
+      li.dataset.raw = `${kind}:${clean}`;
+      const tag = document.createElement('span');
+      tag.className = 'bubble__tag';
+      let label = '[TU]';
+      if (kind === 'oido') label = '[VOZ]';
+      else if (kind === 'fuko') label = '[CAPRI]';
+      else if (kind === 'sistema') label = '[SYS]';
+      tag.textContent = label;
+      const body = document.createElement('span');
+      body.textContent = ` ${clean}`;
+      li.appendChild(tag);
+      li.appendChild(body);
+      bubbleLog.appendChild(li);
+      while (bubbleLog.children.length > 4) {
+        bubbleLog.removeChild(bubbleLog.firstChild);
+      }
+      bubbleLog.scrollTop = bubbleLog.scrollHeight;
+    }
+
+    // =========================================================================
+    // 3. EFECTO TYPEWRITER + GLITCH DECODE EXACTO DE MtGhozt/Capri-Desktop (bubble.js)
+    // =========================================================================
+    let typeTimer = null;
+    let isThinking = false;
+    let lastRenderedSignature = '';
+    let lastRenderedAt = 0;
+
+    function randomNoiseString(len) {
+      let out = '';
+      for (let i = 0; i < len; i++) {
+        out += NOISE_CHARS[Math.floor(Math.random() * NOISE_CHARS.length)];
+      }
+      return out;
+    }
+
+    function startTypewriter(rawText, model = '') {
+      const { clean, mood } = stripEmojisAndTags(rawText);
+      const finalMsg = clean || 'Listo.';
+
+      // Deduplicación para impedir que eventos repetidos reinicien o borren el texto
+      const now = performance.now();
+      const sig = `${model}|${finalMsg}`;
+      if (sig === lastRenderedSignature && (now - lastRenderedAt) < 600) {
+        return;
+      }
+      lastRenderedSignature = sig;
+      lastRenderedAt = now;
+
+      if (typeTimer) {
+        clearTimeout(typeTimer);
+        typeTimer = null;
+      }
+      isThinking = false;
+
+      if (model) {
+        const cleanModel = stripEmojisAndTags(model).clean.toUpperCase();
+        bubbleModel.innerText = model === 'error' ? '[ERROR]' : `[${BRAIN_LABELS[model] || cleanModel || 'CAPRI'}]`;
+      }
+
+      setBubbleState('HABLANDO');
+      addLogEntry('fuko', finalMsg);
+
+      // Notificar al avatar en index.html para que sincronice la boca y gesto sin reenviar avatar_speak
+      emit('capri_mouth_sync', { length: finalMsg.length, mood });
+
+      // Sonar arpegio de notificación de respuesta
+      if (model === 'error') {
+        capriSynth.errorBuzz();
+      } else {
+        capriSynth.replyStartArp();
+      }
+
+      let idx = 0;
+      bubbleReply.textContent = '';
+      bubbleNoise.textContent = '';
+      bubbleCaret.style.display = 'inline-block';
+
+      function stepChar() {
+        if (idx >= finalMsg.length) {
+          bubbleReply.textContent = finalMsg;
+          bubbleNoise.textContent = '';
+          bubbleCaret.style.display = 'none';
+          setBubbleState('EN ESPERA');
+          capriSynth.replyDoneChime();
+          typeTimer = null;
+          return;
         }
 
-        function setBubbleState(stateName) {
-            bubbleState.innerText = stateName;
-            if (stateName === 'PENSANDO') bubbleEl.setAttribute('data-state', 'THINKING');
-            else if (stateName === 'HABLANDO') bubbleEl.setAttribute('data-state', 'TALKING');
-            else if (stateName === 'LISTENING') bubbleEl.setAttribute('data-state', 'LISTENING');
-            else bubbleEl.setAttribute('data-state', 'ONLINE');
+        idx++;
+        const ch = finalMsg[idx - 1];
+        bubbleReply.textContent = finalMsg.slice(0, idx);
+
+        // Ruido de decodificación estilo Capri-Desktop (hasta 5 caracteres adelante)
+        const remaining = finalMsg.length - idx;
+        const noiseLen = Math.min(5, remaining);
+        bubbleNoise.textContent = noiseLen > 0 ? randomNoiseString(noiseLen) : '';
+        bubbleSpeechArea.scrollTop = bubbleSpeechArea.scrollHeight;
+
+        if (ch && ch.trim().length > 0) {
+          capriSynth.blip(mood);
         }
 
-        function startTypewriter(text, model = '') {
-            clearInterval(typeTimer);
-            isThinking = false;
-
-            let clean = (text || '').trim();
-            let moodMatch = clean.match(/^\[(burla|emocion|aburrida|seria)\]\s*/i);
-            if (moodMatch) {
-                clean = clean.replace(moodMatch[0], '');
-            }
-
-            if (model) {
-                let badge = model;
-                if (model.includes('argon')) badge = 'GEMINI 4 ARGON';
-                else if (model.includes('nemotron')) badge = 'OPENCLAW NEMOTRON';
-                else if (model.includes('bolt')) badge = 'OPENCLAW BOLT';
-                else if (model.includes('skills')) badge = 'SKILLS+HANDS';
-                bubbleModel.innerText = badge;
-            }
-
-            fullReplyText = clean;
-            revealedChars = 0;
-            bubbleReply.innerText = '';
-            setBubbleState('HABLANDO');
-            if (clean) addLogEntry('fuko', clean);
-
-            const intervalMs = Math.round(1000 / CHARS_PER_SEC);
-            typeTimer = setInterval(() => {
-                revealedChars = Math.min(fullReplyText.length, revealedChars + 1);
-                bubbleReply.innerText = fullReplyText.slice(0, revealedChars);
-                if (revealedChars >= fullReplyText.length) {
-                    clearInterval(typeTimer);
-                    bubbleCaret.style.display = 'none';
-                    setBubbleState('EN ESPERA');
-                } else {
-                    bubbleCaret.style.display = 'inline-block';
-                }
-            }, intervalMs);
+        // Pausas adaptativas por puntuación (idéntico a bubble.js de MtGhozt/Capri-Desktop)
+        let delay = 28;
+        if (finalMsg.slice(idx - 3, idx) === '...') {
+          delay = 190;
+        } else if (ch === '.' || ch === '!' || ch === '?') {
+          delay = 105;
+        } else if (ch === ',' || ch === ';' || ch === ':') {
+          delay = 70;
         }
 
-        async function submitUserMessage() {
-            const text = bubbleInput.value.trim();
-            if (!text || isThinking) return;
-            bubbleInput.value = '';
+        typeTimer = setTimeout(stepChar, delay);
+      }
 
-            addLogEntry('pregunta', text);
-            isThinking = true;
-            setBubbleState('PENSANDO');
-            bubbleReply.innerText = 'pensando...';
-            bubbleCaret.style.display = 'inline-block';
+      stepChar();
+    }
 
-            try {
-                const res = await invoke('send_chat_message', {
-                    message: text,
-                    mode: currentBrainMode
-                });
-                startTypewriter(res.reply, res.model_used);
-            } catch (err) {
-                startTypewriter(`Mi cromo tuvo un glitch: ${err}`, 'error');
-            }
+    async function submitUserMessage() {
+      const text = bubbleInput.value.trim();
+      if (!text || isThinking) return;
+      bubbleInput.value = '';
+
+      addLogEntry('pregunta', text);
+      isThinking = true;
+      if (typeTimer) {
+        clearTimeout(typeTimer);
+        typeTimer = null;
+      }
+      setBubbleState('PENSANDO');
+      bubbleReply.textContent = 'pensando';
+      bubbleNoise.textContent = '...';
+      bubbleCaret.style.display = 'inline-block';
+
+      try {
+        const res = await invoke('send_chat_message', {
+          message: text,
+          mode: currentBrainMode
+        });
+        if (res && res.reply) {
+          startTypewriter(res.reply, res.model_used || currentBrainMode);
+        } else {
+          startTypewriter('Sin respuesta del motor.', 'error');
         }
+      } catch (err) {
+        startTypewriter(`Fallo en la conexion: ${err}`, 'error');
+      } finally {
+        isThinking = false;
+      }
+    }
 
-        bubbleInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                submitUserMessage();
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                invoke('show_bubble_window_cmd', { show: false });
-            }
-        });
+    bubbleInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        invoke('show_bubble_window_cmd', { show: false });
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitUserMessage();
+        return;
+      }
+      if (e.key.length === 1) {
+        capriSynth.typeBlip();
+      }
+    });
 
-        bubbleCloseBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            invoke('show_bubble_window_cmd', { show: false });
-        });
+    bubbleCloseBtn.addEventListener('click', () => {
+      invoke('show_bubble_window_cmd', { show: false });
+    });
 
-        bubbleModePill.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const nextIdx = (BRAIN_MODES.indexOf(currentBrainMode) + 1) % BRAIN_MODES.length;
-            currentBrainMode = BRAIN_MODES[nextIdx];
-            bubbleModePill.innerText = BRAIN_LABELS[currentBrainMode] || '⚡ AUTO';
-            try {
-                await invoke('set_ai_mode_cmd', { mode: currentBrainMode });
-            } catch (_) {}
-        });
+    bubbleModePill.addEventListener('click', async () => {
+      const idx = (BRAIN_MODES.indexOf(currentBrainMode) + 1) % BRAIN_MODES.length;
+      currentBrainMode = BRAIN_MODES[idx];
+      bubbleModePill.innerText = BRAIN_LABELS[currentBrainMode];
+      bubbleModel.innerText = `[${BRAIN_LABELS[currentBrainMode]}]`;
+      try {
+        await invoke('set_ai_mode_cmd', { mode: currentBrainMode });
+      } catch (_) {}
+    });
 
-        // Eventos recibidos desde el avatar / sistema
-        listen('avatar_speak', (e) => {
-            const data = e.payload || {};
-            const msg = typeof data === 'string' ? data : (data.message || '');
-            const model = typeof data === 'object' ? (data.model || '') : '';
-            const thinking = typeof data === 'object' ? !!data.thinking : false;
-            const heard = typeof data === 'object' ? (data.heard || '') : '';
+    // Evento limpio desde index.html o desde el backend de Rust
+    function handleIncomingSpeech(payload) {
+      const data = payload || {};
+      const msg = typeof data === 'string' ? data : (data.message || data.reply || '');
+      const model = typeof data === 'object' ? (data.model || '') : '';
+      const thinking = typeof data === 'object' ? !!data.thinking : false;
+      const heard = typeof data === 'object' ? (data.heard || '') : '';
 
-            if (heard) addLogEntry('pregunta', heard);
+      if (heard && heard !== 'startup') {
+        addLogEntry('pregunta', heard);
+      }
 
-            if (thinking) {
-                isThinking = true;
-                setBubbleState('PENSANDO');
-                bubbleReply.innerText = 'pensando...';
-                bubbleCaret.style.display = 'inline-block';
-            } else {
-                startTypewriter(msg, model);
-            }
-        });
+      if (thinking) {
+        isThinking = true;
+        setBubbleState('PENSANDO');
+        bubbleReply.textContent = stripEmojisAndTags(msg).clean || 'pensando';
+        bubbleNoise.textContent = '...';
+        bubbleCaret.style.display = 'inline-block';
+      } else if (msg) {
+        startTypewriter(msg, model);
+      }
+    }
 
-        listen('ears_speech_recognized', (e) => {
-            const heard = String(e.payload || '').trim();
-            if (heard) {
-                addLogEntry('oido', heard);
-                setBubbleState('PENSANDO');
-            }
-        });
+    listen('capri_bubble_render', (e) => handleIncomingSpeech(e.payload));
+    listen('avatar_speak', (e) => handleIncomingSpeech(e.payload));
 
-        listen('focus_bubble_input', () => {
-            setTimeout(() => bubbleInput.focus(), 60);
-        });
+    listen('ears_speech_recognized', (e) => {
+      const txt = typeof e.payload === 'string' ? e.payload : (e.payload?.text || '');
+      if (txt) {
+        addLogEntry('oido', txt);
+        setBubbleState('PENSANDO');
+        bubbleReply.textContent = 'procesando voz';
+        bubbleNoise.textContent = '...';
+      }
+    });
 
-        listen('ai_status_updated', (e) => {
-            const st = e.payload || {};
-            if (st.mode && BRAIN_MODES.includes(st.mode)) {
-                currentBrainMode = st.mode;
-                bubbleModePill.innerText = BRAIN_LABELS[currentBrainMode] || '⚡ AUTO';
-            }
-        });
+    listen('focus_bubble_input', () => {
+      setTimeout(() => bubbleInput.focus(), 50);
+    });
 
-        // Inicializar modo IA
-        (async () => {
-            try {
-                const st = await invoke('get_ai_status_cmd');
-                if (st && st.mode) {
-                    currentBrainMode = st.mode;
-                    bubbleModePill.innerText = BRAIN_LABELS[currentBrainMode] || '⚡ AUTO';
-                }
-            } catch (_) {}
-        })();
-    </script>
+    listen('ai_status_updated', (e) => {
+      const st = e.payload;
+      if (st && st.mode) {
+        currentBrainMode = st.mode;
+        bubbleModePill.innerText = BRAIN_LABELS[currentBrainMode] || currentBrainMode.toUpperCase();
+      }
+    });
+
+    (async () => {
+      try {
+        const st = await invoke('get_ai_status_cmd');
+        if (st && st.mode) {
+          currentBrainMode = st.mode;
+          bubbleModePill.innerText = BRAIN_LABELS[currentBrainMode] || currentBrainMode.toUpperCase();
+        }
+      } catch (_) {}
+    })();
+  </script>
 </body>
 </html>

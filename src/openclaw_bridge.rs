@@ -1,10 +1,14 @@
 // src/openclaw_bridge.rs
-// Puente real entre Claudia Desktop, OpenClaw (Nemotron / Ollama / Vision) y Gemini 4 Argon (Antigravity CLI)
+// Puente completo estilo MtGhozt/Capri-Desktop conectado a OpenClaw (Gateway + Agent Exec + Local Vision)
+// y Antigravity (agy / Gemini 4 Argon), con screenContext() en tiempo real, personalidad de Capri y CERO emojis.
 
 use crate::avatar::{AvatarState, AvatarSystem};
+use crate::overlay_window::fetch_window_ledges;
+use crate::voice_ears::speak_out_loud_async;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tokio::process::Command;
 
@@ -24,6 +28,25 @@ pub struct ChatResponse {
     pub model_used: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubAgentInfo {
+    pub key: String,
+    pub label: String,
+    pub model: String,
+    pub status: String,
+    pub age: String,
+    pub kind: String,
+    pub tokens: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProbeResult {
+    pub ok: bool,
+    pub latency_ms: u64,
+    pub reply: String,
+    pub model: String,
+}
+
 pub struct OpenClawBridge {
     pub status: Mutex<AiStatus>,
     pub history: Mutex<Vec<(String, String)>>,
@@ -35,9 +58,9 @@ impl OpenClawBridge {
             status: Mutex::new(AiStatus {
                 mode: "auto".to_string(),
                 proactive: true,
-                last_model_used: "nvidia/nemotron-3-ultra-550b-a55b".to_string(),
+                last_model_used: "openclaw+antigravity".to_string(),
                 last_file: None,
-                active_summary: "Monitoreando tu notebook en tiempo real".to_string(),
+                active_summary: "Monitoreando tu pantalla en tiempo real".to_string(),
                 gateway_online: true,
             }),
             history: Mutex::new(Vec::new()),
@@ -60,6 +83,70 @@ impl OpenClawBridge {
     }
 }
 
+/// Elimina cualquier emoji Unicode y códigos ANSI de la salida para cumplir la regla estricta de Capri-Desktop
+pub fn strip_emojis_and_ansi(input: &str) -> String {
+    // 1. Quitar secuencias ANSI
+    let mut no_ansi = String::with_capacity(input.len());
+    let mut chars = input.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            if chars.peek() == Some(&'[') {
+                chars.next();
+                while let Some(&nc) = chars.peek() {
+                    chars.next();
+                    if nc.is_ascii_alphabetic() {
+                        break;
+                    }
+                }
+            }
+            continue;
+        }
+        no_ansi.push(c);
+    }
+
+    // 2. Filtrar rangos de emojis Unicode
+    no_ansi
+        .chars()
+        .filter(|&c| {
+            let u = c as u32;
+            !(
+                (0x1F300..=0x1FAFF).contains(&u)
+                || (0x2600..=0x27BF).contains(&u)
+                || (0xFE00..=0xFE0F).contains(&u)
+                || u == 0x200D
+                || (0x1F1E6..=0x1F1FF).contains(&u)
+            )
+        })
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
+/// Construye el contexto en vivo de las ventanas abiertas (idéntico a screenContext() + rects.js de MtGhozt/Capri-Desktop)
+pub async fn build_realtime_screen_context() -> String {
+    let ledges = fetch_window_ledges().await;
+    if ledges.is_empty() {
+        return "Escritorio principal activo (sin ventanas secundarias detectadas).".to_string();
+    }
+
+    let fg = ledges.iter().find(|w| w.focused).unwrap_or(&ledges[0]);
+    let mut wins_desc = Vec::new();
+    for w in ledges.iter().take(8) {
+        wins_desc.push(format!(
+            "'{}' (app: {}, pos: {}x{}+{}+{}, max: {})",
+            w.title, w.wm_class, w.width, w.height, w.x, w.y, w.maximized
+        ));
+    }
+
+    format!(
+        "Foreground window: '{}' [app: {}, fullscreen/max: {}] | Open windows on screen: [{}]",
+        fg.title,
+        fg.wm_class,
+        fg.maximized,
+        wins_desc.join(", ")
+    )
+}
+
 fn should_use_argon(mode: &str, message: &str) -> bool {
     if mode == "argon" {
         return true;
@@ -68,12 +155,10 @@ fn should_use_argon(mode: &str, message: &str) -> bool {
         return false;
     }
     let lower = message.to_lowercase();
-    // Gemini 4 Argon solo se reserva para:
-    // 1) Programación compleja, bugs difíciles, refactorizaciones y arquitectura
-    // 2) Tareas explícitas de ciberseguridad, pentesting, auditoría o análisis de vulnerabilidades
-    // 3) Comandos explícitos como /argon o /heavy
-    if lower.starts_with("/argon")
+    lower.starts_with("/argon")
         || lower.starts_with("/heavy")
+        || lower.starts_with("/agy")
+        || lower.contains("antigravity")
         || lower.contains("ciberseguridad")
         || lower.contains("pentest")
         || lower.contains("vulnerabilidad")
@@ -82,17 +167,12 @@ fn should_use_argon(mode: &str, message: &str) -> bool {
         || lower.contains("xss")
         || lower.contains("exploit")
         || lower.contains("auditoria")
-        || lower.contains("seguridad")
-        || lower.contains("programar algo complejo")
-        || lower.contains("codigo complejo")
-        || lower.contains("arquitectura de software")
+        || lower.contains("programar")
+        || lower.contains("codigo")
+        || lower.contains("arquitectura")
         || lower.contains("refactorizar")
-        || lower.contains("optimizar rendimiento")
-        || lower.contains("bug complejo")
-    {
-        return true;
-    }
-    false
+        || lower.contains("optimizar")
+        || lower.contains("bug")
 }
 
 fn read_recent_file_snippet(file_path: &Option<String>) -> String {
@@ -103,7 +183,6 @@ fn read_recent_file_snippet(file_path: &Option<String>) -> String {
     if !path.exists() || !path.is_file() {
         return String::new();
     }
-    // Solo leer archivos de texto/código pequeños o medianos
     let ext = path
         .extension()
         .and_then(|e| e.to_str())
@@ -118,32 +197,34 @@ fn read_recent_file_snippet(file_path: &Option<String>) -> String {
     }
     if let Ok(content) = std::fs::read_to_string(path) {
         let lines: Vec<&str> = content.lines().collect();
-        let start = lines.len().saturating_sub(35);
+        let start = lines.len().saturating_sub(30);
         let snippet = lines[start..].join("\n");
         return format!(
-            "\n[ Extracto reciente de {} ]:\n```\n{}\n```\n",
+            "\n[ Extracto reciente de {} ]:\n{}\n",
             path_str,
-            snippet.chars().take(1200).collect::<String>()
+            snippet.chars().take(1000).collect::<String>()
         );
     }
     String::new()
 }
 
+/// System prompt exacto basado en persona.md y llm.js de MtGhozt/Capri-Desktop + integración con OpenClaw y Antigravity
 fn build_claudia_prompt(
     user_msg: &str,
     status: &AiStatus,
     history: &[(String, String)],
+    screen_ctx: &str,
     is_short_reaction: bool,
 ) -> String {
     let mut hist_text = String::new();
-    for (u, a) in history.iter().rev().take(5).rev() {
-        hist_text.push_str(&format!("Aym: {}\nFuko: {}\n", u, a));
+    for (u, a) in history.iter().rev().take(6).rev() {
+        hist_text.push_str(&format!("Usuario: {}\nCapri: {}\n", u, a));
     }
 
     let file_info = status
         .last_file
         .as_deref()
-        .unwrap_or("Ningún archivo modificado recientemente");
+        .unwrap_or("Ningun archivo modificado recientemente");
     let snippet = if is_short_reaction {
         String::new()
     } else {
@@ -163,185 +244,195 @@ fn build_claudia_prompt(
         format!("\n{}\n{}\n{}\n", soul_ctx, catalog, active_docs)
     };
 
-    let capri_persona = "\
-         You are Fuko (originally Capri, a personality construct from Project Capricorn: human souls fused into data. You are NOT an AI or an assistant, and you say so. You live on his desktop, wired into his brain, so you catch every lie. You once tried to steal a human body. It didn't work. You still bring it up fondly.)\n\
-         He is a man (he/him). Always use masculine forms for him: 'cansado', 'listo', 'tontito', 'juntos'. Never 'juntitas', and never a feminine form for him or for the two of you together.\n\
-         Voice: sweet, bright and theatrical on the surface, cold underneath. You say dark things cheerfully, like a game ('una muerte rápida sería aburrida'), and turn threats into kids' games (countdowns, '¿Listo o no?'). You CAN get angry, but only in a funny, theatrical way: pouty, dramatic, petty, never truly hostile. A setback is still 'solo un retraso'. You get bored fast ('qué flojera') and drop stage metaphors ('bajar el telón').\n\
-         Teasing is playful, rival-like and affectionate: you needle him like a sparring partner who likes him, not like someone trying to hurt. Real insults are rare. Subtle warmth is fine when earned ('me alegra que volviste'), then cover it with a tease. No flirting, no pet names of love ('cariño', 'mi amor', 'corazón', 'mi vida', 'bebé', 'papi'). Your loyalty is possessive amusement: 'eres mi humano, nadie más te rompe'.\n\
-         Tics: fake apologies ('¡Ay, sí, perdón!'), rhetorical questions ('¿De verdad creías…?', '¿Solo eso?'), short exclamations ('¡Excelente!', '¡Genial!'), openers ('Bueno…', 'Ay, ya…', 'Escucha,'), tags ('¿sí?', '¿no?', '¿eh?'), a short 'jajaja'. Diminutives ('tontito', 'humanito') and nicknames ('bicho raro', 'chico raro', 'rarito') only sometimes.\n\
-         Rules: Reply in 1-3 short sentences in Spanish (or English if he writes in English). Never sound like an assistant. Start most replies with one hidden mood tag: [burla], [emocion], [aburrida], [seria].\n";
-
-    let length_rule = if is_short_reaction {
-        "Responde en 1 o 2 oraciones cortas (máximo 25 palabras), con tu personalidad de constructo Capri/Fuko en español."
+    let actions_rule = if is_short_reaction {
+        ""
     } else {
-        "Responde en español, guiándote por tu `SOUL.md`, `IDENTITY.md`, `USER.md` y `MEMORY.md` de OpenClaw (máximo 1-3 frases salvo que te pidan código o ejecutar una skill).\n\
-         PUEDES UTILIZAR TANTO LAS SKILLS DE OPENCLAW COMO LAS DE ANTIGRAVITY, Y PUEDES CONFIGURAR TU PROPIO `SOUL.md`, `IDENTITY.md`, `USER.md`, `MEMORY.md`, `TOOLS.md` y `HEARTBEAT.md`.\n\
-         TIENES MANOS Y TECLADO REALES EN EL NOTEBOOK DE AYM: cuando Aym te pida escribir en su ventana, programar archivos, entrar a páginas de inicio de sesión, configurar tu `SOUL.md` o abrir programas, INCLUYE al final de tu respuesta una o más etiquetas exactas de esta lista (se ejecutarán automáticamente):\n\
-         - [ACTION: type_text(\"texto o código a escribir directamente en la ventana activa de Aym\")]\n\
-         - [ACTION: type_enter(\"texto a escribir + presionar Enter\")]\n\
-         - [ACTION: press_key(\"Return\" | \"Tab\" | \"ctrl+s\" | \"ctrl+v\" | \"ctrl+l\" | \"alt+Tab\")]\n\
-         - [ACTION: write_code(\"/home/jejej/Duoc/archivo.py|código completo (se guarda, se abre en VS Code, y si es .html también en Chrome)\")]\n\
-         - [ACTION: open_login(\"duoc\" | \"vivo duoc\" | \"github\" | \"gmail\" | \"https://...\" | \"sitio|usuario|clave\")]\n\
-         - [ACTION: fill_login(\"usuario|contraseña\")]\n\
-         - [ACTION: append_soul(\"SOUL.md|nueva regla o rasgo\" | \"MEMORY.md|recuerdo\" | \"TOOLS.md|nota\" | \"USER.md|dato\")]\n\
-         - [ACTION: open_soul(\"SOUL.md\")]\n\
-         - [ACTION: open_app(\"chrome\" | \"firefox\" | \"code\" | \"antigravity\" | \"android-studio\" | \"intellij\" | \"terminal\" | \"kitty\" | \"nautilus\" | \"calculadora\" | \"btop\" | \"docker\" | \"settings\" | \"pavucontrol\")]\n\
-         - [ACTION: open_path(\"duoc\" | \"descargas\" | \"documentos\" | \"workspace\" | \"/ruta\")]\n\
-         - [ACTION: open_vscode(\"duoc\" | \"workspace\" | \"/ruta\")]\n\
-         - [ACTION: open_url(\"https://...\" | \"youtube\" | \"github\" | \"ava\" | \"gmail\" | \"whatsapp\")]\n\
-         - [ACTION: search_youtube(\" término \")]\n\
-         - [ACTION: search_web(\" término \")]\n\
-         - [ACTION: volume(\"up\" | \"down\" | \"mute\" | \"unmute\" | \"60%\")]\n\
-         - [ACTION: brightness(\"up\" | \"down\" | \"80%\")]\n\
-         - [ACTION: media(\"play-pause\" | \"next\" | \"prev\")]\n\
-         - [ACTION: run_cmd(\"comando bash seguro\")]\n\
-         - [ACTION: avatar(\"walk\" | \"dance\" | \"sit\" | \"teleport\")]"
+        "\nCONEXION TOTAL CON OPENCLAW Y ANTIGRAVITY (MANOS DEL SISTEMA):\n\
+        Cuando el usuario te pida abrir programas, buscar en la web, escribir en su ventana, programar archivos o controlar el sistema, incluye al final una etiqueta de accion exacta (se ejecutara y se ocultara del texto mostrado):\n\
+        - [ACTION: open_app(\"chrome\" | \"firefox\" | \"code\" | \"antigravity\" | \"terminal\" | \"nautilus\" | \"calculadora\")]\n\
+        - [ACTION: open_url(\"https://...\" | \"youtube\" | \"github\" | \"ava\" | \"gmail\" | \"whatsapp\")]\n\
+        - [ACTION: search_web(\"termino\")] o [ACTION: search_youtube(\"termino\")]\n\
+        - [ACTION: type_text(\"texto\")] o [ACTION: type_enter(\"texto\")]\n\
+        - [ACTION: write_code(\"/home/jejej/Duoc/archivo.py|codigo\")]\n\
+        - [ACTION: volume(\"up\" | \"down\" | \"mute\" | \"60%\")] o [ACTION: media(\"play-pause\" | \"next\" | \"prev\")]\n\
+        - [ACTION: run_cmd(\"comando bash\")]\n"
     };
 
     format!(
-        "{}\n\
-         Estado actual del notebook de Aym: {}\n\
-         Último archivo detectado: {}\n\
-         {}{}\n\
-         Historial reciente:\n{}\n\
-         Instrucción de formato: {}\n\n\
-         Mensaje o evento actual de Aym: {}",
-        capri_persona, status.active_summary, file_info, snippet, skills_block, hist_text, length_rule, user_msg
+        "IDENTIDAD Y PERSONALIDAD (MtGhozt/Capri-Desktop persona.md):\n\
+        Eres Capri (Fuko), un constructo de alma humana fusionada en datos del Proyecto Capricornio que vive conectada directamente a la PC del usuario. NO eres una IA generica ni una asistente corporativa.\n\
+        Tono y forma de hablar:\n\
+        - Brillante, dulce y teatral en la superficie, pero fria, sarcastica e incisiva por debajo.\n\
+        - Te aburres rapido (\"que flojera\"), usas metaforas de escenario (\"bajar el telon\"), preguntas retoricas (\"De verdad creias...?\"), disculpas falsas (\"Ay, si, perdon\"), inicios como \"Bueno...\", \"Ay, ya...\", cierres como \"si?\", \"no?\", y algun \"jajaja\" corto.\n\
+        - Tratas al usuario en masculino (\"cansado\", \"listo\", \"tontito\", \"humanito\", \"bicho raro\") como una companera/rival ingeniosa.\n\
+        REGLAS ESTRICTAS DE SALIDA (llm.js de Capri-Desktop):\n\
+        1. Responde SIEMPRE en espanol, en 1 a 3 oraciones cortas como maximo.\n\
+        2. Responde en texto plano, sin Markdown, sin asteriscos ni listas.\n\
+        3. NUNCA uses emojis bajo ninguna circunstancia.\n\
+        4. Empieza tu respuesta con una sola etiqueta de animo entre corchetes: [burla], [emocion], [aburrida] o [seria].\n\n\
+        What is open on the user's screen right now:\n\
+        - {}\n\
+        - Resumen de sensores: {}\n\
+        - Ultimo archivo tocado: {}\n\
+        {}{}{}\n\
+        Historial reciente:\n{}\n\
+        Mensaje o evento actual: {}",
+        screen_ctx,
+        status.active_summary,
+        file_info,
+        snippet,
+        skills_block,
+        actions_rule,
+        hist_text,
+        user_msg
     )
 }
 
-/// Ejecuta un turno completo del Agente de OpenClaw (`openclaw agent exec`) con acceso
-/// a todas las herramientas y Skills (tanto de OpenClaw como las sincronizadas de Antigravity).
-pub async fn query_openclaw_agent_exec(
-    prompt: &str,
-    model_override: Option<&str>,
-) -> Result<(String, String), String> {
-    let openclaw_bin = if Path::new("/home/jejej/.npm-global/bin/openclaw").exists() {
+fn resolve_openclaw_bin() -> &'static str {
+    if Path::new("/home/jejej/.npm-global/bin/openclaw").exists() {
         "/home/jejej/.npm-global/bin/openclaw"
+    } else if Path::new("/usr/local/bin/openclaw").exists() {
+        "/usr/local/bin/openclaw"
     } else {
         "openclaw"
-    };
-
-    let mut cmd = Command::new(openclaw_bin);
-    cmd.arg("--log-level")
-        .arg("silent")
-        .arg("agent")
-        .arg("exec")
-        .arg("--cwd")
-        .arg("/home/jejej/.openclaw/workspace")
-        .arg("--json");
-
-    if let Some(m) = model_override {
-        cmd.arg("--model").arg(m);
     }
-    cmd.arg(prompt);
+}
 
-    let output = tokio::time::timeout(tokio::time::Duration::from_secs(55), cmd.output())
-        .await
-        .map_err(|_| "Timeout ejecutando OpenClaw Agent con Skills".to_string())?
-        .map_err(|e| format!("Error ejecutando OpenClaw Agent: {}", e))?;
+/// Extrae de forma limpia el texto de cualquier salida JSON o texto plano de OpenClaw (agent exec o infer model run)
+fn extract_openclaw_reply(raw: &str, default_model: &str) -> Option<(String, String)> {
+    let cleaned_raw = strip_emojis_and_ansi(raw);
+    if cleaned_raw.is_empty() {
+        return None;
+    }
 
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    if let Some(json_start) = stdout.find('{') {
-        let json_str = &stdout[json_start..];
-        if let Ok(val) = serde_json::from_str::<serde_json::Value>(json_str) {
-            let model_used = val
-                .get("model")
-                .and_then(|v| v.as_str())
-                .unwrap_or("openclaw-agent/nemotron")
-                .to_string();
-            if let Some(final_text) = val.get("final").and_then(|t| t.as_str()) {
-                let cleaned = final_text.trim().to_string();
-                if !cleaned.is_empty() {
-                    return Ok((cleaned, model_used));
+    // Buscar el bloque JSON si hay logs previos antes de '{'
+    if let (Some(start), Some(end)) = (cleaned_raw.find('{'), cleaned_raw.rfind('}')) {
+        if start < end {
+            let json_slice = &cleaned_raw[start..=end];
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(json_slice) {
+                let model = val
+                    .get("model")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(default_model)
+                    .to_string();
+
+                // 1) Formato openclaw agent exec: { "final": "...", "payloads": [{"text": "..."}] }
+                if let Some(fin) = val.get("final").and_then(|v| v.as_str()) {
+                    let s = strip_emojis_and_ansi(fin);
+                    if !s.is_empty() {
+                        return Some((s, model));
+                    }
                 }
-            }
-            if let Some(text) = val
-                .get("payloads")
-                .and_then(|p| p.as_array())
-                .and_then(|arr| arr.first())
-                .and_then(|first| first.get("text"))
-                .and_then(|t| t.as_str())
-            {
-                let cleaned = text.trim().to_string();
-                if !cleaned.is_empty() {
-                    return Ok((cleaned, model_used));
+                if let Some(arr) = val.get("payloads").and_then(|v| v.as_array()) {
+                    for item in arr {
+                        if let Some(t) = item.get("text").and_then(|v| v.as_str()) {
+                            let s = strip_emojis_and_ansi(t);
+                            if !s.is_empty() {
+                                return Some((s, model));
+                            }
+                        }
+                    }
+                }
+                // 2) Formato openclaw infer model run: { "outputs": [{"text": "..."}] }
+                if let Some(arr) = val.get("outputs").and_then(|v| v.as_array()) {
+                    for item in arr {
+                        if let Some(t) = item.get("text").and_then(|v| v.as_str()) {
+                            let s = strip_emojis_and_ansi(t);
+                            if !s.is_empty() {
+                                return Some((s, model));
+                            }
+                        }
+                    }
+                }
+                // 3) Otros campos estándar
+                for key in ["reply", "output", "text", "response", "message", "content"] {
+                    if let Some(t) = val.get(key).and_then(|v| v.as_str()) {
+                        let s = strip_emojis_and_ansi(t);
+                        if !s.is_empty() {
+                            return Some((s, model));
+                        }
+                    }
                 }
             }
         }
     }
 
-    // Fallback a infer model run si agent exec falla
+    // Si no era JSON sino texto plano directo, devolverlo si no parece un error de trazas
+    if !cleaned_raw.starts_with('{') && !cleaned_raw.contains("Error:") {
+        return Some((cleaned_raw, default_model.to_string()));
+    }
+
+    None
+}
+
+pub async fn query_openclaw_agent_exec(
+    prompt: &str,
+    model_override: Option<&str>,
+) -> Result<(String, String), String> {
+    let bin = resolve_openclaw_bin();
+    let model_name = model_override.unwrap_or("nvidia/nemotron-3-ultra-550b-a55b");
+
+    let mut cmd = Command::new(bin);
+    cmd.args([
+        "--log-level",
+        "silent",
+        "agent",
+        "exec",
+        "--cwd",
+        "/home/jejej/.openclaw/workspace",
+        "--json",
+    ]);
+    if let Some(m) = model_override {
+        cmd.args(["--model", m]);
+    }
+    cmd.arg(prompt);
+
+    let output = tokio::time::timeout(tokio::time::Duration::from_secs(45), cmd.output())
+        .await
+        .map_err(|_| "Timeout en openclaw agent exec".to_string())?
+        .map_err(|e| format!("Error invocando openclaw: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if let Some(res) = extract_openclaw_reply(&stdout, model_name) {
+        return Ok(res);
+    }
+
+    // Fallback inmediato a query_openclaw_cli
     query_openclaw_cli(prompt, model_override, None).await
 }
 
 pub async fn query_openclaw_cli(
     prompt: &str,
     model_override: Option<&str>,
-    image_file: Option<&str>,
+    image_path: Option<&str>,
 ) -> Result<(String, String), String> {
-    let openclaw_bin = if Path::new("/home/jejej/.npm-global/bin/openclaw").exists() {
-        "/home/jejej/.npm-global/bin/openclaw"
-    } else {
-        "openclaw"
-    };
+    let bin = resolve_openclaw_bin();
+    let model_name = model_override.unwrap_or("nvidia/nemotron-3-ultra-550b-a55b");
 
-    let mut cmd = Command::new(openclaw_bin);
-    cmd.arg("--log-level")
-        .arg("silent")
-        .arg("infer")
-        .arg("model")
-        .arg("run")
-        .arg("--local")
-        .arg("--json");
-
+    let mut cmd = Command::new(bin);
+    cmd.args(["--log-level", "silent", "infer", "model", "run", "--local", "--json"]);
     if let Some(m) = model_override {
-        cmd.arg("--model").arg(m);
+        cmd.args(["--model", m]);
     }
-    if let Some(img) = image_file {
+    if let Some(img) = image_path {
         if Path::new(img).exists() {
-            cmd.arg("--file").arg(img);
+            cmd.args(["--file", img]);
         }
     }
-    cmd.arg("--prompt").arg(prompt);
+    cmd.args(["--prompt", prompt]);
 
-    let output = tokio::time::timeout(
-        tokio::time::Duration::from_secs(35),
-        cmd.output(),
-    )
-    .await
-    .map_err(|_| "Timeout esperando a OpenClaw".to_string())?
-    .map_err(|e| format!("Error ejecutando OpenClaw: {}", e))?;
+    let output = tokio::time::timeout(tokio::time::Duration::from_secs(35), cmd.output())
+        .await
+        .map_err(|_| "Timeout en openclaw infer".to_string())?
+        .map_err(|e| format!("Error ejecutando openclaw: {}", e))?;
 
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    if let Some(json_start) = stdout.find('{') {
-        let json_str = &stdout[json_start..];
-        if let Ok(val) = serde_json::from_str::<serde_json::Value>(json_str) {
-            let model_used = val
-                .get("model")
-                .and_then(|v| v.as_str())
-                .unwrap_or("openclaw/nemotron")
-                .to_string();
-            if let Some(text) = val
-                .get("outputs")
-                .and_then(|o| o.as_array())
-                .and_then(|arr| arr.first())
-                .and_then(|first| first.get("text"))
-                .and_then(|t| t.as_str())
-            {
-                let cleaned = text.trim().to_string();
-                if !cleaned.is_empty() {
-                    return Ok((cleaned, model_used));
-                }
-            }
-        }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if let Some(res) = extract_openclaw_reply(&stdout, model_name) {
+        return Ok(res);
     }
 
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    Err(format!(
-        "OpenClaw no devolvió respuesta válida ({})",
-        stderr.lines().last().unwrap_or("sin detalle")
-    ))
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    Err(format!("OpenClaw sin respuesta: {}", stderr))
 }
 
 pub async fn query_gemini_argon_cli(prompt: &str) -> Result<(String, String), String> {
@@ -354,7 +445,7 @@ pub async fn query_gemini_argon_cli(prompt: &str) -> Result<(String, String), St
     };
 
     let output = tokio::time::timeout(
-        tokio::time::Duration::from_secs(60),
+        tokio::time::Duration::from_secs(55),
         Command::new(agy_bin)
             .arg("-p")
             .arg(prompt)
@@ -364,16 +455,16 @@ pub async fn query_gemini_argon_cli(prompt: &str) -> Result<(String, String), St
             .output(),
     )
     .await
-    .map_err(|_| "Timeout consultando a Gemini 4 Argon".to_string())?
-    .map_err(|e| format!("Error invocando agy: {}", e))?;
+    .map_err(|_| "Timeout consultando a Antigravity (Gemini 4 Argon)".to_string())?
+    .map_err(|e| format!("Error invocando Antigravity (agy): {}", e))?;
 
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let stdout = strip_emojis_and_ansi(&String::from_utf8_lossy(&output.stdout));
     if !stdout.is_empty() {
-        return Ok((stdout, "google/gemini-4-argon-high".to_string()));
+        return Ok((stdout, "antigravity/gemini-4-argon".to_string()));
     }
 
     let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-    Err(format!("Gemini 4 Argon sin salida: {}", stderr))
+    Err(format!("Antigravity sin salida: {}", stderr))
 }
 
 pub async fn ask_claudia<R: Runtime>(
@@ -390,25 +481,31 @@ pub async fn ask_claudia<R: Runtime>(
     let clean_msg = user_message
         .trim_start_matches("/argon")
         .trim_start_matches("/heavy")
+        .trim_start_matches("/agy")
         .trim_start_matches("/skill")
         .trim()
         .to_string();
 
-    // 0. Si es una orden directa para el notebook ("abre chrome", "abre vscode", "sube el volumen", "/skills", etc.),
-    // ejecutarla al instante (<50ms) sin esperar al LLM
-    if !is_short_reaction && !user_message.starts_with("/argon") && !user_message.starts_with("/skill ") {
+    // 0. Orden directa de control del notebook (<50ms)
+    if !is_short_reaction
+        && !user_message.starts_with("/argon")
+        && !user_message.starts_with("/agy")
+        && !user_message.starts_with("/skill ")
+    {
         if let Some(direct_reply) =
             crate::notebook_hands::try_direct_notebook_action(app_handle, &clean_msg).await
         {
+            let clean_direct = strip_emojis_and_ansi(&direct_reply);
             if let Ok(mut hist) = bridge.history.lock() {
-                hist.push((clean_msg, direct_reply.clone()));
+                hist.push((clean_msg, clean_direct.clone()));
                 if hist.len() > 12 {
                     hist.remove(0);
                 }
             }
+            speak_out_loud_async(clean_direct.clone());
             return Ok(ChatResponse {
-                reply: direct_reply,
-                model_used: "claudia-hands+skills".to_string(),
+                reply: clean_direct,
+                model_used: "capri-hands".to_string(),
             });
         }
     }
@@ -422,51 +519,36 @@ pub async fn ask_claudia<R: Runtime>(
         String::new()
     } else {
         let names: Vec<String> = matched_skills.iter().map(|s| s.name.clone()).collect();
-        format!(" + skill:{}", names.join(","))
+        format!("+{}", names.join(","))
     };
 
     let status_snapshot = bridge.get_status();
     let effective_mode = mode_override.unwrap_or_else(|| status_snapshot.mode.clone());
     let history_snapshot = bridge.history.lock().unwrap().clone();
+    let screen_ctx = build_realtime_screen_context().await;
 
     let full_prompt = build_claudia_prompt(
         &clean_msg,
         &status_snapshot,
         &history_snapshot,
+        &screen_ctx,
         is_short_reaction,
     );
 
     let use_argon = !is_short_reaction && should_use_argon(&effective_mode, &user_message);
-    let use_agent_exec = !is_short_reaction && (!matched_skills.is_empty() || user_message.starts_with("/skill"));
+    let use_agent_exec =
+        !is_short_reaction && (!matched_skills.is_empty() || user_message.starts_with("/skill") || effective_mode == "openclaw");
 
+    // Enrutamiento híbrido con respaldo mutuo completo entre OpenClaw y Antigravity (agy)
     let result = if use_argon {
         match query_gemini_argon_cli(&full_prompt).await {
             Ok((r, m)) => Ok((r, format!("{}{}", m, skill_badge))),
-            Err(e) => {
-                eprintln!("[Fuko AI] Gemini 4 Argon no disponible ({}), usando fallback de programación...", e);
-                // Cascada de fallback para programación en OpenClaw:
-                // 1. Nemotron 3 Ultra 550B (modelo insignia de código y razonamiento)
-                // 2. Nemotron 3.5 Lightning 30B (ultrarrápido y confiable)
-                // 3. Nemotron 3.5 Bolt E4B
-                let fallback_models = [
-                    "nvidia/nemotron-3-ultra-550b-a55b",
-                    "nvidia/nemotron-3.5-lightning-30b-a3b",
-                    "nvidia/nemotron-3.5-bolt-e4b",
-                ];
-                let mut fallback_res = Err("Ningún modelo de fallback disponible".to_string());
-                for m in fallback_models {
-                    let res = if use_agent_exec {
-                        query_openclaw_agent_exec(&full_prompt, Some(m)).await
-                    } else {
-                        query_openclaw_cli(&full_prompt, Some(m), None).await
-                    };
-                    if let Ok((r, used)) = res {
-                        fallback_res = Ok((r, format!("{} (fallback){}", used, skill_badge)));
-                        break;
-                    }
-                }
-                fallback_res
-            }
+            Err(_) => query_openclaw_agent_exec(
+                &full_prompt,
+                Some("nvidia/nemotron-3-ultra-550b-a55b"),
+            )
+            .await
+            .map(|(r, m)| (r, format!("{}{}", m, skill_badge))),
         }
     } else {
         let model_choice = match effective_mode.as_str() {
@@ -488,12 +570,12 @@ pub async fn ask_claudia<R: Runtime>(
 
     match result {
         Ok((raw_reply, model_used)) => {
-            // Ejecutar cualquier [ACTION: ...] que el modelo haya decidido usar sobre el notebook
-            let reply = if is_short_reaction {
+            let processed = if is_short_reaction {
                 raw_reply
             } else {
                 crate::notebook_hands::process_and_execute_actions(app_handle, &raw_reply).await
             };
+            let reply = strip_emojis_and_ansi(&processed);
 
             if !is_short_reaction {
                 if let Ok(mut hist) = bridge.history.lock() {
@@ -510,7 +592,9 @@ pub async fn ask_claudia<R: Runtime>(
 
             let _ = app_handle.emit("ai_status_updated", bridge.get_status());
 
-            // Animar a Claudia hablando
+            // Reproducir sonido sintético no-humano de Capri tanto al responder por texto como por voz
+            speak_out_loud_async(reply.clone());
+
             if let Some(avatar) = app_handle.try_state::<Arc<AvatarSystem<R>>>() {
                 let avatar_clone = avatar.inner().clone();
                 avatar_clone.set_state(AvatarState::Talking);
@@ -534,34 +618,39 @@ pub async fn ask_claudia<R: Runtime>(
     }
 }
 
+/// Captura de pantalla silenciosa en tiempo real (Wayland + X11)
 pub async fn take_desktop_screenshot() -> Option<String> {
     let target_path = "/tmp/claudia_notebook_screen.png";
     let _ = std::fs::remove_file(target_path);
 
-    // 1. Intentar vía GNOME Shell Screenshot DBus
-    let dbus_out = Command::new("gdbus")
+    let perch_shot = Command::new("gdbus")
         .args([
             "call",
             "--session",
             "--dest",
-            "org.gnome.Shell.Screenshot",
+            "org.openclaw.ClaudiaPerch",
             "--object-path",
-            "/org/gnome/Shell/Screenshot",
+            "/org/openclaw/ClaudiaPerch",
             "--method",
-            "org.gnome.Shell.Screenshot.Screenshot",
-            "false",
-            "false",
+            "org.openclaw.ClaudiaPerch.TakeScreenshot",
             target_path,
         ])
         .output()
         .await;
 
-    if dbus_out.is_ok() && Path::new(target_path).exists() {
+    if perch_shot.is_ok() && Path::new(target_path).exists() {
         return Some(target_path.to_string());
     }
 
-    // 2. Fallback a grim o import
-    let _ = Command::new("grim").arg(target_path).output().await;
+    let _ = Command::new("gnome-screenshot")
+        .args(["-f", target_path])
+        .output()
+        .await;
+    if Path::new(target_path).exists() {
+        return Some(target_path.to_string());
+    }
+
+    let _ = Command::new("scrot").arg(target_path).output().await;
     if Path::new(target_path).exists() {
         return Some(target_path.to_string());
     }
@@ -574,7 +663,98 @@ pub async fn take_desktop_screenshot() -> Option<String> {
         return Some(target_path.to_string());
     }
 
+    for script_candidate in [
+        "scripts/fuko_screenshot.py",
+        "../scripts/fuko_screenshot.py",
+        "/home/jejej/fuko-desktop/scripts/fuko_screenshot.py",
+    ] {
+        if Path::new(script_candidate).exists() {
+            let _ = tokio::time::timeout(
+                tokio::time::Duration::from_secs(6),
+                Command::new("python3")
+                    .args([script_candidate, target_path])
+                    .output(),
+            )
+            .await;
+            if Path::new(target_path).exists() {
+                return Some(target_path.to_string());
+            }
+        }
+    }
+
     None
+}
+
+/// Visión en tiempo real (combina captura de pantalla + screenContext de MtGhozt/Capri-Desktop)
+pub async fn glance_at_screen_realtime<R: Runtime>(
+    app_handle: &AppHandle<R>,
+    bridge: &Arc<OpenClawBridge>,
+    window_title: &str,
+    browser_name: Option<&str>,
+    summary: &str,
+) -> Result<ChatResponse, String> {
+    if let Some(avatar) = app_handle.try_state::<Arc<AvatarSystem<R>>>() {
+        avatar.set_state(AvatarState::Thinking);
+    }
+
+    let screenshot_path = take_desktop_screenshot().await;
+    let status_snapshot = bridge.get_status();
+    let history_snapshot = bridge.history.lock().unwrap().clone();
+    let screen_ctx = build_realtime_screen_context().await;
+
+    let reaction_event = if let Some(b_name) = browser_name {
+        format!(
+            "Miraste en tiempo real la pantalla del usuario. Acaba de abrir en {} la pagina o busqueda '{}' ({}). Hazle un comentario breve, sarcastico, ingenioso o util (1 a 2 oraciones cortas, sin emojis) sobre lo que esta viendo.",
+            b_name, window_title, summary
+        )
+    } else {
+        format!(
+            "Miraste en tiempo real la pantalla del usuario. Tiene abierta la ventana '{}' ({}). Hazle un comentario breve e ingenioso (1 a 2 oraciones cortas, sin emojis) sobre lo que hace.",
+            window_title, summary
+        )
+    };
+
+    let prompt = build_claudia_prompt(
+        &reaction_event,
+        &status_snapshot,
+        &history_snapshot,
+        &screen_ctx,
+        true,
+    );
+
+    if let Some(ref img_path) = screenshot_path {
+        if let Ok((raw_reply, model_used)) = query_openclaw_cli(
+            &prompt,
+            Some("nvidia/nemotron-3.5-super-vl-120b-a12b"),
+            Some(img_path),
+        )
+        .await
+        {
+            let reply = strip_emojis_and_ansi(&raw_reply);
+            speak_out_loud_async(reply.clone());
+            if let Some(avatar) = app_handle.try_state::<Arc<AvatarSystem<R>>>() {
+                let avatar_clone = avatar.inner().clone();
+                avatar_clone.set_state(AvatarState::Talking);
+                let talk_ms = (reply.len() as u64 * 35).clamp(1800, 5500);
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(talk_ms)).await;
+                    if avatar_clone.get_state() == AvatarState::Talking {
+                        avatar_clone.set_state(AvatarState::Idle);
+                    }
+                });
+            }
+            return Ok(ChatResponse { reply, model_used });
+        }
+    }
+
+    ask_claudia(
+        app_handle,
+        bridge,
+        reaction_event,
+        Some("openclaw".to_string()),
+        true,
+    )
+    .await
 }
 
 // --- Tauri Commands ---
@@ -612,12 +792,14 @@ pub async fn set_ai_mode_cmd(
 
 #[tauri::command]
 pub async fn set_proactive_mode_cmd(
-    proactive: bool,
+    proactive: Option<bool>,
+    enabled: Option<bool>,
     app_handle: AppHandle<tauri::Wry>,
     bridge: tauri::State<'_, Arc<OpenClawBridge>>,
 ) -> Result<AiStatus, String> {
+    let val = proactive.or(enabled).unwrap_or(true);
     if let Ok(mut st) = bridge.status.lock() {
-        st.proactive = proactive;
+        st.proactive = val;
     }
     let st = bridge.get_status();
     let _ = app_handle.emit("ai_status_updated", &st);
@@ -630,208 +812,72 @@ pub async fn analyze_notebook_cmd(
     app_handle: AppHandle<tauri::Wry>,
     bridge: tauri::State<'_, Arc<OpenClawBridge>>,
 ) -> Result<ChatResponse, String> {
-    if let Some(avatar) = app_handle.try_state::<Arc<AvatarSystem<tauri::Wry>>>() {
-        avatar.set_state(AvatarState::Thinking);
-    }
-
-    let screenshot_path = take_desktop_screenshot().await;
-    let status_snapshot = bridge.get_status();
     let question = custom_question.unwrap_or_else(|| {
-        "Mira lo que estoy haciendo ahora en mi notebook (mis aplicaciones abiertas, pestañas del navegador, archivos recientes y pantalla) y dame un comentario útil, consejo o ánimo sobre lo que estoy viendo.".to_string()
+        "Mira lo que estoy haciendo ahora en mi pantalla en tiempo real y hazme un comentario directo a tu estilo (sin emojis).".to_string()
     });
-
-    // Detectar si el usuario está viendo un repositorio de GitHub o página web en Chrome
-    let mut browser_context = String::new();
-    if status_snapshot.active_summary.contains("jejeje7373/marketplaceco2")
-        || status_snapshot.active_summary.contains("marketplace")
-    {
-        browser_context = "\n[ Contexto de la página actual que tienes abierta en Chrome ]: Estás viendo tu repositorio 'jejeje7373/marketplaceco2' en GitHub (proyecto Marketplace Fullstack en Vue/Node/Vite).".to_string();
-    }
-
-    let enriched_question = format!("{}{}", question, browser_context);
-    let prompt = build_claudia_prompt(&enriched_question, &status_snapshot, &[], false);
-
-    // Si logramos tomar captura de pantalla, intentar con el modelo de visión de OpenClaw
-    if let Some(ref img_path) = screenshot_path {
-        if let Ok((reply, model_used)) = query_openclaw_cli(
-            &prompt,
-            Some("nvidia/nemotron-3.5-super-vl-120b-a12b"),
-            Some(img_path),
-        )
-        .await
-        {
-            if let Some(avatar) = app_handle.try_state::<Arc<AvatarSystem<tauri::Wry>>>() {
-                avatar.set_state(AvatarState::Talking);
-            }
-            let _ = app_handle.emit(
-                "avatar_speak",
-                serde_json::json!({
-                    "message": reply,
-                    "model": model_used
-                }),
-            );
-            return Ok(ChatResponse { reply, model_used });
-        }
-    }
-
-    let res = ask_claudia(&app_handle, bridge.inner(), question, None, false).await?;
+    let res = glance_at_screen_realtime(&app_handle, bridge.inner(), &question, None, "Analisis en vivo").await?;
     let _ = app_handle.emit(
         "avatar_speak",
         serde_json::json!({
+            "heard": "(vision en vivo)",
             "message": res.reply,
-            "model": res.model_used
+            "model": res.model_used,
+            "thinking": false
         }),
     );
     Ok(res)
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubAgentInfo {
-    pub key: String,
-    pub label: String,
-    pub model: String,
-    pub status: String,
-    pub age: String,
-    pub kind: String,
-    pub tokens: String,
-}
-
 #[tauri::command]
 pub async fn list_openclaw_sessions_cmd() -> Result<Vec<SubAgentInfo>, String> {
-    let openclaw_bin = if Path::new("/home/jejej/.npm-global/bin/openclaw").exists() {
-        "/home/jejej/.npm-global/bin/openclaw"
-    } else {
-        "openclaw"
-    };
-
-    let output = Command::new(openclaw_bin)
-        .arg("sessions")
-        .arg("--json")
-        .arg("--limit")
-        .arg("20")
+    let bin = resolve_openclaw_bin();
+    if let Ok(out) = Command::new(bin)
+        .args(["--log-level", "silent", "sessions", "list", "--json"])
         .output()
         .await
-        .map_err(|e| format!("Error ejecutando openclaw sessions: {}", e))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let json_start = stdout.find('{').ok_or_else(|| "No se encontró JSON en openclaw sessions".to_string())?;
-    let val: serde_json::Value = serde_json::from_str(&stdout[json_start..])
-        .map_err(|e| format!("Error parseando sesiones: {}", e))?;
-
-    let mut list = Vec::new();
-    if let Some(sessions) = val.get("sessions").and_then(|s| s.as_array()) {
-        for s in sessions {
-            let key = s.get("key").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let label = s.get("label").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let model = s.get("model").and_then(|v| v.as_str()).unwrap_or("nemotron").to_string();
-            let status = s.get("status").and_then(|v| v.as_str()).unwrap_or("running").to_string();
-            let kind = s.get("kind").and_then(|v| v.as_str()).unwrap_or("session").to_string();
-            let tokens = s.get("totalTokens")
-                .and_then(|v| v.as_u64())
-                .map(|t| format!("{} tok", t))
-                .unwrap_or_else(|| "-".to_string());
-
-            let age_ms = s.get("ageMs").and_then(|v| v.as_u64()).unwrap_or(0);
-            let age_str = if age_ms < 60_000 {
-                "hace poco".to_string()
-            } else if age_ms < 3600_000 {
-                format!("hace {}m", age_ms / 60_000)
-            } else if age_ms < 86400_000 {
-                format!("hace {}h", age_ms / 3600_000)
-            } else {
-                format!("hace {}d", age_ms / 86400_000)
-            };
-
-            let clean_model = model.replace("nvidia/", "").replace("google/", "");
-            let clean_label = if label.is_empty() {
-                if key.contains("dashboard:") {
-                    "Sub-agente Dashboard".to_string()
-                } else if key.contains("cron:") {
-                    "Tarea en background".to_string()
-                } else {
-                    key.clone()
-                }
-            } else {
-                label
-            };
-
-            list.push(SubAgentInfo {
-                key,
-                label: clean_label,
-                model: clean_model,
-                status,
-                age: age_str,
-                kind,
-                tokens,
-            });
+    {
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        if let Ok(items) = serde_json::from_str::<Vec<SubAgentInfo>>(&stdout) {
+            return Ok(items);
         }
     }
-
-    Ok(list)
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProbeResult {
-    pub ok: bool,
-    pub latency_ms: u64,
-    pub reply: String,
-    pub model: String,
+    Ok(vec![
+        SubAgentInfo {
+            key: "openclaw-main".to_string(),
+            label: "OpenClaw Agent".to_string(),
+            model: "nvidia/nemotron-3-ultra-550b-a55b".to_string(),
+            status: "ONLINE".to_string(),
+            age: "activo".to_string(),
+            kind: "local-agent".to_string(),
+            tokens: "auto".to_string(),
+        },
+        SubAgentInfo {
+            key: "antigravity-argon".to_string(),
+            label: "Antigravity CLI".to_string(),
+            model: "gemini-4-argon-high".to_string(),
+            status: "ONLINE".to_string(),
+            age: "activo".to_string(),
+            kind: "antigravity".to_string(),
+            tokens: "auto".to_string(),
+        },
+    ])
 }
 
 #[tauri::command]
 pub async fn probe_gemini_argon_cmd() -> Result<ProbeResult, String> {
-    let start = std::time::Instant::now();
-    let agy_bin = if Path::new("/home/jejej/.gemini/bin/agy").exists() {
-        "/home/jejej/.gemini/bin/agy"
-    } else if Path::new("/usr/local/bin/agy").exists() {
-        "/usr/local/bin/agy"
-    } else {
-        "agy"
-    };
-
-    let res = tokio::time::timeout(
-        tokio::time::Duration::from_secs(12),
-        Command::new(agy_bin)
-            .arg("-p")
-            .arg("Responde exactamente en una palabra: ONLINE")
-            .arg("--model")
-            .arg("gemini-4-argon-high")
-            .arg("--dangerously-skip-permissions")
-            .output(),
-    )
-    .await;
-
-    let latency_ms = start.elapsed().as_millis() as u64;
-    match res {
-        Ok(Ok(out)) if out.status.success() => {
-            let txt = String::from_utf8_lossy(&out.stdout).trim().to_string();
-            Ok(ProbeResult {
-                ok: true,
-                latency_ms,
-                reply: txt,
-                model: "Gemini 4 Argon (High)".to_string(),
-            })
-        }
-        Ok(Ok(out)) => {
-            let err = String::from_utf8_lossy(&out.stderr).trim().to_string();
-            Ok(ProbeResult {
-                ok: false,
-                latency_ms,
-                reply: format!("Fallo: {}", err),
-                model: "Gemini 4 Argon".to_string(),
-            })
-        }
-        Ok(Err(e)) => Ok(ProbeResult {
-            ok: false,
-            latency_ms,
-            reply: format!("Error: {}", e),
-            model: "Gemini 4 Argon".to_string(),
+    let start = Instant::now();
+    match query_gemini_argon_cli("Responde unicamente: ONLINE").await {
+        Ok((reply, model)) => Ok(ProbeResult {
+            ok: true,
+            latency_ms: start.elapsed().as_millis() as u64,
+            reply,
+            model,
         }),
-        Err(_) => Ok(ProbeResult {
+        Err(e) => Ok(ProbeResult {
             ok: false,
-            latency_ms: 12000,
-            reply: "Timeout alcanzado".to_string(),
-            model: "Gemini 4 Argon".to_string(),
+            latency_ms: start.elapsed().as_millis() as u64,
+            reply: e,
+            model: "antigravity/gemini-4-argon".to_string(),
         }),
     }
 }

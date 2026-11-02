@@ -1,1741 +1,2077 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fuko</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            margin: 0;
-            padding: 0;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fuko</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      margin: 0;
+      padding: 0;
+    }
 
-        html, body {
-            width: 320px;
-            height: 380px;
-            background: transparent !important;
-            overflow: hidden;
-            font-family: 'Share Tech Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-            position: relative;
-        }
+    html, body {
+      width: 360px;
+      height: 420px;
+      background: transparent !important;
+      overflow: hidden;
+      font-family: 'Share Tech Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      position: relative;
+    }
 
-        /* =========================================================
-           AVATAR STAGE & CANVAS (Capri Scale)
-           ========================================================= */
-        #pet-stage {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
+    /* ==================================================
+       CAPRI CYBERPUNK SPEECH BUBBLE (Look.cs / Talk.cs Sheet)
+       Panel: rgb(9, 11, 15), Border: #3ad6eb, Accent: #ff4466
+       ================================================== */
+    #capri-bubble {
+      position: absolute;
+      top: 8px;
+      left: 10px;
+      right: 10px;
+      background: rgba(9, 11, 15, 0.95);
+      border: 2px solid #3ad6eb;
+      clip-path: polygon(
+        10px 0%,
+        calc(100% - 10px) 0%,
+        100% 10px,
+        100% calc(100% - 10px),
+        calc(100% - 10px) 100%,
+        10px 100%,
+        0% calc(100% - 10px),
+        0% 10px
+      );
+      box-shadow: 0 0 14px rgba(58, 214, 235, 0.35);
+      padding: 10px 14px 11px 22px;
+      min-height: 54px;
+      max-height: 148px;
+      overflow-y: auto;
+      opacity: 0;
+      transform: translateY(6px);
+      pointer-events: none;
+      transition: opacity 0.14s ease, transform 0.14s ease;
+      z-index: 2000;
+      cursor: pointer;
+    }
 
-        #avatar-canvas {
-            width: 320px;
-            height: 380px;
-            cursor: grab;
-            filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
-        }
+    #capri-bubble.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
 
-        #avatar-canvas:active {
-            cursor: grabbing;
-        }
+    #capri-bubble::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.03) 0px,
+        rgba(255, 255, 255, 0.03) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+      pointer-events: none;
+    }
 
-        /* =========================================================
-           CAPRI TALKPILL (Talk.cs PillFace / TalkPill exacto)
-           Placa negra con esquinas biseladas, borde degradado rosa->cian,
-           costura diagonal central, 5 barras de onda en tiempo real y botón MicBody
-           ========================================================= */
-        #talk-pill-wrap {
-            position: absolute;
-            bottom: 4px;
-            left: 50%;
-            transform: translateX(-50%);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.14s ease;
-            z-index: 1600;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+    .bubble-red-bar {
+      position: absolute;
+      left: 9px;
+      top: 11px;
+      bottom: 11px;
+      width: 3px;
+      background: #ff4466;
+      box-shadow: 0 0 6px rgba(255, 68, 102, 0.7);
+    }
 
-        body:hover #talk-pill-wrap,
-        #talk-pill-wrap.visible {
-            opacity: 1;
-            pointer-events: auto;
-        }
+    .bubble-heard {
+      font-size: 12px;
+      font-style: italic;
+      color: #7c8492;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 3px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-        #talk-pill-canvas {
-            cursor: pointer;
-            display: block;
-        }
+    .bubble-model-tag {
+      font-style: normal;
+      font-size: 9.5px;
+      color: #3ad6eb;
+      opacity: 0.85;
+      letter-spacing: 0.4px;
+    }
 
-        /* =========================================================
-           CAPRI RIGHT-CLICK CONTEXT MENU (Pet.cs Menu)
-           ========================================================= */
-        #capri-menu {
-            position: absolute;
-            bottom: 42px;
-            left: 28px;
-            width: 245px;
-            background: rgba(9, 11, 15, 0.98);
-            border: 1.5px solid #3ad6eb;
-            clip-path: polygon(
-                8px 0%,
-                calc(100% - 8px) 0%,
-                100% 8px,
-                100% calc(100% - 8px),
-                calc(100% - 8px) 100%,
-                8px 100%,
-                0% calc(100% - 8px),
-                0% 8px
-            );
-            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.8);
-            padding: 6px 0;
-            display: none;
-            flex-direction: column;
-            z-index: 3000;
-            font-size: 12px;
-        }
+    .bubble-body {
+      font-size: 13px;
+      line-height: 1.35;
+      color: #5ceeff;
+      word-wrap: break-word;
+    }
 
-        #capri-menu.open {
-            display: flex;
-        }
+    .speaker-tag {
+      color: #ff4466;
+      font-weight: 700;
+    }
 
-        .menu-header {
-            padding: 4px 12px 6px;
-            font-size: 10.5px;
-            color: #ff4466;
-            font-weight: 700;
-            letter-spacing: 1px;
-            border-bottom: 1px solid rgba(58, 214, 235, 0.25);
-            margin-bottom: 3px;
-            display: flex;
-            justify-content: space-between;
-        }
+    .caret-block {
+      display: inline-block;
+      width: 7px;
+      height: 13px;
+      background: #5ceeff;
+      vertical-align: text-bottom;
+      margin-left: 2px;
+      animation: blinkCaret 0.7s steps(1) infinite;
+    }
 
-        .menu-item {
-            padding: 5px 12px;
-            color: #e8ecf2;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    @keyframes blinkCaret {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
 
-        .menu-item:hover {
-            background: rgba(58, 214, 235, 0.18);
-            color: #5ceeff;
-        }
+    /* ==================================================
+       CAPRI TYPER INPUT BAR (Talk.cs Typer)
+       ================================================== */
+    #capri-typer {
+      position: absolute;
+      bottom: 256px;
+      left: 12px;
+      right: 12px;
+      height: 42px;
+      background: rgba(9, 11, 15, 0.96);
+      border: 2px solid #3ad6eb;
+      clip-path: polygon(
+        8px 0%,
+        calc(100% - 8px) 0%,
+        100% 8px,
+        100% calc(100% - 8px),
+        calc(100% - 8px) 100%,
+        8px 100%,
+        0% calc(100% - 8px),
+        0% 8px
+      );
+      display: none;
+      align-items: center;
+      padding: 0 10px 0 18px;
+      z-index: 2100;
+      box-shadow: 0 0 16px rgba(58, 214, 235, 0.4);
+    }
 
-        .menu-item .sub {
-            font-size: 10px;
-            color: #7c8492;
-        }
+    #capri-typer.open {
+      display: flex;
+    }
 
-        .menu-sep {
-            height: 1px;
-            background: rgba(255, 255, 255, 0.1);
-            margin: 4px 8px;
-        }
-    </style>
+    #capri-typer .typer-red-bar {
+      position: absolute;
+      left: 8px;
+      top: 8px;
+      bottom: 8px;
+      width: 3px;
+      background: #ff4466;
+    }
+
+    .typer-prompt {
+      color: #7c8492;
+      font-style: italic;
+      font-size: 13px;
+      margin-right: 6px;
+      white-space: nowrap;
+    }
+
+    #typer-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #e8ecf2;
+      font-family: inherit;
+      font-size: 13px;
+      caret-color: #5ceeff;
+      user-select: text;
+    }
+
+    #typer-mode-pill {
+      cursor: pointer;
+      font-size: 9px;
+      font-weight: bold;
+      color: #ffee55;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 1px 4px;
+      border-radius: 3px;
+      border: 1px solid rgba(255, 238, 85, 0.4);
+      margin-left: 6px;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    #typer-mode-pill:hover {
+      background: rgba(255, 68, 102, 0.25);
+      border-color: #ff4466;
+      color: #ff4466;
+    }
+
+    /* ==================================================
+       AVATAR STAGE & CANVAS (240px Capri Scale)
+       ================================================== */
+    #pet-stage {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 240px;
+      height: 248px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 1000;
+      transition: bottom 0.08s ease-out;
+    }
+
+    #avatar-canvas {
+      width: 240px;
+      height: 248px;
+      cursor: grab;
+      filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+    }
+
+    #avatar-canvas:active {
+      cursor: grabbing;
+    }
+
+    /* ==================================================
+       CAPRI TALKPILL (Talk.cs PillFace / TalkPill exacto)
+       ================================================== */
+    #talk-pill-wrap {
+      position: absolute;
+      bottom: 1px;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.14s ease;
+      z-index: 1600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    body:hover #talk-pill-wrap,
+    #talk-pill-wrap.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #talk-pill-canvas {
+      cursor: pointer;
+      display: block;
+    }
+
+    /* ============================================================
+       CAPRI RIGHT-CLICK CONTEXT MENU (Pet.cs Menu)
+       ============================================================ */
+    #capri-menu {
+      position: absolute;
+      bottom: 42px;
+      left: 28px;
+      width: 252px;
+      background: rgba(9, 11, 15, 0.98);
+      border: 1.5px solid #3ad6eb;
+      clip-path: polygon(
+        8px 0%,
+        calc(100% - 8px) 0%,
+        100% 8px,
+        100% calc(100% - 8px),
+        calc(100% - 8px) 100%,
+        8px 100%,
+        0% calc(100% - 8px),
+        0% 8px
+      );
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.8);
+      padding: 6px 0;
+      display: none;
+      flex-direction: column;
+      z-index: 3000;
+      font-size: 12px;
+    }
+
+    #capri-menu.open {
+      display: flex;
+    }
+
+    .menu-header {
+      padding: 4px 12px 6px;
+      font-size: 10.5px;
+      color: #ff4466;
+      font-weight: 700;
+      letter-spacing: 1px;
+      border-bottom: 1px solid rgba(58, 214, 235, 0.25);
+      margin-bottom: 3px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .menu-item {
+      padding: 5px 12px;
+      color: #e8ecf2;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .menu-item:hover {
+      background: rgba(58, 214, 235, 0.18);
+      color: #5ceeff;
+    }
+
+    .menu-sep {
+      height: 1px;
+      background: rgba(58, 214, 235, 0.25);
+      margin: 3px 0;
+    }
+
+    .menu-item span.sub {
+      font-size: 9.5px;
+      color: #a0aec0;
+    }
+
+    .menu-item:hover span.sub {
+      color: #d1f7ff;
+    }
+
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #3ad6eb;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      margin: 4px 8px;
+    }
+  </style>
 </head>
 <body>
 
-    <!-- Escenario del personaje (sin botones flotantes invasivos) -->
-    <div id="pet-stage">
-        <canvas id="avatar-canvas" width="320" height="380"></canvas>
+  <!-- Globo Cyberpunk de Capri / Fuko -->
+  <div id="capri-bubble" title="Click para cerrar">
+    <div class="bubble-red-bar"></div>
+    <div class="bubble-heard">
+      <span id="bubble-prompt">&gt; tú: startup</span>
+      <span class="bubble-model-tag" id="bubble-model"></span>
     </div>
-
-    <!-- TalkPill exacto de capri-desktop (Talk.cs PillFace: TYPE | TALK + 5 barras de onda + botón Mic Mute) -->
-    <div id="talk-pill-wrap" class="visible">
-        <canvas id="talk-pill-canvas" width="166" height="46"></canvas>
+    <div class="bubble-body">
+      <span class="speaker-tag">FUKO: </span><span id="bubble-reply"></span><span class="caret-block" id="bubble-caret"></span>
     </div>
+  </div>
 
-    <!-- Menú contextual estilo Capri (Click derecho sobre Fuko) -->
-    <div id="capri-menu">
-        <div class="menu-header">
-            <span>FUKO // CAPRI OS</span>
-            <span id="menu-status-label">ONLINE</span>
-        </div>
-        <div class="menu-item" data-action="mic"><span>🎤 Hablar por micrófono</span></div>
-        <div class="menu-item" data-action="talk"><span>✎ Escribir mensaje</span></div>
-        <div class="menu-item" data-action="look"><span>👁 Mirar mi pantalla ahora</span></div>
-        <div class="menu-item" data-action="soul"><span>🧬 Configurar SOUL.md &amp; OpenClaw</span></div>
-        <div class="menu-item" data-action="skills"><span>🧩 Ver Skills (OpenClaw + AGY)</span></div>
-        <div class="menu-sep"></div>
-        <div class="menu-item" data-action="toggle-floating">
-            <span>🪶 Flotar en el aire (Sin gravedad)</span>
-            <span class="sub" id="menu-floating-val">Desactivado</span>
-        </div>
-        <div class="menu-item" data-action="sit-active-window"><span>🪑 Posarse en ventana activa</span></div>
-        <div class="menu-item" data-action="toggle-sit"><span id="menu-sit-text">🪑 Sentarse aquí</span></div>
-        <div class="menu-item" data-action="drop-floor"><span>⬇️ Bajar al suelo</span></div>
-        <div class="menu-item" data-action="walk-now"><span>🐾 Caminar por la pantalla</span></div>
-        <div class="menu-item" data-action="toggle-dance"><span id="menu-dance-text">🎵 Bailar</span></div>
-        <div class="menu-item" data-action="teleport"><span>⚡ Glitch / Teletransportar</span></div>
-        <div class="menu-item" data-action="toggle-sleep"><span id="menu-sleep-text">💤 Ir a dormir</span></div>
-        <div class="menu-sep"></div>
-        <div class="menu-item" data-action="toggle-continuous-mic">
-            <span>🎙️ Escucha continua (Manos libres)</span>
-            <span class="sub" id="menu-cmic-val">Pausado</span>
-        </div>
-        <div class="menu-item" data-action="toggle-tts">
-            <span>🔊 Voz de Fuko (TTS)</span>
-            <span class="sub" id="menu-tts-val">Activa</span>
-        </div>
-        <div class="menu-item" data-action="cycle-wander">
-            <span>Movimiento autónomo</span>
-            <span class="sub" id="menu-wander-val">Frecuente</span>
-        </div>
-        <div class="menu-item" data-action="cycle-brain">
-            <span>Cerebro IA</span>
-            <span class="sub" id="menu-brain-val">Auto (OpenClaw+Argon)</span>
-        </div>
-        <div class="menu-item" data-action="toggle-watch">
-            <span>Reaccionar sola a mi notebook</span>
-            <span class="sub" id="menu-watch-val">Activo</span>
-        </div>
-        <div class="menu-sep"></div>
-        <div class="menu-item" data-action="mainframe"><span>⚙️ Abrir Mainframe</span></div>
-        <div class="menu-item" data-action="quit" style="color: #ff4466;"><span>✕ Salir</span></div>
+  <!-- Barra de entrada estilo Capri (> tú: ...) -->
+  <div id="capri-typer">
+    <div class="typer-red-bar"></div>
+    <span class="typer-prompt">&gt; tú:</span>
+    <input type="text" id="typer-input" placeholder="pide: abre chrome, abre vscode, sube volumen, /argon..." maxlength="240" autocomplete="off" />
+    <span id="typer-mode-pill" title="Click para cambiar motor IA"> AUTO</span>
+  </div>
+
+  <!-- Escenario del personaje -->
+  <div id="pet-stage">
+    <canvas id="avatar-canvas" width="260" height="270"></canvas>
+  </div>
+
+  <!-- TalkPill exacto de capri-desktop -->
+  <div id="talk-pill-wrap" class="visible">
+    <canvas id="talk-pill-canvas" width="166" height="46"></canvas>
+  </div>
+
+  <!-- Menú contextual estilo Capri (Click derecho sobre Fuko) -->
+  <div id="capri-menu">
+    <div class="menu-header">
+      <span>FUKO // CAPRI OS</span>
+      <span id="menu-status-label">ONLINE</span>
     </div>
+    <div class="menu-item" data-action="mic"><span>Hablar por micrófono</span></div>
+    <div class="menu-item" data-action="talk"><span>Escribir mensaje</span></div>
+    <div class="menu-item" data-action="look"><span>Mirar mi pantalla ahora</span></div>
+    <div class="menu-item" data-action="soul"><span>Configurar SOUL.md &amp; OpenClaw</span></div>
+    <div class="menu-item" data-action="skills"><span>Ver Skills (OpenClaw + AGY)</span></div>
+    <div class="menu-sep"></div>
+    <div class="menu-item" data-action="perch-window"><span>Sentarse en ventana activa</span></div>
+    <div class="menu-item" data-action="toggle-sit"><span id="menu-sit-text"> Sentarse / Flotar aquí</span></div>
+    <div class="menu-item" data-action="drop-floor"><span>⬇ Bajar al suelo</span></div>
+    <div class="menu-item" data-action="walk-now"><span>Caminar por la pantalla</span></div>
+    <div class="menu-item" data-action="toggle-dance"><span id="menu-dance-text"> Bailar</span></div>
+    <div class="menu-item" data-action="teleport"><span>Glitch / Teletransportar</span></div>
+    <div class="menu-item" data-action="toggle-sleep">
+      <span id="menu-sleep-text"> Ir a dormir</span>
+    </div>
+    <div class="menu-sep"></div>
+    <div class="menu-item" data-action="toggle-continuous-mic">
+      <span>Escucha continua (Manos libres)</span>
+      <span class="sub" id="menu-cmic-val">Pausado</span>
+    </div>
+    <div class="menu-item" data-action="toggle-tts">
+      <span>Voz de Fuko (TTS)</span>
+      <span class="sub" id="menu-tts-val">Activa</span>
+    </div>
+    <div class="menu-item" data-action="cycle-wander">
+      <span>Movimiento autónomo</span>
+      <span class="sub" id="menu-wander-val">Frecuente</span>
+    </div>
+    <div class="menu-item" data-action="cycle-brain">
+      <span>Cerebro IA</span>
+      <span class="sub" id="menu-brain-val">Auto (OpenClaw+Argon)</span>
+    </div>
+    <div class="menu-item" data-action="toggle-watch">
+      <span>Reaccionar sola a mi pantalla</span>
+      <span class="sub" id="menu-watch-val">Activo</span>
+    </div>
+    <div class="menu-sep"></div>
+    <div class="menu-item" data-action="mainframe"><span>Abrir Mainframe</span></div>
+    <div class="menu-item" data-action="quit" style="color: #ff4466;"><span>Salir</span></div>
+  </div>
 
-    <script>
-        const tauri = window.__TAURI__ || null;
-        const invoke = tauri ? tauri.core.invoke : async () => ({});
-        const listen = tauri ? tauri.event.listen : () => {};
+<script>
+  const tauri = window.__TAURI__ || null;
+  const invoke = tauri ? tauri.core.invoke : async () => ({});
+  const listen = tauri ? tauri.event.listen : () => {};
 
-        const canvas = document.getElementById('avatar-canvas');
-        const ctx = canvas.getContext('2d');
-        const talkPillWrap = document.getElementById('talk-pill-wrap');
-        const talkPillCanvas = document.getElementById('talk-pill-canvas');
-        const pillCtx = talkPillCanvas.getContext('2d');
-        const capriMenu = document.getElementById('capri-menu');
+  const canvas = document.getElementById('avatar-canvas');
+  const ctx = canvas.getContext('2d');
+  const bubble = document.getElementById('capri-bubble');
+  const bubblePrompt = document.getElementById('bubble-prompt');
+  const bubbleModel = document.getElementById('bubble-model');
+  const bubbleReply = document.getElementById('bubble-reply');
+  const bubbleCaret = document.getElementById('bubble-caret');
+  const typer = document.getElementById('capri-typer');
+  const typerInput = document.getElementById('typer-input');
+  const typerModePill = document.getElementById('typer-mode-pill');
+  const talkPillWrap = document.getElementById('talk-pill-wrap');
+  const talkPillCanvas = document.getElementById('talk-pill-canvas');
+  const pillCtx = talkPillCanvas.getContext('2d');
+  const capriMenu = document.getElementById('capri-menu');
 
-        // Estado exacto de TalkPill + Ears.cs de capri-desktop
-        let pillHover = 0;        // 0 = ninguno, 1 = TYPE (izq), 2 = TALK (der), 3 = MicBody (mute)
-        let pillChatting = true;  // TALK activo por defecto al iniciar para que te escuche de inmediato
-        let pillMuted = false;    // Botón de mute del micrófono
-        let pillLevel = 0;        // Nivel en vivo de tu voz (0..6) para estirar las 5 barras de onda
-        let pillTear = 4;         // Frames de glitch al aparecer (TearFrames = 4 en Talk.cs)
-        let ttsVoiceEnabled = true;
+  // Estado exacto de TalkPill + Ears.cs de capri-desktop
+  let pillHover = 0;        // 0 = ninguno, 1 = TYPE (izq), 2 = TALK (der), 3 = MicBody (mute)
+  let pillChatting = true;  // TALK activo por defecto al iniciar para que te escuche de inmediato
+  let pillMuted = false;    // Botón de mute del micrófono
+  let pillLevel = 0;        // Nivel en vivo de tu voz (0..6) para estirar las 5 barras de onda
+  let pillTear = 4;         // Frames de glitch al aparecer (TearFrames = 4 en Talk.cs)
+  let ttsVoiceEnabled = true;
 
-        // =========================================================================
-        // 1. DEFINICIÓN EXACTA DE CLIPS DE CAPRI (Pet.cs líneas 201-221)
-        // =========================================================================
-        const CLIPS = {
-            idle:              { src: 'sprites/idle.png',              count: 16, fps: 8,  fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
-            blink:             { src: 'sprites/blink.png',             count: 4,  fps: 8,  fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
-            blink_glitch:      { src: 'sprites/blink_glitch.png',      count: 4,  fps: 8,  fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
-            glitch:            { src: 'sprites/glitch.png',            count: 10, fps: 15, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
-            dangle:            { src: 'sprites/dangle.png',            count: 24, fps: 10, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
-            mouth:             { src: 'sprites/mouth.png',             count: 5,  fps: 12, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
-            walk:              { src: 'sprites/walk.png',              count: 12, fps: 12, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
-            dance:             { src: 'sprites/dance.png',             count: 16, fps: 16, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
-            arrive:            { src: 'sprites/arrive.png',            count: 14, fps: 15, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
-            leave:             { src: 'sprites/leave.png',             count: 12, fps: 15, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
-            grin:              { src: 'sprites/grin.png',              count: 16, fps: 8,  fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
-            sleep:             { src: 'sprites/sleep.png',             count: 16, fps: 6,  fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
-            wake:              { src: 'sprites/wake.png',              count: 13, fps: 15, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
-            perch:             { src: 'sprites/perch.png',             count: 60, fps: 30, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
-            perch_blink:       { src: 'sprites/perch_blink.png',       count: 8,  fps: 30, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
-            perch_blink_glitch:{ src: 'sprites/perch_blink_glitch.png',count: 8,  fps: 30, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
-            perch_glitch:      { src: 'sprites/perch_glitch.png',      count: 10, fps: 15, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
-            perch_music:       { src: 'sprites/perch_music.png',       count: 60, fps: 30, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
-            perch_arrive:      { src: 'sprites/perch_arrive.png',      count: 14, fps: 15, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
-            perch_leave:       { src: 'sprites/perch_leave.png',       count: 12, fps: 15, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
-        };
+  // =========================================================
+  // 1. DEFINICIÓN EXACTA DE CLIPS DE CAPRI (Pet.cs líneas 201-221)
+  // =========================================================
+  const CLIPS = {
+    idle:         { src: 'sprites/idle.png',         count: 16, fps: 8,  fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
+    blink:        { src: 'sprites/blink.png',        count: 4,  fps: 8,  fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
+    blink_glitch: { src: 'sprites/blink_glitch.png', count: 4,  fps: 8,  fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
+    glitch:       { src: 'sprites/glitch.png',       count: 10, fps: 15, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
+    dangle:       { src: 'sprites/dangle.png',       count: 24, fps: 10, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
+    mouth:        { src: 'sprites/mouth.png',        count: 5,  fps: 12, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
+    walk:         { src: 'sprites/walk.png',         count: 12, fps: 12, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
+    dance:        { src: 'sprites/dance.png',        count: 16, fps: 16, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
+    arrive:       { src: 'sprites/arrive.png',       count: 14, fps: 15, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
+    leave:        { src: 'sprites/leave.png',        count: 12, fps: 15, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
+    grin:         { src: 'sprites/grin.png',         count: 16, fps: 8,  fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
+    sleep:        { src: 'sprites/sleep.png',        count: 16, fps: 6,  fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
+    wake:         { src: 'sprites/wake.png',         count: 13, fps: 15, fw: 240, fh: 384, height: 1.0,  shiftX: 0,   shiftY: 0 },
+    perch:              { src: 'sprites/perch.png',              count: 60, fps: 30, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
+    perch_blink:        { src: 'sprites/perch_blink.png',        count: 8,  fps: 30, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
+    perch_blink_glitch: { src: 'sprites/perch_blink_glitch.png', count: 8,  fps: 30, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
+    perch_glitch:       { src: 'sprites/perch_glitch.png',       count: 10, fps: 15, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
+    perch_music:        { src: 'sprites/perch_music.png',        count: 60, fps: 30, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
+    perch_arrive:       { src: 'sprites/perch_arrive.png',       count: 14, fps: 15, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
+    perch_leave:        { src: 'sprites/perch_leave.png',        count: 12, fps: 15, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
+  };
 
-        const images = {};
-        function getClipImage(key) {
-            if (!CLIPS[key]) return null;
-            if (!images[key]) {
-                const img = new Image();
-                img.src = CLIPS[key].src;
-                images[key] = img;
+  const images = {};
+  function getClipImage(key) {
+    if (!CLIPS[key]) return null;
+    if (!images[key]) {
+      const img = new Image();
+      img.src = CLIPS[key].src;
+      images[key] = img;
+    }
+    return images[key];
+  }
+
+  // Pre-cargar primero los sprites esenciales de arranque para inicio instantáneo (<50ms)
+  ['arrive', 'dangle', 'glitch', 'idle', 'blink', 'mouth', 'walk', 'grin'].forEach(getClipImage);
+  // Cargar el resto en segundo plano sin bloquear el arranque
+  setTimeout(() => {
+    Object.keys(CLIPS).forEach(getClipImage);
+  }, 1200);
+
+  // Frases de cariñitos (PetLines de Pet.cs traducidas al estilo cyberpunk de Claudia)
+  const PET_LINES = [
+    "Heh. Está bien, lo permito.",
+    "Cariñitos registrados. Moral +12%.",
+    "Cuidado, choom. Muerdo virus.",
+    "¿Palmadas en mi cromo? Qué atrevido.",
+    "Okey, eso se siente bien. No se lo digas a nadie.",
+    "Estado del sistema: muy acariciada.",
+    "Mis ventiladores acaban de encenderse, choom.",
+    "Diez de diez esos cariñitos. Lo permitiría otra vez.",
+    "¿Esto es un soborno? Porque está funcionando.",
+    "Mmm. Si empiezo a ronronear con glitch, es tu culpa."
+  ];
+  let petLineIdx = 0;
+
+  // =========================================================
+  // 2. ESTADO FÍSICO Y DE ANIMACIÓN (Pet.cs State Machine)
+  // =========================================================
+  const startTime = performance.now() / 1000;
+  function getNow() { return performance.now() / 1000 - startTime; }
+
+  let currentClip = 'arrive';
+  let clipStart = getNow();
+  let idleCycle = 0;
+  let blinkWith = null;
+  let nextGlitch = getNow() + 25 + Math.random() * 25;
+
+  // Estados físicos de escritorio
+  let geom = {
+    screen_width: 1920,
+    screen_height: 1080,
+    work_x: 0,
+    work_y: 32,
+    work_width: 1920,
+    work_height: 1048,
+    win_x: 1250,
+    win_y: 190,
+    win_width: 360,
+    win_height: 420,
+    floor_y: 660
+  };
+
+  let dropAfter = false; // Se mantiene en el aire / en las ventanas sin caerse al iniciar
+  let falling = false;
+  let fallSpeed = 0;
+  let fallStep = getNow();
+
+  let seated = false; // Modo perch (sentada) vs de pie
+  let dancing = false;
+  let musicPlaying = false;
+  let napping = false;
+
+  // Caminata autónoma (Walk / CheckWander)
+  let walking = false;
+  let walkToX = 900;
+  let walkStep = getNow();
+  let walkDir = 1; // 1 = derecha, -1 = izquierda
+  let wanderLevel = 3; // 0=Off, 1=Raro, 2=Normal, 3=Frecuente, 4=Inquieta
+  const WANDER_PACES = [0, 2.2, 1.0, 0.45, 0.22];
+  const WANDER_NAMES = ['Quieta', 'Rara vez', 'A veces', 'Frecuente', 'Inquieta'];
+  let nextWander = getNow() + 11; // Primera caminata autónoma a los ~11s
+
+  // Callback tras animación de salida (GlitchOut / Teleport)
+  let outroCallback = null;
+  let outroAt = -1;
+
+  // Arrastrar con el mouse (Grab / Move / Drop)
+  let pointerPressed = false;
+  let dragging = false;
+  let downScreenX = 0;
+  let downScreenY = 0;
+  let grabOffsetX = 0;
+  let grabOffsetY = 0;
+
+  // Detección de caricias moviendo el mouse sobre ella (Stroke en Pet.cs)
+  let petTurns = [];
+  let lastPetX = 0;
+  let lastPetWay = 0;
+  let lastPetAt = -60;
+
+  // Estado del globo de diálogo y máquina de escribir (Talk.cs)
+  let bubbleVisible = false;
+  let fullReplyText = '';
+  let revealedChars = 0;
+  let revealStart = 0;
+  let isThinking = false;
+  let bubbleHideTimer = null;
+  const CHARS_PER_SEC = 32;
+
+  // Estado IA
+  const BRAIN_MODES = ['auto', 'argon', 'openclaw', 'ollama'];
+  const BRAIN_LABELS = {
+    auto: 'AUTO',
+    argon: 'ANTIGRAVITY',
+    openclaw: 'OPENCLAW',
+    ollama: 'OLLAMA'
+  };
+  const BRAIN_MENU_NAMES = {
+    auto: 'Auto (OpenClaw+Argon)',
+    argon: 'Gemini 4 Argon',
+    openclaw: 'OpenClaw (Nemotron)',
+    ollama: 'Ollama Local'
+  };
+  let currentBrainMode = 'auto';
+  let proactiveWatch = true;
+
+  function playClip(name) {
+    if (!CLIPS[name]) return;
+    currentClip = name;
+    clipStart = getNow();
+    idleCycle = 0;
+    blinkWith = null;
+  }
+
+  const petStage = document.getElementById('pet-stage');
+
+  // Estado de bordes de ventanas abiertas (Ledges) para que Fuko se siente en ellas sin caerse
+  let windowLedges = [];
+  let perchedWindowId = null;
+  let perchedOffsetX = 0;
+  let pinnedInAir = false; // Si el usuario la suelta sobre una ventana o punto de la pantalla, no se cae al suelo
+  const FOOT_OFFSET_FROM_TOP = 382; // Distancia desde el tope del overlay (420px) hasta la base donde se sienta Fuko
+
+  // Calcula la coordenada Y del overlay para que Fuko quede sentada exactamente sobre el borde superior de una ventana
+  function getLedgePerchY(ledge) {
+    // Si la ventana está maximizada o muy arriba (y < 75), se sienta sobre la barra de pestañas/herramientas (~y=78)
+    const effectiveLedgeY = (ledge.maximized || ledge.y < 68) ? Math.max(ledge.y + 42, 74) : ledge.y;
+    return Math.max(-130, Math.min(geom.floor_y, effectiveLedgeY - FOOT_OFFSET_FROM_TOP));
+  }
+
+  function adjustStageForTopPerch(winY) {
+    // Si el gestor de ventanas X11 limita winY >= 0 cuando Fuko está muy arriba, elevamos #pet-stage dentro del overlay
+    if (winY < 0) {
+      const lift = Math.min(135, Math.abs(winY));
+      petStage.style.bottom = `${24 + lift}px`;
+    } else {
+      petStage.style.bottom = '24px';
+    }
+  }
+
+  async function syncGeometry() {
+    try {
+      const g = await invoke('get_desktop_geometry_cmd');
+      if (g && g.screen_width) {
+        const oldWinX = geom.win_x;
+        const oldWinY = geom.win_y;
+        geom = g;
+        if (dragging || falling || walking || seated || pinnedInAir) {
+          geom.win_x = oldWinX;
+          geom.win_y = oldWinY;
+        }
+      }
+    } catch (_) {}
+  }
+
+  async function syncWindowLedges() {
+    try {
+      const ledges = await invoke('get_window_ledges_cmd');
+      if (Array.isArray(ledges)) {
+        windowLedges = ledges;
+        // Si Fuko está sentada sobre una ventana y el usuario mueve esa ventana, Fuko se mueve con ella
+        if (perchedWindowId && !dragging && !falling && !walking) {
+          const currentLedge = windowLedges.find(w => w.id === perchedWindowId);
+          if (currentLedge) {
+            const targetX = Math.max(
+              currentLedge.x - 60,
+              Math.min(currentLedge.x + currentLedge.width - geom.win_width + 60, currentLedge.x + perchedOffsetX)
+            );
+            const targetY = getLedgePerchY(currentLedge);
+            if (Math.abs(targetX - geom.win_x) > 2 || Math.abs(targetY - geom.win_y) > 2) {
+              moveWindowTo(targetX, targetY);
             }
-            return images[key];
+          }
         }
+      }
+    } catch (_) {}
+  }
 
-        // Pre-cargar primero los sprites esenciales de arranque para inicio instantáneo (<50ms)
-        ['arrive', 'dangle', 'glitch', 'idle', 'blink', 'mouth', 'walk', 'grin'].forEach(getClipImage);
-        // Cargar el resto en segundo plano sin bloquear el arranque
-        setTimeout(() => {
-            Object.keys(CLIPS).forEach(getClipImage);
-        }, 1200);
+  syncGeometry();
+  syncWindowLedges();
+  setInterval(syncWindowLedges, 750);
+  setInterval(syncGeometry, 4000);
 
-        // Frases de cariñitos (PetLines de Pet.cs traducidas al estilo cyberpunk de Claudia)
-        const PET_LINES = [
-            "Heh. Está bien, lo permito.",
-            "Cariñitos registrados. Moral +12%.",
-            "Cuidado, choom. Muerdo virus.",
-            "¿Palmadas en mi cromo? Qué atrevido.",
-            "Okey, eso se siente bien. No se lo digas a nadie.",
-            "Estado del sistema: muy acariciada.",
-            "Mis ventiladores acaban de encenderse, choom.",
-            "Diez de diez esos cariñitos. Lo permitiría otra vez.",
-            "¿Esto es un soborno? Porque está funcionando.",
-            "Mmm. Si empiezo a ronronear con glitch, es tu culpa."
-        ];
-        let petLineIdx = 0;
+  let moveInFlight = false;
+  let pendingMove = null;
+  let lastSentX = -9999;
+  let lastSentY = -9999;
 
-        // =========================================================================
-        // 2. ESTADO FÍSICO Y DE ANIMACIÓN (Pet.cs State Machine)
-        // =========================================================================
-        const startTime = performance.now() / 1000;
-        function getNow() { return performance.now() / 1000 - startTime; }
+  async function moveWindowTo(x, y) {
+    const clampedX = Math.max(-50, Math.min((geom.screen_width || 1920) - geom.win_width + 50, Math.round(x)));
+    const clampedY = Math.max(-135, Math.min(geom.floor_y, Math.round(y)));
+    geom.win_x = clampedX;
+    geom.win_y = clampedY;
+    adjustStageForTopPerch(clampedY);
 
-        let currentClip = 'arrive';
-        let clipStart = getNow();
-        let idleCycle = 0;
-        let blinkWith = null;
-        let nextGlitch = getNow() + 25 + Math.random() * 25;
-
-        // Estados físicos de escritorio
-        let geom = {
-            screen_width: 1920,
-            screen_height: 1080,
-            work_x: 0,
-            work_y: 32,
-            work_width: 1920,
-            work_height: 1048,
-            win_x: 1250,
-            win_y: 190,
-            win_width: 360,
-            win_height: 420,
-            floor_y: 660
-        };
-
-        let dropAfter = false; // Por defecto se mantiene en el aire sin caer forzadamente al suelo
-        let falling = false;
-        let fallSpeed = 0;
-        let fallStep = getNow();
-
-        let seated = false; // Modo perch (sentada en repisa/ventana) vs de pie
-        let dancing = false;
-        let musicPlaying = false;
-        let napping = false;
-
-        // FÍSICAS AVANZADAS: FLOTACIÓN AUTOMÁTICA EN EL AIRE Y BORDES DE VENTANAS
-        let floatingMode = true; // TRUE por defecto: se mantiene flotando en el aire sin menús ni botones
-        let openLedges = [];      // Ventanas abiertas detectadas vía D-Bus
-        let currentSeat = null;   // Ventana sobre la que está sentada actualmente
-
-        // Sincronizar repisas/bordes de ventanas abiertas
-        async function refreshLedges() {
-            try {
-                const ledges = await invoke('get_window_ledges_cmd');
-                if (Array.isArray(ledges)) {
-                    openLedges = ledges;
-                }
-            } catch (_) {}
+    if (moveInFlight) {
+      pendingMove = { x: clampedX, y: clampedY };
+      return;
+    }
+    if (clampedX === lastSentX && clampedY === lastSentY) return;
+    moveInFlight = true;
+    lastSentX = clampedX;
+    lastSentY = clampedY;
+    try {
+      await invoke('move_overlay_window_cmd', { x: clampedX, y: Math.max(0, clampedY) });
+    } catch (_) {} finally {
+      moveInFlight = false;
+      if (pendingMove) {
+        const next = pendingMove;
+        pendingMove = null;
+        if (next.x !== lastSentX || next.y !== lastSentY) {
+          moveWindowTo(next.x, next.y);
         }
-        setInterval(refreshLedges, 800);
-        refreshLedges();
+      }
+    }
+  }
 
-        function findLedgeBelow(hipX, hipY) {
-            let best = null;
-            for (const l of openLedges) {
-                if (hipX >= l.x - 40 && hipX <= l.x + l.width + 40) {
-                    if (l.y >= hipY - 60 && l.y <= geom.floor_y + 100) {
-                        if (!best || l.y < best.y) {
-                            best = l;
-                        }
-                    }
-                }
-            }
-            return best;
+  // Busca si hay algún borde de ventana debajo o cerca de Fuko en su coordenada X actual
+  function findBestWindowLedgeAt(winX, winY, maxSnapDist = null) {
+    const centerX = winX + geom.win_width / 2;
+    let bestLedge = null;
+    let bestTargetY = geom.floor_y;
+    let bestDist = Infinity;
+
+    for (const ledge of windowLedges) {
+      if (centerX < ledge.x + 20 || centerX > ledge.x + ledge.width - 20) continue;
+      const perchY = getLedgePerchY(ledge);
+
+      if (maxSnapDist !== null) {
+        // Modo magnético al soltarla con el mouse cerca del borde superior de una ventana
+        const dist = Math.abs(winY - perchY);
+        if (dist <= maxSnapDist && dist < bestDist) {
+          bestDist = dist;
+          bestLedge = ledge;
+          bestTargetY = perchY;
         }
-
-        function findLedgeAt(hipX, hipY) {
-            for (const l of openLedges) {
-                if (hipX >= l.x - 40 && hipX <= l.x + l.width + 40) {
-                    if (Math.abs(hipY - l.y) <= 160) {
-                        return l;
-                    }
-                }
-            }
-            return null;
+      } else {
+        // Modo caída por gravedad: buscar la ventana más alta que esté por debajo de Fuko
+        if (perchY >= winY - 24 && perchY < bestTargetY) {
+          bestTargetY = perchY;
+          bestLedge = ledge;
         }
+      }
+    }
 
-        function sitOnLedge(ledge) {
-            falling = false;
-            walking = false;
+    return bestLedge ? { ledge: bestLedge, targetY: bestTargetY } : null;
+  }
+
+  function perchOnWindowLedge(ledge, customX = null) {
+    if (!ledge) return;
+    falling = false;
+    walking = false;
+    seated = true;
+    pinnedInAir = true;
+    perchedWindowId = ledge.id;
+
+    const minLedgeX = ledge.x - 30;
+    const maxLedgeX = Math.max(minLedgeX + 20, ledge.x + ledge.width - geom.win_width + 30);
+    const destX = customX !== null
+      ? Math.max(minLedgeX, Math.min(maxLedgeX, customX))
+      : Math.round(minLedgeX + (maxLedgeX - minLedgeX) * 0.72);
+    const destY = getLedgePerchY(ledge);
+
+    perchedOffsetX = destX - ledge.x;
+    moveWindowTo(destX, destY);
+    playClip('perch_glitch');
+  }
+
+  // =========================================================
+  // 3. FÍSICAS DE GRAVEDAD, VENTANAS Y CAMINATA AUTÓNOMA
+  // =========================================================
+  function startFall(forceToFloor = false) {
+    walking = false;
+    seated = false;
+    pinnedInAir = false;
+    if (forceToFloor) {
+      perchedWindowId = null;
+    }
+    falling = true;
+    fallSpeed = 0;
+    fallStep = getNow();
+    playClip('dangle');
+  }
+
+  function updateFall(now) {
+    const dt = Math.max(0, Math.min(0.05, now - fallStep));
+    fallStep = now;
+    fallSpeed += 2400 * dt;
+    const dropPx = Math.ceil(fallSpeed * dt);
+
+    // Comprobar si hay una ventana debajo de Fuko para aterrizar y sentarse en ella sin caerse al suelo
+    const hit = findBestWindowLedgeAt(geom.win_x, geom.win_y, null);
+    const targetY = hit ? hit.targetY : geom.floor_y;
+
+    if (geom.win_y + dropPx >= targetY) {
+      falling = false;
+      if (hit && hit.ledge) {
+        perchOnWindowLedge(hit.ledge, geom.win_x);
+      } else {
+        perchedWindowId = null;
+        moveWindowTo(geom.win_x, geom.floor_y);
+        // Al llegar al suelo, 40% de probabilidad de sentarse para no quedarse tiesa
+        if (Math.random() < 0.4) {
+          seated = true;
+          playClip('perch_glitch');
+        } else {
+          playClip('glitch');
+        }
+      }
+    } else {
+      moveWindowTo(geom.win_x, geom.win_y + dropPx);
+    }
+  }
+
+  function startStroll(customTargetX = null) {
+    if (falling || dragging || pointerPressed || napping) return false;
+
+    // Si está sentada sobre una ventana, camina solo a lo largo del borde de esa ventana sin caerse
+    let minX = 40;
+    let maxX = Math.max(120, geom.screen_width - geom.win_width - 40);
+    if (perchedWindowId) {
+      const ledge = windowLedges.find(w => w.id === perchedWindowId);
+      if (ledge) {
+        minX = Math.max(10, ledge.x - 20);
+        maxX = Math.min(geom.screen_width - geom.win_width - 10, ledge.x + ledge.width - geom.win_width + 20);
+      }
+    }
+
+    if (maxX - minX < 60) return false;
+
+    let targetX = customTargetX;
+    if (targetX === null) {
+      const step = 120 + Math.random() * Math.min(320, maxX - minX);
+      const goRight = (geom.win_x < minX + 120) ? true : (geom.win_x > maxX - 120) ? false : (Math.random() < 0.5);
+      targetX = goRight ? Math.min(maxX, geom.win_x + step) : Math.max(minX, geom.win_x - step);
+    }
+
+    if (Math.abs(targetX - geom.win_x) < 35) return false;
+
+    seated = false;
+    walking = true;
+    walkToX = Math.round(targetX);
+    walkDir = walkToX > geom.win_x ? -1 : 1;
+    walkStep = getNow();
+    playClip('walk');
+    return true;
+  }
+
+  function updateWalk(now) {
+    const dt = Math.max(0, Math.min(0.05, now - walkStep));
+    walkStep = now;
+    const gap = walkToX - geom.win_x;
+    const speed = 115;
+    const stride = Math.max(1, Math.round(speed * dt));
+
+    if (Math.abs(gap) <= stride) {
+      moveWindowTo(walkToX, geom.win_y);
+      walking = false;
+      if (perchedWindowId) {
+        const ledge = windowLedges.find(w => w.id === perchedWindowId);
+        if (ledge) perchedOffsetX = geom.win_x - ledge.x;
+        // Si camina sobre una ventana, vuelve a sentarse al terminar para no caerse
+        seated = true;
+        playClip('perch_glitch');
+      } else if (Math.random() < 0.35) {
+        seated = true;
+        playClip('perch_glitch');
+      } else {
+        playClip('idle');
+      }
+    } else {
+      walkDir = gap > 0 ? -1 : 1;
+      moveWindowTo(geom.win_x + Math.sign(gap) * stride, geom.win_y);
+    }
+  }
+
+  function glitchTeleport(targetX = null, targetY = null) {
+    if (falling || dragging || outroCallback) return;
+    walking = false;
+    const minX = 50;
+    const maxX = Math.max(150, geom.screen_width - geom.win_width - 50);
+    const destX = targetX !== null ? targetX : Math.round(minX + Math.random() * (maxX - minX));
+    const destY = targetY !== null ? targetY : geom.win_y;
+
+    playClip(seated ? 'perch_leave' : 'leave');
+    outroAt = getNow() + 0.65;
+    outroCallback = () => {
+      moveWindowTo(destX, destY);
+      playClip(seated ? 'perch_arrive' : 'arrive');
+      dropAfter = false;
+    };
+  }
+
+  function checkWander(now) {
+    if (wanderLevel <= 0) return;
+    if (dragging || pointerPressed || falling || walking || outroCallback || napping || isThinking) return;
+    if (typer.classList.contains('open')) return;
+
+    // Si Fuko está sentada en una ventana o el usuario la dejó sentada, no tirarla al suelo
+    if (seated || pinnedInAir || perchedWindowId) return;
+
+    const pace = WANDER_PACES[wanderLevel] || 0.5;
+    if (nextWander < 0) {
+      nextWander = now + (18 + Math.random() * 25) * pace;
+    }
+    if (now < nextWander) return;
+
+    nextWander = now + (22 + Math.random() * 35) * pace;
+
+    // 25% probabilidad de subirse a una ventana abierta, 75% caminar
+    if (windowLedges.length > 0 && Math.random() < 0.25) {
+      const targetWin = windowLedges[0];
+      perchOnWindowLedge(targetWin);
+    } else {
+      startStroll();
+    }
+  }
+
+  // =========================================================
+  // 4. ADVANCE & RENDER LOOP (Pet.cs Advance + Body.Render)
+  // =========================================================
+  function isTalkingNow(now) {
+    if (now < talkingUntil) return true;
+    if (!bubbleVisible || isThinking) return false;
+    const elapsed = now - revealStart;
+    const chars = Math.floor(elapsed * CHARS_PER_SEC);
+    return chars < fullReplyText.length;
+  }
+
+  function mouthFrame(now) {
+    return Math.floor(now * CLIPS.mouth.fps) % CLIPS.mouth.count;
+  }
+
+  function tick(now) {
+    // 1. Callback de salida (GlitchOut)
+    if (outroCallback && now >= outroAt) {
+      const cb = outroCallback;
+      outroCallback = null;
+      cb();
+    }
+
+    // 2. Actualizar físicas si no está siendo arrastrada
+    if (!dragging) {
+      if (falling) {
+        updateFall(now);
+      } else if (walking) {
+        updateWalk(now);
+      } else {
+        checkWander(now);
+      }
+    }
+
+    // 3. Máquina de estados de sprites (Pet.cs Advance líneas 953-1007)
+    const clipObj = CLIPS[currentClip] || CLIPS.idle;
+    let index = Math.floor((now - clipStart) * clipObj.fps);
+
+    if (currentClip === 'leave' || currentClip === 'perch_leave') {
+      index = Math.min(index, clipObj.count - 1);
+    }
+
+    if (
+      (currentClip === 'glitch' && index >= CLIPS.glitch.count) ||
+      (currentClip === 'wake' && index >= CLIPS.wake.count) ||
+      (currentClip === 'grin' && index >= CLIPS.grin.count * 2)
+    ) {
+      playClip(seated ? 'perch' : 'idle');
+      index = 0;
+    }
+
+    if (currentClip === 'arrive' && index >= CLIPS.arrive.count) {
+      if (dropAfter) {
+        dropAfter = false;
+        startFall();
+      } else {
+        seated = true;
+        pinnedInAir = true;
+        playClip('perch_glitch');
+      }
+      index = 0;
+    }
+
+    if (
+      (currentClip === 'perch_glitch' && index >= CLIPS.perch_glitch.count) ||
+      (currentClip === 'perch_arrive' && index >= CLIPS.perch_arrive.count)
+    ) {
+      playClip('perch');
+      index = 0;
+    }
+
+    // Bailar sola con música o cuando está activado
+    const still = !walking && !dragging && !falling && !outroCallback && !napping;
+    const grooving = dancing || musicPlaying;
+    if (grooving && still && (currentClip === 'idle' || currentClip === 'perch')) {
+      playClip(seated ? 'perch_music' : 'dance');
+      index = 0;
+    }
+    if ((!grooving || !still) && (currentClip === 'dance' || currentClip === 'perch_music')) {
+      playClip(seated ? 'perch' : 'idle');
+      index = 0;
+    }
+
+    // Parpadeo aleatorio (blink / blink_glitch) y glitch espontáneo en Idle / Perch
+    if (currentClip === 'idle' || currentClip === 'perch') {
+      const cycle = Math.floor(index / clipObj.count);
+      if (cycle !== idleCycle) {
+        idleCycle = cycle;
+        const roll = Math.random();
+        if (roll < 0.12) {
+          blinkWith = currentClip === 'perch' ? 'perch_blink_glitch' : 'blink_glitch';
+        } else if (roll < 0.58) {
+          blinkWith = currentClip === 'perch' ? 'perch_blink' : 'blink';
+        } else {
+          blinkWith = null;
+        }
+      }
+
+      if (now >= nextGlitch && !isTalkingNow(now)) {
+        nextGlitch = now + 28 + Math.random() * 28;
+        playClip(currentClip === 'perch' ? 'perch_glitch' : 'glitch');
+        index = 0;
+      }
+    }
+
+    const activeClipObj = CLIPS[currentClip] || CLIPS.idle;
+    let cell = index % activeClipObj.count;
+    let shownKey = currentClip;
+
+    const blinkFrom = currentClip === 'perch' ? 28 : 9;
+    if ((currentClip === 'idle' || currentClip === 'perch') && blinkWith && CLIPS[blinkWith]) {
+      const bCount = CLIPS[blinkWith].count;
+      if (cell >= blinkFrom && cell < blinkFrom + bCount) {
+        shownKey = blinkWith;
+        cell -= blinkFrom;
+      }
+    }
+
+    // Respiración suave y balanceo (Pet.cs líneas 1000-1002)
+    const settled = !dragging && currentClip !== 'dangle' && currentClip !== 'sleep';
+    const breathe = settled ? Math.sin(now * 1.75) * 2.2 : 0;
+    const tilt = settled ? Math.sin(now * 0.95) * 0.65 : 0;
+
+    // Actualizar texto máquina de escribir en el globo
+    updateBubbleTypewriter(now);
+
+    // Dibujar en Canvas
+    drawBody(shownKey, cell, breathe, tilt, isTalkingNow(now) ? mouthFrame(now) : -1);
+  }
+
+  function drawBody(shownKey, cell, breathe, tilt, talkingMouthCell) {
+    const clip = CLIPS[shownKey] || CLIPS.idle;
+    const img = getClipImage(shownKey);
+    if (!img || !img.complete || img.naturalWidth === 0) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const baseSize = 225;
+    const drawH = baseSize * clip.height;
+    const drawW = drawH * (clip.fw / clip.fh);
+    const centerX = canvas.width / 2 + (clip.shiftX || 0);
+    const centerY = canvas.height - drawH / 2 - 8 + (clip.shiftY || 0);
+
+    ctx.save();
+    ctx.translate(centerX, centerY + breathe);
+    ctx.rotate((tilt * Math.PI) / 180);
+    if (currentClip === 'walk' && walkDir === -1) {
+      ctx.scale(-1, 1);
+    }
+
+    const safeCell = cell % Math.max(1, Math.floor(img.naturalWidth / clip.fw));
+    ctx.drawImage(
+      img,
+      safeCell * clip.fw, 0, clip.fw, clip.fh,
+      -drawW / 2, -drawH / 2, drawW, drawH
+    );
+
+    // Si está hablando en estado de pie, superponer mouth.png ENCIMA del cuerpo (como Body.Render en Pet.cs)
+    if (talkingMouthCell >= 0 && currentClip === 'idle' && shownKey !== 'blink_glitch') {
+      const mouthImg = getClipImage('mouth');
+      if (mouthImg && mouthImg.complete && mouthImg.naturalWidth > 0) {
+        const mCell = talkingMouthCell % CLIPS.mouth.count;
+        ctx.drawImage(
+          mouthImg,
+          mCell * CLIPS.mouth.fw, 0, CLIPS.mouth.fw, CLIPS.mouth.fh,
+          -drawW / 2, -drawH / 2, drawW, drawH
+        );
+      }
+    }
+
+    ctx.restore();
+  }
+
+  // =========================================================
+  // 5. BLOQUE DE TEXTO CAPRI-DESKTOP (Sincronizado con bubble.html + Sonido Synth)
+  // =========================================================
+  let talkingUntil = 0;
+  let audioCtx = null;
+  let lastSoundBlip = 0;
+  const SYNTH_NOTES = [62, 65, 67, 69, 72, 74, 77, 79];
+
+  function playSynthBlip(mood = 'normal') {
+    if (!ttsVoiceEnabled) return;
+    const nowMs = performance.now();
+    if (nowMs - lastSoundBlip < 48) return;
+    lastSoundBlip = nowMs;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!audioCtx) audioCtx = new AC();
+      if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+      let m = SYNTH_NOTES[Math.floor(Math.random() * SYNTH_NOTES.length)];
+      if (mood === 'emocion') m += 5;
+      else if (mood === 'aburrida' || mood === 'error') m -= 5;
+      const f = 440 * Math.pow(2, (m - 69) / 12);
+      const t = audioCtx.currentTime;
+      const osc = (type, freq, start, dur, gainVal) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = type;
+        o.frequency.setValueAtTime(freq, start);
+        g.gain.setValueAtTime(0.0001, start);
+        g.gain.linearRampToValueAtTime(gainVal, start + 0.004);
+        g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.start(start);
+        o.stop(start + dur + 0.005);
+      };
+      osc('square', f, t, 0.035, 0.038);
+      osc('triangle', f * 1.498, t + 0.004, 0.028, 0.026);
+      osc('square', f * 0.501, t + 0.008, 0.028, 0.018);
+    } catch (_) {}
+  }
+
+  function stripTextTagsAndEmojis(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/\[(burla|emocion|aburrida|seria|grin|dance|idle)\]/gi, '')
+      .replace(/\[ACTION:[^\]]*\]/gi, '')
+      .replace(/\[(open|play):[^\]]*\]/gi, '')
+      .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}\uFE0F\u200D]/gu, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function applyMoodAnimation(rawText) {
+    if (!rawText) return;
+    if (/\[burla\]/i.test(rawText)) playClip('grin');
+    else if (/\[emocion\]/i.test(rawText)) playClip('dance');
+    else if (/\[aburrida\]/i.test(rawText)) playClip(seated ? 'perch_glitch' : 'glitch');
+    else if (/\[seria\]/i.test(rawText)) playClip(seated ? 'perch' : 'idle');
+  }
+
+  async function showCapriBubble(heard, reply, model = '', thinking = false) {
+    const cleanHeard = stripTextTagsAndEmojis((heard || 'chat').replace(/^>\s*t[uú]:\s*/i, ''));
+    const cleanReply = stripTextTagsAndEmojis(reply || '');
+
+    if (!thinking && reply) {
+      applyMoodAnimation(reply);
+      talkingUntil = getNow() + Math.max(1.8, Math.min(9.5, cleanReply.length / CHARS_PER_SEC));
+    }
+
+    if (currentClip === 'sleep') {
+      napping = false;
+      playClip('wake');
+    }
+
+    // 1. Mostrar y posicionar bubble_window (bubble.html) y enviarle 'capri_bubble_render' (SIN re-emitir avatar_speak para no crear bucle infinito)
+    try {
+      await invoke('position_bubble_near_avatar_cmd');
+      await invoke('show_bubble_window_cmd', { show: true, focus: false });
+      if (tauri && tauri.event) {
+        await tauri.event.emit('capri_bubble_render', {
+          heard: cleanHeard,
+          message: cleanReply || (thinking ? 'pensando...' : ''),
+          model: stripTextTagsAndEmojis(model || 'CAPRI'),
+          thinking: !!thinking
+        });
+      }
+    } catch (_) {
+      // Fallback al globo integrado si bubble_window no está disponible
+      bubblePrompt.innerText = `> tu: ${cleanHeard}`;
+      bubbleModel.innerText = model ? `[${stripTextTagsAndEmojis(model)}]` : '';
+      isThinking = thinking;
+      fullReplyText = thinking ? '...' : cleanReply;
+      revealedChars = 0;
+      revealStart = getNow();
+      bubbleVisible = true;
+      bubble.classList.add('visible');
+    }
+
+    clearTimeout(bubbleHideTimer);
+    if (!thinking) {
+      const readDuration = Math.max(9000, Math.min(22000, cleanReply.length * 75 + 5000));
+      bubbleHideTimer = setTimeout(() => {
+        bubbleVisible = false;
+        bubble.classList.remove('visible');
+      }, readDuration);
+    }
+  }
+
+  function updateBubbleTypewriter(now) {
+    if (!bubbleVisible) return;
+    if (isThinking) {
+      const dots = '.'.repeat(1 + (Math.floor(now * 3) % 3));
+      bubbleReply.innerText = `pensando${dots}`;
+      bubbleCaret.style.display = 'inline-block';
+      return;
+    }
+    const elapsed = now - revealStart;
+    const count = Math.min(fullReplyText.length, Math.max(1, Math.floor(elapsed * CHARS_PER_SEC)));
+    if (count !== revealedChars) {
+      revealedChars = count;
+      bubbleReply.innerText = fullReplyText.slice(0, revealedChars);
+    }
+    bubbleCaret.style.display = (revealedChars < fullReplyText.length) ? 'inline-block' : 'none';
+  }
+
+  bubble.addEventListener('click', () => {
+    bubbleVisible = false;
+    bubble.classList.remove('visible');
+    clearTimeout(bubbleHideTimer);
+  });
+
+  // =========================================================
+  // 6. INTERACCIONES NATURALES DEL MOUSE: ARRASTRAR, SOLTAR CON GRAVEDAD Y ACARICIAR (Stroke)
+  // =========================================================
+  canvas.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return; // Solo click izquierdo
+    capriMenu.classList.remove('open');
+    pointerPressed = true;
+    dragging = false;
+    downScreenX = e.screenX;
+    downScreenY = e.screenY;
+    grabOffsetX = e.screenX - geom.win_x;
+    grabOffsetY = e.screenY - geom.win_y;
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!pointerPressed) {
+      // Detectar caricias con el mouse (Stroke en Pet.cs líneas 1263-1278)
+      if (dragging || falling || outroCallback) return;
+      const rect = canvas.getBoundingClientRect();
+      const insideSprite = (
+        e.clientX >= rect.left + 40 &&
+        e.clientX <= rect.right - 40 &&
+        e.clientY >= rect.top + 20 &&
+        e.clientY <= rect.bottom - 10
+      );
+      if (!insideSprite) {
+        petTurns = [];
+        lastPetWay = 0;
+        return;
+      }
+      const dx = e.screenX - lastPetX;
+      if (Math.abs(dx) < 6) return;
+      const now = getNow();
+      const way = Math.sign(dx);
+      lastPetX = e.screenX;
+      if (lastPetWay !== 0 && way !== lastPetWay) {
+        petTurns.push(now);
+      }
+      lastPetWay = way;
+      petTurns = petTurns.filter(t => now - t <= 1.5);
+      if (petTurns.length >= 4 && now - lastPetAt >= 8) {
+        petTurns = [];
+        lastPetAt = now;
+        triggerHeadPat();
+      }
+      return;
+    }
+
+    const dx = e.screenX - downScreenX;
+    const dy = e.screenY - downScreenY;
+    if (!dragging && (dx * dx + dy * dy) < 25) return;
+
+    if (!dragging) {
+      // Empezó a arrastrarla (Grab en Pet.cs)
+      dragging = true;
+      walking = false;
+      falling = false;
+      seated = false;
+      napping = false;
+      playClip('dangle');
+    }
+
+    moveWindowTo(e.screenX - grabOffsetX, e.screenY - grabOffsetY);
+  });
+
+  window.addEventListener('mouseup', async (e) => {
+    if (!pointerPressed || e.button !== 0) return;
+    pointerPressed = false;
+
+    if (dragging) {
+      dragging = false;
+      const dropX = e.screenX - grabOffsetX;
+      const dropY = e.screenY - grabOffsetY;
+      await moveWindowTo(dropX, dropY);
+
+      // Si se suelta muy cerca (<= 55px) del borde superior de una ventana, se alinea con ese borde;
+      // de lo contrario, se queda flotando/sentada EXACTAMENTE en la coordenada del aire donde la soltaste sin caerse nunca.
+      await syncWindowLedges();
+      const snapHit = findBestWindowLedgeAt(geom.win_x, geom.win_y, 55);
+      if (snapHit && snapHit.ledge) {
+        perchOnWindowLedge(snapHit.ledge, geom.win_x);
+      } else {
+        falling = false;
+        walking = false;
+        seated = true;
+        pinnedInAir = true;
+        perchedWindowId = null;
+        playClip('perch_glitch');
+      }
+    } else {
+      // Fue un click simple sobre ella (React en Pet.cs)
+      if (currentClip === 'sleep') {
+        napping = false;
+        playClip('wake');
+      } else {
+        playClip(seated ? 'perch_glitch' : 'glitch');
+      }
+    }
+  });
+
+  function triggerHeadPat() {
+    walking = false;
+    if (seated) {
+      playClip('perch');
+      blinkWith = 'perch_blink';
+    } else {
+      playClip('grin');
+    }
+    const line = PET_LINES[petLineIdx++ % PET_LINES.length];
+    setTimeout(() => {
+      showCapriBubble('(la acaricias)', line, 'capri-core');
+    }, 650);
+  }
+
+  // =========================================================
+  // 7. CAPRI TALKPILL EXACTO (Talk.cs PillFace / TalkPill + Ears.cs en vivo)
+  // =========================================================
+  const PILL_SCALE = 1.15;
+  const PILL_WIDE = Math.round(100 * PILL_SCALE); // 115px
+  const PILL_TALL = Math.round(40 * PILL_SCALE);  // 46px
+  const PILL_GAP = Math.round(4 * PILL_SCALE);    // 5px
+  const PILL_MARGIN = Math.round(3 * PILL_SCALE); // 3px
+
+  const LOOK = {
+    fill: 'rgba(9, 11, 15, 0.965)',
+    pink: '#ff2a6d',
+    cyan: '#3ad6eb',
+    cyanBright: '#5ceeff',
+    ink: '#e8ecf2',
+    caption: '#a8aeb8',
+    dim: '#586070',
+    red: '#ff4466',
+    seam: '#424856',
+    wash: 'rgba(58, 214, 235, 0.16)'
+  };
+
+  function getPillBodyRect() {
+    return {
+      left: PILL_MARGIN,
+      top: PILL_MARGIN,
+      width: PILL_WIDE - PILL_MARGIN * 2,
+      height: PILL_TALL - PILL_MARGIN * 2,
+      right: PILL_WIDE - PILL_MARGIN,
+      bottom: PILL_TALL - PILL_MARGIN
+    };
+  }
+
+  function getPillMicRect() {
+    const left = PILL_WIDE + PILL_GAP + PILL_MARGIN;
+    const size = PILL_TALL - PILL_MARGIN * 2;
+    return {
+      left,
+      top: PILL_MARGIN,
+      width: size,
+      height: size,
+      right: left + size,
+      bottom: PILL_MARGIN + size
+    };
+  }
+
+  function cutOctagonPath(c, x, y, w, h, cut) {
+    c.beginPath();
+    c.moveTo(x + cut, y);
+    c.lineTo(x + w - cut, y);
+    c.lineTo(x + w, y + cut);
+    c.lineTo(x + w, y + h - cut);
+    c.lineTo(x + w - cut, y + h);
+    c.lineTo(x + cut, y + h);
+    c.lineTo(x, y + h - cut);
+    c.lineTo(x, y + cut);
+    c.closePath();
+  }
+
+  function drawCapriPlate(c, box, s, litRect, fromColor, toColor) {
+    const cut = Math.max(3, Math.round(6 * s));
+    const edge = Math.max(1, Math.round(1.5 * s));
+
+    // Resplandor exterior suave + fondo negro cyberpunk (Talk.cs Plate líneas 446-464)
+    c.save();
+    const gradGlow = c.createLinearGradient(box.left, 0, box.right, 0);
+    gradGlow.addColorStop(0, fromColor + '44');
+    gradGlow.addColorStop(1, toColor + '44');
+    cutOctagonPath(c, box.left, box.top, box.width, box.height, cut);
+    c.strokeStyle = gradGlow;
+    c.lineWidth = PILL_MARGIN * 1.8;
+    c.stroke();
+
+    c.fillStyle = LOOK.fill;
+    c.fill();
+
+    // Scanlines horizontales y wash cian al pasar el mouse
+    c.clip();
+    c.strokeStyle = 'rgba(255, 255, 255, 0.036)';
+    c.lineWidth = 1;
+    const step = Math.max(3, Math.round(3 * s));
+    for (let row = box.top; row < box.bottom; row += step) {
+      c.beginPath();
+      c.moveTo(box.left, row + 0.5);
+      c.lineTo(box.right, row + 0.5);
+      c.stroke();
+    }
+    if (litRect && litRect.width > 0) {
+      c.fillStyle = LOOK.wash;
+      c.fillRect(litRect.left, litRect.top, litRect.width, litRect.height);
+    }
+    c.restore();
+
+    // Borde neón nítido (degradado Pink -> Cyan en el cuerpo, o Cyan/Red en MicBody)
+    const inset = edge / 2;
+    const gradEdge = c.createLinearGradient(box.left, 0, box.right, 0);
+    gradEdge.addColorStop(0, fromColor);
+    gradEdge.addColorStop(1, toColor);
+    cutOctagonPath(c, box.left + inset, box.top + inset, box.width - edge, box.height - edge, cut - inset * 0.58);
+    c.strokeStyle = gradEdge;
+    c.lineWidth = edge;
+    c.stroke();
+  }
+
+  function drawCapriPencil(c, cx, cy, k, color, backColor) {
+    // Lápiz rotado a -45 grados con corte cuadrado (Talk.cs Pencil líneas 526-545)
+    c.save();
+    c.translate(cx + 0.5 * k, cy - 0.5 * k);
+    c.rotate(-Math.PI / 4);
+    c.fillStyle = color;
+    c.fillRect(-7.2 * k, -2.3 * k, 11.4 * k, 4.6 * k);
+    c.beginPath();
+    c.moveTo(4.2 * k, -2.3 * k);
+    c.lineTo(8.3 * k, 0);
+    c.lineTo(4.2 * k, 2.3 * k);
+    c.closePath();
+    c.fill();
+
+    c.strokeStyle = backColor;
+    c.lineWidth = 1.15 * k;
+    c.beginPath();
+    c.moveTo(-4.3 * k, -2.8 * k);
+    c.lineTo(-4.3 * k, 2.8 * k);
+    c.moveTo(3.6 * k, -2.8 * k);
+    c.lineTo(3.6 * k, 2.8 * k);
+    c.stroke();
+    c.restore();
+  }
+
+  function drawCapriWaveMeter(c, cx, cy, s, chatting, muted, level, color) {
+    // Las 5 barras redondeadas de Capri que se estiran en vivo con tu nivel de micrófono (Talk.cs Meter líneas 490-502)
+    const heights = [5, 10, 14, 9, 4];
+    const stretch = !chatting ? 1.0 : (0.45 + (muted ? 0 : level) * 0.14);
+    c.save();
+    c.strokeStyle = (chatting && muted) ? LOOK.dim : color;
+    c.lineWidth = 2.2 * s;
+    c.lineCap = 'round';
+    for (let i = 0; i < heights.length; i++) {
+      const x = cx + (i - 2) * 3.4 * s;
+      const half = Math.max(1.5, heights[i] * stretch) * s / 2;
+      c.beginPath();
+      c.moveTo(x, cy - half);
+      c.lineTo(x, cy + half);
+      c.stroke();
+    }
+    c.restore();
+  }
+
+  function drawCapriMicIcon(c, cx, cy, s, color, muted, backColor) {
+    // Icono de micrófono con cápsula, copa, base y línea diagonal roja cuando está en Muted (Talk.cs Mic líneas 504-523)
+    const x = cx;
+    const y = cy + 0.5 * s;
+    c.save();
+    c.fillStyle = color;
+    c.strokeStyle = color;
+    c.lineCap = 'round';
+    c.lineWidth = 1.75 * s;
+
+    // Cápsula redondeada
+    const rw = 6.0 * s;
+    const rh = 10.4 * s;
+    const rx = x - rw / 2;
+    const ry = y - 8.6 * s;
+    const rad = 3.0 * s;
+    c.beginPath();
+    c.roundRect(rx, ry, rw, rh, rad);
+    c.fill();
+
+    // Copa semicircular
+    c.beginPath();
+    c.arc(x, y - 2.0 * s, 5.6 * s, 0, Math.PI, false);
+    c.stroke();
+
+    // Pie y base
+    c.beginPath();
+    c.moveTo(x, y + 3.8 * s);
+    c.lineTo(x, y + 6.8 * s);
+    c.moveTo(x - 3.3 * s, y + 6.8 * s);
+    c.lineTo(x + 3.3 * s, y + 6.8 * s);
+    c.stroke();
+
+    // Barra diagonal roja de Muted
+    if (muted) {
+      c.strokeStyle = backColor;
+      c.lineWidth = 4.0 * s;
+      c.beginPath();
+      c.moveTo(x - 7.0 * s, y - 9.0 * s);
+      c.lineTo(x + 7.0 * s, y + 7.0 * s);
+      c.stroke();
+
+      c.strokeStyle = LOOK.red;
+      c.lineWidth = 2.0 * s;
+      c.beginPath();
+      c.moveTo(x - 7.0 * s, y - 9.0 * s);
+      c.lineTo(x + 7.0 * s, y + 7.0 * s);
+      c.stroke();
+    }
+    c.restore();
+  }
+
+  function drawTalkPillClean(c) {
+    const s = PILL_SCALE;
+    const body = getPillBodyRect();
+    const mid = Math.floor(PILL_WIDE / 2);
+
+    let litRect = null;
+    if (pillHover === 1) {
+      litRect = { left: body.left, top: body.top, width: mid - body.left, height: body.height };
+    } else if (pillHover === 2) {
+      litRect = { left: mid, top: body.top, width: body.right - mid, height: body.height };
+    }
+
+    drawCapriPlate(c, body, s, litRect, LOOK.pink, LOOK.cyan);
+
+    // Costura diagonal central entre TYPE y TALK (Talk.cs línea 425)
+    c.save();
+    c.strokeStyle = LOOK.seam;
+    c.lineWidth = Math.max(1, Math.round(s));
+    c.beginPath();
+    c.moveTo(mid + 1.5 * s, body.top + 9.5 * s);
+    c.lineTo(mid - 1.5 * s, body.bottom - 9.5 * s);
+    c.stroke();
+
+    // Esquirlas glitch del borde (cian arriba a la derecha, rosa abajo a la izquierda - Talk.cs líneas 427-429)
+    const sliver = Math.max(1.2, Math.round(s));
+    c.fillStyle = LOOK.cyan;
+    c.fillRect(body.right - Math.round(32 * s), body.top - Math.round(2 * s), Math.round(15 * s), sliver);
+    c.fillStyle = LOOK.pink;
+    c.fillRect(body.left + Math.round(12 * s), body.bottom + Math.round(2 * s) - sliver, Math.round(11 * s), sliver);
+    c.restore();
+
+    const centerY = body.top + body.height / 2;
+    c.font = `700 ${Math.round(8.8 * s)}px "Share Tech Mono", "JetBrains Mono", monospace`;
+    c.textBaseline = 'middle';
+
+    // Mitad Izquierda (part == 1): Lápiz + "TYPE"
+    const leftCenter = (body.left + mid) / 2;
+    drawCapriPencil(
+      c,
+      leftCenter - 14 * s,
+      centerY,
+      0.88 * s,
+      pillHover === 1 ? LOOK.cyanBright : LOOK.ink,
+      '#090b0f'
+    );
+    c.fillStyle = pillHover === 1 ? LOOK.cyanBright : LOOK.caption;
+    c.fillText('TYPE', leftCenter - 4 * s, centerY + 0.5);
+
+    // Mitad Derecha (part == 2): 5 barras de onda + "TALK" / "MUTED"
+    const rightCenter = (mid + body.right) / 2;
+    const talkLabel = (pillChatting && pillMuted) ? 'MUTED' : 'TALK';
+    const waveColor = (pillHover === 2 || pillChatting) ? LOOK.cyanBright : LOOK.ink;
+    const labelColor = (pillChatting && pillMuted)
+      ? LOOK.red
+      : (pillHover === 2 || pillChatting) ? LOOK.cyanBright : LOOK.caption;
+
+    drawCapriWaveMeter(
+      c,
+      rightCenter - 14.5 * s,
+      centerY,
+      s * 0.92,
+      pillChatting,
+      pillMuted,
+      pillLevel,
+      waveColor
+    );
+    c.fillStyle = labelColor;
+    c.fillText(talkLabel, rightCenter - 4.5 * s, centerY + 0.5);
+
+    // Botón cuadrado de Micrófono a la derecha cuando el chat de voz está activo (MicBody - Talk.cs líneas 438-441)
+    if (pillChatting) {
+      const mic = getPillMicRect();
+      const edgeColor = pillMuted ? LOOK.red : LOOK.cyan;
+      drawCapriPlate(c, mic, s, pillHover === 3 ? mic : null, edgeColor, edgeColor);
+      const micInk = pillHover === 3 ? LOOK.cyanBright : (pillMuted ? LOOK.dim : LOOK.ink);
+      drawCapriMicIcon(
+        c,
+        mic.left + mic.width / 2,
+        mic.top + mic.height / 2,
+        s * 0.92,
+        micInk,
+        pillMuted,
+        '#090b0f'
+      );
+    }
+  }
+
+  function renderTalkPill() {
+    const dpr = window.devicePixelRatio || 1;
+    const logicalW = pillChatting ? (PILL_WIDE + PILL_GAP + PILL_TALL) : PILL_WIDE;
+    const logicalH = PILL_TALL;
+
+    if (talkPillCanvas.width !== Math.round(logicalW * dpr) || talkPillCanvas.height !== Math.round(logicalH * dpr)) {
+      talkPillCanvas.width = Math.round(logicalW * dpr);
+      talkPillCanvas.height = Math.round(logicalH * dpr);
+      talkPillCanvas.style.width = `${logicalW}px`;
+      talkPillCanvas.style.height = `${logicalH}px`;
+    }
+
+    pillCtx.save();
+    pillCtx.scale(dpr, dpr);
+    pillCtx.clearRect(0, 0, logicalW, logicalH);
+
+    if (pillTear <= 0) {
+      drawTalkPillClean(pillCtx);
+    } else {
+      // Efecto Glitch Tear de 4 frames (Talk.cs Draw líneas 380-415)
+      drawTalkPillClean(pillCtx);
+      const amount = Math.min(1, pillTear / 4);
+      for (let i = 0; i < 3; i++) {
+        const bandH = 4 + (i * 3);
+        const bandY = ((pillTear * 11 + i * 13) % Math.max(1, logicalH - bandH));
+        const shiftX = (i % 2 === 0 ? 1 : -1) * Math.round(4 * amount);
+        pillCtx.save();
+        pillCtx.beginPath();
+        pillCtx.rect(0, bandY, logicalW, bandH);
+        pillCtx.clip();
+        pillCtx.clearRect(0, bandY, logicalW, bandH);
+        pillCtx.translate(shiftX, 0);
+        drawTalkPillClean(pillCtx);
+        pillCtx.fillStyle = i % 2 === 0 ? 'rgba(255, 42, 109, 0.28)' : 'rgba(58, 214, 235, 0.28)';
+        pillCtx.fillRect(0, bandY, logicalW, bandH);
+        pillCtx.restore();
+      }
+    }
+    pillCtx.restore();
+
+    // Mientras el modo de voz TALK esté activo, mantener la pastilla siempre visible
+    // para que veas las 5 barras de onda moverse cuando le hablas
+    talkPillWrap.classList.toggle('visible', pillChatting);
+  }
+
+  function triggerPillTear() {
+    pillTear = 4;
+    renderTalkPill();
+    const timer = setInterval(() => {
+      pillTear--;
+      renderTalkPill();
+      if (pillTear <= 0) clearInterval(timer);
+    }, 45);
+  }
+
+  function pillPartAt(clientX, clientY) {
+    const rect = talkPillCanvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const body = getPillBodyRect();
+    const mid = Math.floor(PILL_WIDE / 2);
+
+    if (x >= body.left && x <= body.right && y >= body.top && y <= body.bottom) {
+      return x < mid ? 1 : 2;
+    }
+    if (pillChatting) {
+      const mic = getPillMicRect();
+      if (x >= mic.left && x <= mic.right && y >= mic.top && y <= mic.bottom) {
+        return 3;
+      }
+    }
+    return 0;
+  }
+
+  talkPillCanvas.addEventListener('mousemove', (e) => {
+    const part = pillPartAt(e.clientX, e.clientY);
+    if (part !== pillHover) {
+      pillHover = part;
+      renderTalkPill();
+    }
+  });
+
+  talkPillCanvas.addEventListener('mouseleave', () => {
+    if (pillHover !== 0) {
+      pillHover = 0;
+      renderTalkPill();
+    }
+  });
+
+  talkPillCanvas.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const part = pillPartAt(e.clientX, e.clientY);
+    if (part === 1) {
+      // Mitad Izquierda: TYPE -> Abre/cierra la barra de texto (> tú:)
+      toggleTyper();
+    } else if (part === 2) {
+      // Mitad Derecha: TALK -> Activa/desactiva el chat de voz en vivo (ToggleChat en Capri.cs)
+      await toggleCapriVoiceChat();
+    } else if (part === 3) {
+      // Botón cuadrado derecho: MicBody -> Mute / Unmute micrófono (ToggleMic en Capri.cs)
+      await toggleCapriMicMute();
+    }
+  });
+
+  async function toggleCapriVoiceChat(force = null) {
+    try {
+      const st = await invoke('toggle_voice_chat_cmd', { enabled: force });
+      pillChatting = !!st.chatting;
+      pillMuted = !!st.muted;
+      pillLevel = 0;
+      triggerPillTear();
+      if (pillChatting) {
+        showCapriBubble('(voice)', 'Chat de voz libre activado. Háblame cuando quieras y te responderé, choom.', 'ears', false);
+      } else {
+        showCapriBubble('(voice)', 'Chat de voz desactivado. Haz click en TALK para volver a escucharte.', 'ears', false);
+      }
+    } catch (err) {
+      showCapriBubble('(voice)', `Error al cambiar chat de voz: ${err}`, 'error', false);
+    }
+  }
+
+  async function toggleCapriMicMute(force = null) {
+    try {
+      const st = await invoke('toggle_mic_mute_cmd', { muted: force });
+      pillChatting = !!st.chatting;
+      pillMuted = !!st.muted;
+      pillLevel = 0;
+      renderTalkPill();
+      if (pillMuted) {
+        showCapriBubble('(voice)', 'Micrófono silenciado (MUTED). Haz click en el icono del mic para reactivarlo.', 'ears', false);
+      } else {
+        showCapriBubble('(voice)', 'Micrófono activo. Háblame cuando quieras, choom.', 'ears', false);
+      }
+    } catch (_) {}
+  }
+
+  // Sincronizar estado inicial de TalkPill con Rust
+  (async () => {
+    try {
+      const st = await invoke('get_ears_state_cmd');
+      if (st) {
+        pillChatting = !!st.chatting;
+        pillMuted = !!st.muted;
+      }
+    } catch (_) {}
+    triggerPillTear();
+  })();
+
+  // =========================================================
+  // 7.5. INPUT BAR (> tú:) Y CONEXIÓN A OPENCLAW + GEMINI 4 ARGON
+  // =========================================================
+  async function toggleTyper(force = null) {
+    try {
+      await invoke('position_bubble_near_avatar_cmd');
+      await invoke('show_bubble_window_cmd', { show: force !== null ? force : true, focus: true });
+      if (tauri && tauri.event) {
+        await tauri.event.emit('focus_bubble_input', true);
+      }
+    } catch (_) {
+      const open = force !== null ? force : !typer.classList.contains('open');
+      typer.classList.toggle('open', open);
+      if (open) typerInput.focus();
+    }
+  }
+
+  typerModePill.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const nextIdx = (BRAIN_MODES.indexOf(currentBrainMode) + 1) % BRAIN_MODES.length;
+    currentBrainMode = BRAIN_MODES[nextIdx];
+    updateBrainUI();
+    try {
+      await invoke('set_ai_mode_cmd', { mode: currentBrainMode });
+    } catch (_) {}
+  });
+
+  function updateBrainUI() {
+    typerModePill.innerText = BRAIN_LABELS[currentBrainMode] || ' AUTO';
+    document.getElementById('menu-brain-val').innerText = BRAIN_MENU_NAMES[currentBrainMode] || currentBrainMode;
+  }
+
+  typerInput.addEventListener('keydown', async (e) => {
+    if (e.key === 'Escape') {
+      toggleTyper(false);
+      return;
+    }
+    if (e.key === 'Enter') {
+      const text = typerInput.value.trim();
+      if (!text) return;
+      typerInput.value = '';
+      toggleTyper(false);
+      await sendToClaudia(text);
+    }
+  });
+
+  async function sendToClaudia(text) {
+    // Comandos rápidos naturales estilo Capri
+    const lower = text.toLowerCase();
+    if (lower === 'baila' || lower === 'dance') {
+      dancing = true;
+      showCapriBubble(text, 'Bailando, choom. Dime cuando quieras que pare.', 'capri');
+      return;
+    }
+    if (lower === 'para de bailar' || lower === 'stop dancing') {
+      dancing = false;
+      showCapriBubble(text, 'Listo, descanso los pies.', 'capri');
+      return;
+    }
+    if (lower === 'duerme' || lower === 'sleep') {
+      napping = true;
+      walking = false;
+      seated = false;
+      playClip('sleep');
+      showCapriBubble(text, 'Yendo a dormir. Hazme click cuando quieras despertarme.', 'capri');
+      return;
+    }
+
+    showCapriBubble(text, '', currentBrainMode, true);
+    try {
+      const res = await invoke('send_chat_message', {
+        message: text,
+        mode: currentBrainMode
+      });
+      showCapriBubble(text, res.reply, res.model_used, false);
+    } catch (err) {
+      showCapriBubble(text, `Mi cerebro tuvo un glitch: ${err}`, 'error', false);
+    }
+  }
+
+  async function triggerScreenGlance() {
+    showCapriBubble('(mirar pantalla)', '', 'openclaw-vision', true);
+    try {
+      await invoke('analyze_notebook_cmd', { customQuestion: null });
+    } catch (err) {
+      showCapriBubble('(mirar pantalla)', `No pude ver tu pantalla: ${err}`, 'error', false);
+    }
+  }
+
+  // =========================================================
+  // 8. MENÚ CONTEXTUAL CLICK DERECHO (Capri ContextMenu)
+  // =========================================================
+  window.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    document.getElementById('menu-sit-text').innerText = seated ? ' Levantarse' : ' Sentarse aquí';
+    document.getElementById('menu-dance-text').innerText = dancing ? '⏹ Dejar de bailar' : ' Bailar';
+    document.getElementById('menu-sleep-text').innerText = (currentClip === 'sleep') ? ' Despertar' : ' Ir a dormir';
+    document.getElementById('menu-wander-val').innerText = WANDER_NAMES[wanderLevel];
+    document.getElementById('menu-watch-val').innerText = proactiveWatch ? 'Activo' : 'Pausado';
+    document.getElementById('menu-cmic-val').innerText = pillChatting ? (pillMuted ? 'MUTED ' : 'TALK Activo ') : 'Apagado';
+    document.getElementById('menu-tts-val').innerText = ttsVoiceEnabled ? 'Activa' : 'Silencio';
+    capriMenu.classList.add('open');
+  });
+
+  window.addEventListener('click', (e) => {
+    if (!capriMenu.contains(e.target)) {
+      capriMenu.classList.remove('open');
+    }
+  });
+
+  capriMenu.querySelectorAll('.menu-item').forEach(item => {
+    item.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const action = item.getAttribute('data-action');
+      capriMenu.classList.remove('open');
+
+      switch (action) {
+        case 'mic':
+          await toggleCapriVoiceChat();
+          break;
+        case 'talk':
+          toggleTyper(true);
+          break;
+        case 'look':
+          await triggerScreenGlance();
+          break;
+        case 'soul':
+          try { await invoke('open_mainframe_cmd'); } catch (_) {}
+          break;
+        case 'skills':
+          await sendToClaudia('/skills');
+          break;
+        case 'toggle-continuous-mic':
+          await toggleCapriVoiceChat();
+          break;
+        case 'toggle-tts':
+          ttsVoiceEnabled = !ttsVoiceEnabled;
+          try { await invoke('set_tts_enabled_cmd', { enabled: ttsVoiceEnabled }); } catch (_) {}
+          showCapriBubble('(voz tts)', ttsVoiceEnabled ? 'Voz Piper TTS activada.' : 'Voz en silencio (solo texto).', 'piper-tts');
+          break;
+        case 'perch-window':
+          await syncWindowLedges();
+          if (windowLedges.length > 0) {
+            perchOnWindowLedge(windowLedges[0]);
+            showCapriBubble('(ventana)', `Me senté sobre '${windowLedges[0].title.slice(0, 36)}', choom.`, 'capri');
+          } else {
             seated = true;
-            currentSeat = {
-                title: ledge.title,
-                wm_class: ledge.wm_class,
-                x: ledge.x,
-                y: ledge.y,
-                width: ledge.width,
-                height: ledge.height
-            };
-
-            const sitX = Math.max(ledge.x + 80, Math.min(geom.win_x + 180, ledge.x + ledge.width - 100));
-            const targetWinX = sitX - 180;
-
-            const stageEl = document.getElementById('pet-stage');
-            if (ledge.y < 350) {
-                const winY = 24;
-                const offsetInside = Math.max(20, Math.min(300, ledge.y - 24 + 140));
-                stageEl.style.bottom = 'auto';
-                stageEl.style.top = `${offsetInside - 180}px`;
-                moveWindowTo(targetWinX, winY);
-            } else {
-                stageEl.style.top = 'auto';
-                stageEl.style.bottom = '24px';
-                const targetWinY = ledge.y - 370;
-                moveWindowTo(targetWinX, targetWinY);
-            }
-
+            pinnedInAir = true;
             playClip('perch_glitch');
-            const cleanTitle = (ledge.title || ledge.wm_class || 'ventana').slice(0, 26);
-            showCapriBubble('(posada)', `Posada en ${cleanTitle}...`, 'perch');
-        }
-
-        function standUp(drop = true) {
-            seated = false;
-            currentSeat = null;
-            const stageEl = document.getElementById('pet-stage');
-            stageEl.style.top = 'auto';
-            stageEl.style.bottom = '24px';
-            playClip('glitch');
-            if (drop && !floatingMode) {
-                startFall();
-            }
-        }
-
-        // Seguimiento dinámico de la ventana donde está sentada
-        setInterval(async () => {
-            if (!seated || !currentSeat || dragging || pointerPressed) return;
-            try {
-                const ledges = await invoke('get_window_ledges_cmd');
-                if (!Array.isArray(ledges)) return;
-                openLedges = ledges;
-
-                const matched = ledges.find(l => 
-                    l.title === currentSeat.title || 
-                    (l.wm_class && l.wm_class === currentSeat.wm_class)
-                );
-
-                if (!matched) {
-                    showCapriBubble('(ventana)', 'La ventana se minimizó o cerró.', 'capri');
-                    standUp(true);
-                    return;
-                }
-
-                const dx = matched.x - currentSeat.x;
-                const dy = matched.y - currentSeat.y;
-                if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
-                    currentSeat.x = matched.x;
-                    currentSeat.y = matched.y;
-                    currentSeat.width = matched.width;
-                    currentSeat.height = matched.height;
-                    sitOnLedge(matched);
-                }
-            } catch (_) {}
-        }, 500);
-
-        // Caminata autónoma (Walk / CheckWander)
-        let walking = false;
-        let walkToX = 900;
-        let walkStep = getNow();
-        let walkDir = 1; // 1 = derecha, -1 = izquierda
-        let wanderLevel = 3; // 0=Off, 1=Raro, 2=Normal, 3=Frecuente, 4=Inquieta
-        const WANDER_PACES = [0, 2.2, 1.0, 0.45, 0.22];
-        const WANDER_NAMES = ['Quieta', 'Rara vez', 'A veces', 'Frecuente', 'Inquieta'];
-        let nextWander = getNow() + 11; // Primera caminata autónoma a los ~11s
-
-        // Callback tras animación de salida (GlitchOut / Teleport)
-        let outroCallback = null;
-        let outroAt = -1;
-
-        // Arrastrar con el mouse (Grab / Move / Drop)
-        let pointerPressed = false;
-        let dragging = false;
-        let downScreenX = 0;
-        let downScreenY = 0;
-        let grabOffsetX = 0;
-        let grabOffsetY = 0;
-
-        // Detección de caricias moviendo el mouse sobre ella (Stroke en Pet.cs)
-        let petTurns = [];
-        let lastPetX = 0;
-        let lastPetWay = 0;
-        let lastPetAt = -60;
-
-        // Estado del habla y sincronización
-        let talkingUntil = 0;
-        let isThinking = false;
-        let bubbleHideTimer = null;
-        const CHARS_PER_SEC = 32;
-
-        // Estado IA
-        const BRAIN_MODES = ['auto', 'argon', 'openclaw', 'ollama'];
-        const BRAIN_LABELS = {
-            auto: '⚡ AUTO',
-            argon: '🧠 ARGON',
-            openclaw: '🦞 OPENCLAW',
-            ollama: '🏠 OLLAMA'
-        };
-        const BRAIN_MENU_NAMES = {
-            auto: 'Auto (OpenClaw+Argon)',
-            argon: 'Gemini 4 Argon',
-            openclaw: 'OpenClaw (Nemotron)',
-            ollama: 'Ollama Local'
-        };
-        let currentBrainMode = 'auto';
-        let proactiveWatch = true;
-
-        function playClip(name) {
-            if (!CLIPS[name]) return;
-            currentClip = name;
-            clipStart = getNow();
-            idleCycle = 0;
-            blinkWith = null;
-        }
-
-        // Sincronizar geometría real del escritorio desde Rust
-        async function syncGeometry() {
-            try {
-                const g = await invoke('get_desktop_geometry_cmd');
-                if (g && g.screen_width) {
-                    geom = g;
-                }
-            } catch (_) {}
-        }
-        syncGeometry();
-
-        let moveInFlight = false;
-        let lastSentX = -9999;
-        let lastSentY = -9999;
-
-        async function moveWindowTo(x, y) {
-            geom.win_x = Math.round(x);
-            geom.win_y = Math.round(y);
-            if (moveInFlight) return;
-            if (geom.win_x === lastSentX && geom.win_y === lastSentY) return;
-            moveInFlight = true;
-            lastSentX = geom.win_x;
-            lastSentY = geom.win_y;
-            try {
-                await invoke('move_overlay_window_cmd', { x: geom.win_x, y: geom.win_y });
-            } catch (_) {} finally {
-                moveInFlight = false;
-            }
-        }
-
-        // =========================================================================
-        // 3. FÍSICAS DE GRAVEDAD Y CAMINATA AUTÓNOMA (Fall / Tumble / Walk / Wander)
-        // =========================================================================
-        function startFall() {
-            if (floatingMode) return;
+            showCapriBubble('(ventana)', 'Me quedo sentada aquí mismo, choom.', 'capri');
+          }
+          break;
+        case 'toggle-sit':
+          walking = false;
+          falling = false;
+          seated = !seated;
+          pinnedInAir = true;
+          playClip(seated ? 'perch_glitch' : 'glitch');
+          break;
+        case 'drop-floor':
+          perchedWindowId = null;
+          pinnedInAir = false;
+          startFall(true);
+          break;
+        case 'walk-now':
+          startStroll();
+          break;
+        case 'toggle-dance':
+          dancing = !dancing;
+          break;
+        case 'teleport':
+          glitchTeleport(null, geom.floor_y);
+          break;
+        case 'toggle-sleep':
+          if (currentClip === 'sleep') {
+            napping = false;
+            playClip('wake');
+          } else {
+            napping = true;
             walking = false;
             seated = false;
-            falling = true;
-            fallSpeed = 0;
-            fallStep = getNow();
-            playClip('dangle');
-        }
-
-        function updateFall(now) {
-            if (floatingMode) {
-                falling = false;
-                return;
-            }
-            const dt = Math.max(0, Math.min(0.05, now - fallStep));
-            fallStep = now;
-            fallSpeed += 2500 * dt; // Aceleración gravitatoria de Capri
-            const dropPx = Math.ceil(fallSpeed * dt);
-
-            const hipX = geom.win_x + 180;
-            const hipY = geom.win_y + 370;
-
-            // Buscar si hay una repisa de ventana directamente debajo
-            const ledge = findLedgeBelow(hipX, hipY);
-            let targetFloorY = geom.floor_y;
-            let hitLedge = false;
-
-            if (ledge) {
-                const ledgeWinY = ledge.y >= 350 ? (ledge.y - 370) : 24;
-                if (ledgeWinY < targetFloorY) {
-                    targetFloorY = ledgeWinY;
-                    hitLedge = true;
-                }
-            }
-
-            if (geom.win_y + dropPx >= targetFloorY) {
-                falling = false;
-                if (hitLedge && ledge) {
-                    sitOnLedge(ledge);
-                } else {
-                    const stageEl = document.getElementById('pet-stage');
-                    stageEl.style.top = 'auto';
-                    stageEl.style.bottom = '24px';
-                    moveWindowTo(geom.win_x, geom.floor_y);
-                    playClip('glitch');
-                }
-            } else {
-                moveWindowTo(geom.win_x, geom.win_y + dropPx);
-            }
-        }
-
-        function startStroll(customTargetX = null) {
-            if (falling || dragging || pointerPressed || napping) return false;
-            const minX = 40;
-            const maxX = Math.max(120, geom.screen_width - geom.win_width - 40);
-            let targetX = customTargetX;
-
-            if (targetX === null) {
-                // Elegir un punto a 180..520px de distancia
-                const step = 180 + Math.random() * 340;
-                const goRight = (geom.win_x < minX + 180) ? true : (geom.win_x > maxX - 180) ? false : (Math.random() < 0.5);
-                targetX = goRight ? Math.min(maxX, geom.win_x + step) : Math.max(minX, geom.win_x - step);
-            }
-
-            if (Math.abs(targetX - geom.win_x) < 40) return false;
-
-            seated = false;
-            walking = true;
-            walkToX = Math.round(targetX);
-            walkDir = walkToX > geom.win_x ? -1 : 1; // walk.png mira a la izquierda por defecto; invertimos si va a la derecha
-            walkStep = getNow();
-            playClip('walk');
-            return true;
-        }
-
-        function updateWalk(now) {
-            const dt = Math.max(0, Math.min(0.05, now - walkStep));
-            walkStep = now;
-            const gap = walkToX - geom.win_x;
-            const speed = 115; // px por segundo (Pet.cs body.Size * 0.42)
-            const stride = Math.max(1, Math.round(speed * dt));
-
-            if (Math.abs(gap) <= stride) {
-                moveWindowTo(walkToX, geom.win_y);
-                walking = false;
-                // Al terminar de caminar, a veces se sienta (perch) y a veces queda de pie (idle)
-                if (Math.random() < 0.28) {
-                    seated = true;
-                    playClip('perch_glitch');
-                } else {
-                    playClip('idle');
-                }
-            } else {
-                walkDir = gap > 0 ? -1 : 1;
-                moveWindowTo(geom.win_x + Math.sign(gap) * stride, geom.win_y);
-            }
-        }
-
-        function glitchTeleport(targetX = null, targetY = null) {
-            if (falling || dragging || outroCallback) return;
-            walking = false;
-            const minX = 50;
-            const maxX = Math.max(150, geom.screen_width - geom.win_width - 50);
-            const destX = targetX !== null ? targetX : Math.round(minX + Math.random() * (maxX - minX));
-            const destY = targetY !== null ? targetY : (geom.win_y < geom.floor_y - 60 ? geom.win_y : geom.floor_y);
-
-            playClip(seated ? 'perch_leave' : 'leave');
-            outroAt = getNow() + 0.65;
-            outroCallback = () => {
-                moveWindowTo(destX, destY);
-                playClip(seated ? 'perch_arrive' : 'arrive');
-                dropAfter = false;
-            };
-        }
-
-        function checkWander(now) {
-            if (wanderLevel <= 0) return;
-            if (dragging || pointerPressed || falling || walking || outroCallback || napping || isThinking) return;
-            if (isTalkingNow(now)) return;
-            if (seated || floatingMode) return; // Si está posada en ventana o flotando en el aire, no cae al vacío
-
-            const pace = WANDER_PACES[wanderLevel] || 0.5;
-            if (nextWander < 0) {
-                nextWander = now + (18 + Math.random() * 25) * pace;
-            }
-            if (now < nextWander) return;
-
-            nextWander = now + (22 + Math.random() * 35) * pace;
-
-            // 20% probabilidad de teletransporte corto con glitch (Capri Blink), 80% caminar (Stroll)
-            if (Math.random() < 0.2) {
-                glitchTeleport(null, geom.floor_y);
-            } else {
-                startStroll();
-            }
-        }
-
-        // =========================================================================
-        // 4. ADVANCE & RENDER LOOP (Pet.cs Advance + Body.Render)
-        // =========================================================================
-        function isTalkingNow(now) {
-            return now < talkingUntil && !isThinking;
-        }
-
-        function mouthFrame(now) {
-            return Math.floor(now * CLIPS.mouth.fps) % CLIPS.mouth.count;
-        }
-
-        function tick(now) {
-            // 1. Callback de salida (GlitchOut)
-            if (outroCallback && now >= outroAt) {
-                const cb = outroCallback;
-                outroCallback = null;
-                cb();
-            }
-
-            // 2. Actualizar físicas si no está siendo arrastrada
-            if (!dragging) {
-                if (falling) {
-                    updateFall(now);
-                } else if (walking) {
-                    updateWalk(now);
-                } else {
-                    checkWander(now);
-                }
-            }
-
-            // 3. Máquina de estados de sprites (Pet.cs Advance líneas 953-1007)
-            const clipObj = CLIPS[currentClip] || CLIPS.idle;
-            let index = Math.floor((now - clipStart) * clipObj.fps);
-
-            if (currentClip === 'leave' || currentClip === 'perch_leave') {
-                index = Math.min(index, clipObj.count - 1);
-            }
-
-            if (
-                (currentClip === 'glitch' && index >= CLIPS.glitch.count) ||
-                (currentClip === 'wake' && index >= CLIPS.wake.count) ||
-                (currentClip === 'grin' && index >= CLIPS.grin.count * 2)
-            ) {
-                playClip(seated ? 'perch' : 'idle');
-                index = 0;
-            }
-
-            if (currentClip === 'arrive' && index >= CLIPS.arrive.count) {
-                playClip('idle');
-                index = 0;
-                if (dropAfter) {
-                    dropAfter = false;
-                    startFall();
-                }
-            }
-
-            if (
-                (currentClip === 'perch_glitch' && index >= CLIPS.perch_glitch.count) ||
-                (currentClip === 'perch_arrive' && index >= CLIPS.perch_arrive.count)
-            ) {
-                playClip('perch');
-                index = 0;
-            }
-
-            // Bailar sola con música o cuando está activado
-            const still = !walking && !dragging && !falling && !outroCallback && !napping;
-            const grooving = dancing || musicPlaying;
-            if (grooving && still && (currentClip === 'idle' || currentClip === 'perch')) {
-                playClip(seated ? 'perch_music' : 'dance');
-                index = 0;
-            }
-            if ((!grooving || !still) && (currentClip === 'dance' || currentClip === 'perch_music')) {
-                playClip(seated ? 'perch' : 'idle');
-                index = 0;
-            }
-
-            // Parpadeo aleatorio (blink / blink_glitch) y glitch espontáneo en Idle / Perch
-            if (currentClip === 'idle' || currentClip === 'perch') {
-                const cycle = Math.floor(index / clipObj.count);
-                if (cycle !== idleCycle) {
-                    idleCycle = cycle;
-                    const roll = Math.random();
-                    if (roll < 0.12) {
-                        blinkWith = currentClip === 'perch' ? 'perch_blink_glitch' : 'blink_glitch';
-                    } else if (roll < 0.58) {
-                        blinkWith = currentClip === 'perch' ? 'perch_blink' : 'blink';
-                    } else {
-                        blinkWith = null;
-                    }
-
-                    if (now >= nextGlitch && !isTalkingNow(now)) {
-                        nextGlitch = now + 28 + Math.random() * 28;
-                        playClip(currentClip === 'perch' ? 'perch_glitch' : 'glitch');
-                        index = 0;
-                    }
-                }
-            }
-
-            const activeClipObj = CLIPS[currentClip] || CLIPS.idle;
-            let cell = index % activeClipObj.count;
-            let shownKey = currentClip;
-
-            const blinkFrom = currentClip === 'perch' ? 28 : 9;
-            if ((currentClip === 'idle' || currentClip === 'perch') && blinkWith && CLIPS[blinkWith]) {
-                const bCount = CLIPS[blinkWith].count;
-                if (cell >= blinkFrom && cell < blinkFrom + bCount) {
-                    shownKey = blinkWith;
-                    cell -= blinkFrom;
-                }
-            }
-
-            // Respiración suave y balanceo (Pet.cs líneas 1000-1002)
-            const settled = !dragging && currentClip !== 'dangle' && currentClip !== 'sleep';
-            const breathe = settled ? Math.sin(now * 1.75) * 2.2 : 0;
-            const tilt = settled ? Math.sin(now * 0.95) * 0.65 : 0;
-
-            // Dibujar en Canvas
-            drawBody(shownKey, cell, breathe, tilt, isTalkingNow(now) ? mouthFrame(now) : -1);
-        }
-
-        function drawBody(shownKey, cell, breathe, tilt, talkingMouthCell) {
-            const clip = CLIPS[shownKey] || CLIPS.idle;
-            const img = getClipImage(shownKey);
-            if (!img || !img.complete || img.naturalWidth === 0) return;
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            const baseSize = 225;
-            const drawH = baseSize * clip.height;
-            const drawW = drawH * (clip.fw / clip.fh);
-            const centerX = canvas.width / 2 + (clip.shiftX || 0);
-            const centerY = canvas.height - drawH / 2 - 46 + (clip.shiftY || 0);
-
-            ctx.save();
-            ctx.translate(centerX, centerY + breathe);
-            ctx.rotate((tilt * Math.PI) / 180);
-            if (currentClip === 'walk' && walkDir === -1) {
-                ctx.scale(-1, 1);
-            }
-
-            const safeCell = cell % Math.max(1, Math.floor(img.naturalWidth / clip.fw));
-            ctx.drawImage(
-                img,
-                safeCell * clip.fw, 0, clip.fw, clip.fh,
-                -drawW / 2, -drawH / 2, drawW, drawH
-            );
-
-            // Si está hablando en estado de pie, superponer mouth.png ENCIMA del cuerpo (como Body.Render en Pet.cs)
-            if (talkingMouthCell >= 0 && currentClip === 'idle' && shownKey !== 'blink_glitch') {
-                const mouthImg = getClipImage('mouth');
-                if (mouthImg && mouthImg.complete && mouthImg.naturalWidth > 0) {
-                    const mCell = talkingMouthCell % CLIPS.mouth.count;
-                    ctx.drawImage(
-                        mouthImg,
-                        mCell * CLIPS.mouth.fw, 0, CLIPS.mouth.fw, CLIPS.mouth.fh,
-                        -drawW / 2, -drawH / 2, drawW, drawH
-                    );
-                }
-            }
-
-            ctx.restore();
-        }
-
-        // =========================================================================
-        // 5. DIÁLOGO Y BLOQUE DE TEXTO SEPARADO DEL PERSONAJE (MtGhozt/Capri-Desktop)
-        // =========================================================================
-        async function showCapriBubble(heard, reply, model = '', thinking = false) {
-            const cleanHeard = (heard || '').replace(/^>\s*tú:\s*/i, '').trim();
-
-            // Detectar y procesar etiquetas de ánimo ocultas ([burla], [emocion], [aburrida], [seria])
-            let cleanReply = reply || '';
-            let moodMatch = cleanReply.match(/^\[(burla|emocion|aburrida|seria)\]\s*/i);
-            if (moodMatch) {
-                const mood = moodMatch[1].toLowerCase();
-                cleanReply = cleanReply.replace(moodMatch[0], '');
-                if (mood === 'burla') playClip('grin');
-                else if (mood === 'emocion') playClip('dance');
-                else if (mood === 'aburrida') playClip('dangle');
-                else if (mood === 'seria') playClip('idle');
-            }
-
-            isThinking = thinking;
-            const now = getNow();
-            if (!thinking && cleanReply) {
-                talkingUntil = now + Math.max(1.8, Math.min(10.0, cleanReply.length / CHARS_PER_SEC));
-            } else {
-                talkingUntil = 0;
-            }
-
-            if (currentClip === 'sleep') {
-                napping = false;
-                playClip('wake');
-            }
-
-            clearTimeout(bubbleHideTimer);
-            if (!thinking && cleanReply) {
-                const readDuration = Math.max(7500, Math.min(20000, cleanReply.length * 65 + 4500));
-                bubbleHideTimer = setTimeout(async () => {
-                    try {
-                        await invoke('show_bubble_window_cmd', { show: false });
-                    } catch (_) {}
-                }, readDuration);
-            }
-
-            try {
-                // Colocar el bloque de texto con separación estética respecto al personaje
-                await invoke('position_bubble_near_avatar_cmd');
-                await invoke('show_bubble_window_cmd', { show: true });
-                if (tauri && tauri.event) {
-                    await tauri.event.emit('avatar_speak', {
-                        heard: cleanHeard,
-                        message: cleanReply || (thinking ? 'pensando...' : ''),
-                        model: model,
-                        thinking: thinking
-                    });
-                }
-            } catch (err) {
-                console.warn('Error mostrando diálogo separado:', err);
-            }
-        }
-
-        // =========================================================================
-        // 6. INTERACCIONES NATURALES DEL MOUSE: ARRASTRAR, SOLTAR CON GRAVEDAD Y ACARICIAR (Stroke)
-        // =========================================================================
-        canvas.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return; // Solo click izquierdo
-            capriMenu.classList.remove('open');
-            pointerPressed = true;
-            dragging = false;
-            downScreenX = e.screenX;
-            downScreenY = e.screenY;
-            grabOffsetX = e.screenX - geom.win_x;
-            grabOffsetY = e.screenY - geom.win_y;
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (!pointerPressed) {
-                // Detectar caricias con el mouse (Stroke en Pet.cs líneas 1263-1278)
-                if (dragging || falling || outroCallback) return;
-                const rect = canvas.getBoundingClientRect();
-                const insideSprite = (
-                    e.clientX >= rect.left + 40 &&
-                    e.clientX <= rect.right - 40 &&
-                    e.clientY >= rect.top + 20 &&
-                    e.clientY <= rect.bottom - 10
-                );
-                if (!insideSprite) {
-                    petTurns = [];
-                    lastPetWay = 0;
-                    return;
-                }
-                const dx = e.screenX - lastPetX;
-                if (Math.abs(dx) < 6) return;
-                const now = getNow();
-                const way = Math.sign(dx);
-                lastPetX = e.screenX;
-                if (lastPetWay !== 0 && way !== lastPetWay) {
-                    petTurns.push(now);
-                }
-                lastPetWay = way;
-                petTurns = petTurns.filter(t => now - t <= 1.5);
-                if (petTurns.length >= 4 && now - lastPetAt >= 8) {
-                    petTurns = [];
-                    lastPetAt = now;
-                    triggerHeadPat();
-                }
-                return;
-            }
-
-            const dx = e.screenX - downScreenX;
-            const dy = e.screenY - downScreenY;
-            if (!dragging && (dx * dx + dy * dy) < 25) return;
-
-            if (!dragging) {
-                // Empezó a arrastrarla (Grab en Pet.cs)
-                dragging = true;
-                walking = false;
-                falling = false;
-                seated = false;
-                napping = false;
-                playClip('dangle');
-            }
-
-            moveWindowTo(e.screenX - grabOffsetX, e.screenY - grabOffsetY);
-        });
-
-        window.addEventListener('mouseup', (e) => {
-            if (!pointerPressed || e.button !== 0) return;
-            pointerPressed = false;
-
-            if (dragging) {
-                dragging = false;
-                const hipX = geom.win_x + 180;
-                const hipY = geom.win_y + 370;
-
-                // 1. Revisar si se soltó sobre o cerca de una ventana abierta
-                const nearbyLedge = findLedgeAt(hipX, hipY) || findLedgeBelow(hipX, hipY - 90);
-                if (nearbyLedge && Math.abs(hipY - nearbyLedge.y) < 180) {
-                    sitOnLedge(nearbyLedge);
-                } else if (geom.win_y >= geom.floor_y - 35) {
-                    // Si se soltó en el suelo del escritorio
-                    falling = false;
-                    seated = false;
-                    currentSeat = null;
-                    const stageEl = document.getElementById('pet-stage');
-                    stageEl.style.top = 'auto';
-                    stageEl.style.bottom = '24px';
-                    moveWindowTo(geom.win_x, geom.floor_y);
-                    playClip('glitch');
-                } else {
-                    // SIEMPRE SE MANTIENE FLOTANDO EN EL AIRE AUTOMÁTICAMENTE (sin botones ni menú)
-                    falling = false;
-                    seated = false;
-                    currentSeat = null;
-                    const stageEl = document.getElementById('pet-stage');
-                    stageEl.style.top = 'auto';
-                    stageEl.style.bottom = '24px';
-                    playClip('idle');
-                }
-            } else {
-                // Fue un click simple sobre ella (React en Pet.cs)
-                if (currentClip === 'sleep') {
-                    napping = false;
-                    playClip('wake');
-                } else {
-                    playClip(seated ? 'perch_glitch' : 'glitch');
-                }
-            }
-        });
-
-        function triggerHeadPat() {
-            walking = false;
-            if (seated) {
-                playClip('perch');
-                blinkWith = 'perch_blink';
-            } else {
-                playClip('grin');
-            }
-            const line = PET_LINES[petLineIdx++ % PET_LINES.length];
-            setTimeout(() => {
-                showCapriBubble('(la acaricias)', line, 'capri-core');
-            }, 650);
-        }
-
-        // =========================================================================
-        // 7. CAPRI TALKPILL EXACTO (Talk.cs PillFace / TalkPill + Ears.cs en vivo)
-        // =========================================================================
-        const PILL_SCALE = 1.15;
-        const PILL_WIDE = Math.round(100 * PILL_SCALE); // 115px
-        const PILL_TALL = Math.round(40 * PILL_SCALE);  // 46px
-        const PILL_GAP = Math.round(4 * PILL_SCALE);    // 5px
-        const PILL_MARGIN = Math.round(3 * PILL_SCALE); // 3px
-
-        const LOOK = {
-            fill: 'rgba(9, 11, 15, 0.965)',
-            pink: '#ff2a6d',
-            cyan: '#3ad6eb',
-            cyanBright: '#5ceeff',
-            ink: '#e8ecf2',
-            caption: '#a8aeb8',
-            dim: '#586070',
-            red: '#ff4466',
-            seam: '#424856',
-            wash: 'rgba(58, 214, 235, 0.16)'
-        };
-
-        function getPillBodyRect() {
-            return {
-                left: PILL_MARGIN,
-                top: PILL_MARGIN,
-                width: PILL_WIDE - PILL_MARGIN * 2,
-                height: PILL_TALL - PILL_MARGIN * 2,
-                right: PILL_WIDE - PILL_MARGIN,
-                bottom: PILL_TALL - PILL_MARGIN
-            };
-        }
-
-        function getPillMicRect() {
-            const left = PILL_WIDE + PILL_GAP + PILL_MARGIN;
-            const size = PILL_TALL - PILL_MARGIN * 2;
-            return {
-                left,
-                top: PILL_MARGIN,
-                width: size,
-                height: size,
-                right: left + size,
-                bottom: PILL_MARGIN + size
-            };
-        }
-
-        function cutOctagonPath(c, x, y, w, h, cut) {
-            c.beginPath();
-            c.moveTo(x + cut, y);
-            c.lineTo(x + w - cut, y);
-            c.lineTo(x + w, y + cut);
-            c.lineTo(x + w, y + h - cut);
-            c.lineTo(x + w - cut, y + h);
-            c.lineTo(x + cut, y + h);
-            c.lineTo(x, y + h - cut);
-            c.lineTo(x, y + cut);
-            c.closePath();
-        }
-
-        function drawCapriPlate(c, box, s, litRect, fromColor, toColor) {
-            const cut = Math.max(3, Math.round(6 * s));
-            const edge = Math.max(1, Math.round(1.5 * s));
-
-            // Resplandor exterior suave + fondo negro cyberpunk (Talk.cs Plate líneas 446-464)
-            c.save();
-            const gradGlow = c.createLinearGradient(box.left, 0, box.right, 0);
-            gradGlow.addColorStop(0, fromColor + '44');
-            gradGlow.addColorStop(1, toColor + '44');
-            cutOctagonPath(c, box.left, box.top, box.width, box.height, cut);
-            c.strokeStyle = gradGlow;
-            c.lineWidth = PILL_MARGIN * 1.8;
-            c.stroke();
-
-            c.fillStyle = LOOK.fill;
-            c.fill();
-
-            // Scanlines horizontales y wash cian al pasar el mouse
-            c.clip();
-            c.strokeStyle = 'rgba(255, 255, 255, 0.036)';
-            c.lineWidth = 1;
-            const step = Math.max(3, Math.round(3 * s));
-            for (let row = box.top; row < box.bottom; row += step) {
-                c.beginPath();
-                c.moveTo(box.left, row + 0.5);
-                c.lineTo(box.right, row + 0.5);
-                c.stroke();
-            }
-            if (litRect && litRect.width > 0) {
-                c.fillStyle = LOOK.wash;
-                c.fillRect(litRect.left, litRect.top, litRect.width, litRect.height);
-            }
-            c.restore();
-
-            // Borde neón nítido (degradado Pink -> Cyan en el cuerpo, o Cyan/Red en MicBody)
-            const inset = edge / 2;
-            const gradEdge = c.createLinearGradient(box.left, 0, box.right, 0);
-            gradEdge.addColorStop(0, fromColor);
-            gradEdge.addColorStop(1, toColor);
-            cutOctagonPath(c, box.left + inset, box.top + inset, box.width - edge, box.height - edge, cut - inset * 0.58);
-            c.strokeStyle = gradEdge;
-            c.lineWidth = edge;
-            c.stroke();
-        }
-
-        function drawCapriPencil(c, cx, cy, k, color, backColor) {
-            // Lápiz rotado a -45 grados con corte cuadrado (Talk.cs Pencil líneas 526-545)
-            c.save();
-            c.translate(cx + 0.5 * k, cy - 0.5 * k);
-            c.rotate(-Math.PI / 4);
-            c.fillStyle = color;
-            c.fillRect(-7.2 * k, -2.3 * k, 11.4 * k, 4.6 * k);
-            c.beginPath();
-            c.moveTo(4.2 * k, -2.3 * k);
-            c.lineTo(8.3 * k, 0);
-            c.lineTo(4.2 * k, 2.3 * k);
-            c.closePath();
-            c.fill();
-
-            c.strokeStyle = backColor;
-            c.lineWidth = 1.15 * k;
-            c.beginPath();
-            c.moveTo(-4.3 * k, -2.8 * k);
-            c.lineTo(-4.3 * k, 2.8 * k);
-            c.moveTo(3.6 * k, -2.8 * k);
-            c.lineTo(3.6 * k, 2.8 * k);
-            c.stroke();
-            c.restore();
-        }
-
-        function drawCapriWaveMeter(c, cx, cy, s, chatting, muted, level, color) {
-            // Las 5 barras redondeadas de Capri que se estiran en vivo con tu nivel de micrófono (Talk.cs Meter líneas 490-502)
-            const heights = [5, 10, 14, 9, 4];
-            const stretch = !chatting ? 1.0 : (0.45 + (muted ? 0 : level) * 0.14);
-            c.save();
-            c.strokeStyle = (chatting && muted) ? LOOK.dim : color;
-            c.lineWidth = 2.2 * s;
-            c.lineCap = 'round';
-            for (let i = 0; i < heights.length; i++) {
-                const x = cx + (i - 2) * 3.4 * s;
-                const half = Math.max(1.5, heights[i] * stretch) * s / 2;
-                c.beginPath();
-                c.moveTo(x, cy - half);
-                c.lineTo(x, cy + half);
-                c.stroke();
-            }
-            c.restore();
-        }
-
-        function drawCapriMicIcon(c, cx, cy, s, color, muted, backColor) {
-            // Icono de micrófono con cápsula, copa, base y línea diagonal roja cuando está en Muted (Talk.cs Mic líneas 504-523)
-            const x = cx;
-            const y = cy + 0.5 * s;
-            c.save();
-            c.fillStyle = color;
-            c.strokeStyle = color;
-            c.lineCap = 'round';
-            c.lineWidth = 1.75 * s;
-
-            // Cápsula redondeada
-            const rw = 6.0 * s;
-            const rh = 10.4 * s;
-            const rx = x - rw / 2;
-            const ry = y - 8.6 * s;
-            const rad = 3.0 * s;
-            c.beginPath();
-            c.roundRect(rx, ry, rw, rh, rad);
-            c.fill();
-
-            // Copa semicircular
-            c.beginPath();
-            c.arc(x, y - 2.0 * s, 5.6 * s, 0, Math.PI, false);
-            c.stroke();
-
-            // Pie y base
-            c.beginPath();
-            c.moveTo(x, y + 3.8 * s);
-            c.lineTo(x, y + 6.8 * s);
-            c.moveTo(x - 3.3 * s, y + 6.8 * s);
-            c.lineTo(x + 3.3 * s, y + 6.8 * s);
-            c.stroke();
-
-            // Barra diagonal roja de Muted
-            if (muted) {
-                c.strokeStyle = backColor;
-                c.lineWidth = 4.0 * s;
-                c.beginPath();
-                c.moveTo(x - 7.0 * s, y - 9.0 * s);
-                c.lineTo(x + 7.0 * s, y + 7.0 * s);
-                c.stroke();
-
-                c.strokeStyle = LOOK.red;
-                c.lineWidth = 2.0 * s;
-                c.beginPath();
-                c.moveTo(x - 7.0 * s, y - 9.0 * s);
-                c.lineTo(x + 7.0 * s, y + 7.0 * s);
-                c.stroke();
-            }
-            c.restore();
-        }
-
-        function drawTalkPillClean(c) {
-            const s = PILL_SCALE;
-            const body = getPillBodyRect();
-            const mid = Math.floor(PILL_WIDE / 2);
-
-            let litRect = null;
-            if (pillHover === 1) {
-                litRect = { left: body.left, top: body.top, width: mid - body.left, height: body.height };
-            } else if (pillHover === 2) {
-                litRect = { left: mid, top: body.top, width: body.right - mid, height: body.height };
-            }
-
-            drawCapriPlate(c, body, s, litRect, LOOK.pink, LOOK.cyan);
-
-            // Costura diagonal central entre TYPE y TALK (Talk.cs línea 425)
-            c.save();
-            c.strokeStyle = LOOK.seam;
-            c.lineWidth = Math.max(1, Math.round(s));
-            c.beginPath();
-            c.moveTo(mid + 1.5 * s, body.top + 9.5 * s);
-            c.lineTo(mid - 1.5 * s, body.bottom - 9.5 * s);
-            c.stroke();
-
-            // Esquirlas glitch del borde (cian arriba a la derecha, rosa abajo a la izquierda - Talk.cs líneas 427-429)
-            const sliver = Math.max(1.2, Math.round(s));
-            c.fillStyle = LOOK.cyan;
-            c.fillRect(body.right - Math.round(32 * s), body.top - Math.round(2 * s), Math.round(15 * s), sliver);
-            c.fillStyle = LOOK.pink;
-            c.fillRect(body.left + Math.round(12 * s), body.bottom + Math.round(2 * s) - sliver, Math.round(11 * s), sliver);
-            c.restore();
-
-            const centerY = body.top + body.height / 2;
-            c.font = `700 ${Math.round(8.8 * s)}px "Share Tech Mono", "JetBrains Mono", monospace`;
-            c.textBaseline = 'middle';
-
-            // Mitad Izquierda (part == 1): Lápiz + "TYPE"
-            const leftCenter = (body.left + mid) / 2;
-            drawCapriPencil(
-                c,
-                leftCenter - 14 * s,
-                centerY,
-                0.88 * s,
-                pillHover === 1 ? LOOK.cyanBright : LOOK.ink,
-                '#090b0f'
-            );
-            c.fillStyle = pillHover === 1 ? LOOK.cyanBright : LOOK.caption;
-            c.fillText('TYPE', leftCenter - 4 * s, centerY + 0.5);
-
-            // Mitad Derecha (part == 2): 5 barras de onda + "TALK" / "MUTED"
-            const rightCenter = (mid + body.right) / 2;
-            const talkLabel = (pillChatting && pillMuted) ? 'MUTED' : 'TALK';
-            const waveColor = (pillHover === 2 || pillChatting) ? LOOK.cyanBright : LOOK.ink;
-            const labelColor = (pillChatting && pillMuted)
-                ? LOOK.red
-                : (pillHover === 2 || pillChatting) ? LOOK.cyanBright : LOOK.caption;
-
-            drawCapriWaveMeter(
-                c,
-                rightCenter - 14.5 * s,
-                centerY,
-                s * 0.92,
-                pillChatting,
-                pillMuted,
-                pillLevel,
-                waveColor
-            );
-            c.fillStyle = labelColor;
-            c.fillText(talkLabel, rightCenter - 4.5 * s, centerY + 0.5);
-
-            // Botón cuadrado de Micrófono a la derecha cuando el chat de voz está activo (MicBody - Talk.cs líneas 438-441)
-            if (pillChatting) {
-                const mic = getPillMicRect();
-                const edgeColor = pillMuted ? LOOK.red : LOOK.cyan;
-                drawCapriPlate(c, mic, s, pillHover === 3 ? mic : null, edgeColor, edgeColor);
-                const micInk = pillHover === 3 ? LOOK.cyanBright : (pillMuted ? LOOK.dim : LOOK.ink);
-                drawCapriMicIcon(
-                    c,
-                    mic.left + mic.width / 2,
-                    mic.top + mic.height / 2,
-                    s * 0.92,
-                    micInk,
-                    pillMuted,
-                    '#090b0f'
-                );
-            }
-        }
-
-        function renderTalkPill() {
-            const dpr = window.devicePixelRatio || 1;
-            const logicalW = pillChatting ? (PILL_WIDE + PILL_GAP + PILL_TALL) : PILL_WIDE;
-            const logicalH = PILL_TALL;
-
-            if (talkPillCanvas.width !== Math.round(logicalW * dpr) || talkPillCanvas.height !== Math.round(logicalH * dpr)) {
-                talkPillCanvas.width = Math.round(logicalW * dpr);
-                talkPillCanvas.height = Math.round(logicalH * dpr);
-                talkPillCanvas.style.width = `${logicalW}px`;
-                talkPillCanvas.style.height = `${logicalH}px`;
-            }
-
-            pillCtx.save();
-            pillCtx.scale(dpr, dpr);
-            pillCtx.clearRect(0, 0, logicalW, logicalH);
-
-            if (pillTear <= 0) {
-                drawTalkPillClean(pillCtx);
-            } else {
-                // Efecto Glitch Tear de 4 frames (Talk.cs Draw líneas 380-415)
-                drawTalkPillClean(pillCtx);
-                const amount = Math.min(1, pillTear / 4);
-                for (let i = 0; i < 3; i++) {
-                    const bandH = 4 + (i * 3);
-                    const bandY = ((pillTear * 11 + i * 13) % Math.max(1, logicalH - bandH));
-                    const shiftX = (i % 2 === 0 ? 1 : -1) * Math.round(4 * amount);
-                    pillCtx.save();
-                    pillCtx.beginPath();
-                    pillCtx.rect(0, bandY, logicalW, bandH);
-                    pillCtx.clip();
-                    pillCtx.clearRect(0, bandY, logicalW, bandH);
-                    pillCtx.translate(shiftX, 0);
-                    drawTalkPillClean(pillCtx);
-                    pillCtx.fillStyle = i % 2 === 0 ? 'rgba(255, 42, 109, 0.28)' : 'rgba(58, 214, 235, 0.28)';
-                    pillCtx.fillRect(0, bandY, logicalW, bandH);
-                    pillCtx.restore();
-                }
-            }
-            pillCtx.restore();
-
-            // Mientras el modo de voz TALK esté activo, mantener la pastilla siempre visible
-            // para que veas las 5 barras de onda moverse cuando le hablas
-            talkPillWrap.classList.toggle('visible', pillChatting);
-        }
-
-        function triggerPillTear() {
-            pillTear = 4;
-            renderTalkPill();
-            const timer = setInterval(() => {
-                pillTear--;
-                renderTalkPill();
-                if (pillTear <= 0) clearInterval(timer);
-            }, 45);
-        }
-
-        function pillPartAt(clientX, clientY) {
-            const rect = talkPillCanvas.getBoundingClientRect();
-            const x = clientX - rect.left;
-            const y = clientY - rect.top;
-            const body = getPillBodyRect();
-            const mid = Math.floor(PILL_WIDE / 2);
-
-            if (x >= body.left && x <= body.right && y >= body.top && y <= body.bottom) {
-                return x < mid ? 1 : 2;
-            }
-            if (pillChatting) {
-                const mic = getPillMicRect();
-                if (x >= mic.left && x <= mic.right && y >= mic.top && y <= mic.bottom) {
-                    return 3;
-                }
-            }
-            return 0;
-        }
-
-        talkPillCanvas.addEventListener('mousemove', (e) => {
-            const part = pillPartAt(e.clientX, e.clientY);
-            if (part !== pillHover) {
-                pillHover = part;
-                renderTalkPill();
-            }
-        });
-
-        talkPillCanvas.addEventListener('mouseleave', () => {
-            if (pillHover !== 0) {
-                pillHover = 0;
-                renderTalkPill();
-            }
-        });
-
-        talkPillCanvas.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const part = pillPartAt(e.clientX, e.clientY);
-            if (part === 1) {
-                // Mitad Izquierda: TYPE -> Abre/cierra la barra de texto (> tú:)
-                toggleTyper();
-            } else if (part === 2) {
-                // Mitad Derecha: TALK -> Activa/desactiva el chat de voz en vivo (ToggleChat en Capri.cs)
-                await toggleCapriVoiceChat();
-            } else if (part === 3) {
-                // Botón cuadrado derecho: MicBody -> Mute / Unmute micrófono (ToggleMic en Capri.cs)
-                await toggleCapriMicMute();
-            }
-        });
-
-        async function toggleCapriVoiceChat(force = null) {
-            try {
-                const st = await invoke('toggle_voice_chat_cmd', { enabled: force });
-                pillChatting = !!st.chatting;
-                pillMuted = !!st.muted;
-                pillLevel = 0;
-                triggerPillTear();
-                if (pillChatting) {
-                    showCapriBubble('(voice)', 'Chat de voz libre activado. Háblame cuando quieras y te responderé, choom.', 'ears', false);
-                } else {
-                    showCapriBubble('(voice)', 'Chat de voz desactivado. Haz click en TALK para volver a escucharte.', 'ears', false);
-                }
-            } catch (err) {
-                showCapriBubble('(voice)', `Error al cambiar chat de voz: ${err}`, 'error', false);
-            }
-        }
-
-        async function toggleCapriMicMute(force = null) {
-            try {
-                const st = await invoke('toggle_mic_mute_cmd', { muted: force });
-                pillChatting = !!st.chatting;
-                pillMuted = !!st.muted;
-                pillLevel = 0;
-                renderTalkPill();
-                if (pillMuted) {
-                    showCapriBubble('(voice)', 'Micrófono silenciado (MUTED). Haz click en el icono del mic para reactivarlo.', 'ears', false);
-                } else {
-                    showCapriBubble('(voice)', 'Micrófono activo. Háblame cuando quieras, choom.', 'ears', false);
-                }
-            } catch (_) {}
-        }
-
-        // Sincronizar estado inicial de TalkPill con Rust
-        (async () => {
-            try {
-                const st = await invoke('get_ears_state_cmd');
-                if (st) {
-                    pillChatting = !!st.chatting;
-                    pillMuted = !!st.muted;
-                }
-            } catch (_) {}
-            triggerPillTear();
-        })();
-
-        // =========================================================================
-        // 7.5. DIÁLOGO SEPARADO Y CONEXIÓN A OPENCLAW + GEMINI 4 ARGON
-        // =========================================================================
-        async function toggleTyper(force = null) {
-            try {
-                await invoke('position_bubble_near_avatar_cmd');
-                await invoke('show_bubble_window_cmd', { show: force !== null ? force : true, focus: true });
-                if (tauri && tauri.event) {
-                    await tauri.event.emit('focus_bubble_input', {});
-                }
-            } catch (err) {
-                console.warn('Error al enfocar bloque de texto:', err);
-            }
-        }
-
-        function updateBrainUI() {
-            const menuBrainVal = document.getElementById('menu-brain-val');
-            if (menuBrainVal) {
-                menuBrainVal.innerText = BRAIN_MENU_NAMES[currentBrainMode] || currentBrainMode;
-            }
-        }
-
-        async function sendToClaudia(text) {
-            // Comandos rápidos naturales estilo Capri
-            const lower = text.toLowerCase();
-            if (lower === 'baila' || lower === 'dance') {
-                dancing = true;
-                showCapriBubble(text, 'Bailando, choom. Dime cuando quieras que pare.', 'capri');
-                return;
-            }
-            if (lower === 'para de bailar' || lower === 'stop dancing') {
-                dancing = false;
-                showCapriBubble(text, 'Listo, descanso los pies.', 'capri');
-                return;
-            }
-            if (lower === 'duerme' || lower === 'sleep') {
-                napping = true;
-                walking = false;
-                seated = false;
-                playClip('sleep');
-                showCapriBubble(text, 'Yendo a dormir. Hazme click cuando quieras despertarme.', 'capri');
-                return;
-            }
-
-            showCapriBubble(text, '', currentBrainMode, true);
-            try {
-                const res = await invoke('send_chat_message', {
-                    message: text,
-                    mode: currentBrainMode
-                });
-                showCapriBubble(text, res.reply, res.model_used, false);
-            } catch (err) {
-                showCapriBubble(text, `Mi cerebro tuvo un glitch: ${err}`, 'error', false);
-            }
-        }
-
-        async function triggerScreenGlance() {
-            showCapriBubble('(mirar pantalla)', '', 'openclaw-vision', true);
-            try {
-                await invoke('analyze_notebook_cmd', { customQuestion: null });
-            } catch (err) {
-                showCapriBubble('(mirar pantalla)', `No pude ver tu pantalla: ${err}`, 'error', false);
-            }
-        }
-
-        // =========================================================================
-        // 8. MENÚ CONTEXTUAL CLICK DERECHO (Capri ContextMenu)
-        // =========================================================================
-        window.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            document.getElementById('menu-floating-val').innerText = floatingMode ? 'Activo 🪶' : 'Desactivado';
-            document.getElementById('menu-sit-text').innerText = seated ? '🧍 Levantarse' : '🪑 Sentarse aquí';
-            document.getElementById('menu-dance-text').innerText = dancing ? '⏹ Dejar de bailar' : '🎵 Bailar';
-            document.getElementById('menu-sleep-text').innerText = (currentClip === 'sleep') ? '☀️ Despertar' : '💤 Ir a dormir';
-            document.getElementById('menu-wander-val').innerText = WANDER_NAMES[wanderLevel];
-            document.getElementById('menu-watch-val').innerText = proactiveWatch ? 'Activo' : 'Pausado';
-            document.getElementById('menu-cmic-val').innerText = pillChatting ? (pillMuted ? 'MUTED 🔇' : 'TALK Activo 🎙️') : 'Apagado';
-            document.getElementById('menu-tts-val').innerText = ttsVoiceEnabled ? 'Activa' : 'Silencio';
-            capriMenu.classList.add('open');
-        });
-
-        window.addEventListener('click', (e) => {
-            if (!capriMenu.contains(e.target)) {
-                capriMenu.classList.remove('open');
-            }
-        });
-
-        capriMenu.querySelectorAll('.menu-item').forEach(item => {
-            item.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const action = item.getAttribute('data-action');
-                capriMenu.classList.remove('open');
-
-                switch (action) {
-                    case 'mic':
-                        await toggleCapriVoiceChat();
-                        break;
-                    case 'talk':
-                        toggleTyper(true);
-                        break;
-                    case 'look':
-                        await triggerScreenGlance();
-                        break;
-                    case 'soul':
-                        try { await invoke('open_mainframe_cmd'); } catch (_) {}
-                        break;
-                    case 'skills':
-                        await sendToClaudia('/skills');
-                        break;
-                    case 'toggle-continuous-mic':
-                        await toggleCapriVoiceChat();
-                        break;
-                    case 'toggle-tts':
-                        ttsVoiceEnabled = !ttsVoiceEnabled;
-                        try { await invoke('set_tts_enabled_cmd', { enabled: ttsVoiceEnabled }); } catch (_) {}
-                        showCapriBubble('(voz tts)', ttsVoiceEnabled ? 'Voz Piper TTS activada.' : 'Voz en silencio (solo texto).', 'piper-tts');
-                        break;
-                    case 'toggle-floating':
-                        floatingMode = !floatingMode;
-                        document.getElementById('menu-floating-val').innerText = floatingMode ? 'Activo 🪶' : 'Desactivado';
-                        if (floatingMode) {
-                            falling = false;
-                            showCapriBubble('(flotación)', 'Modo flotación activado: me mantengo en el aire donde me dejes.', 'capri');
-                        } else {
-                            showCapriBubble('(gravedad)', 'Gravedad activada: caeré a las ventanas o al suelo.', 'capri');
-                            if (!seated) startFall();
-                        }
-                        break;
-                    case 'sit-active-window':
-                        try {
-                            const active = await invoke('get_active_window_cmd');
-                            if (active && active.width > 150) {
-                                sitOnLedge(active);
-                            } else if (openLedges.length > 0) {
-                                sitOnLedge(openLedges[0]);
-                            } else {
-                                showCapriBubble('(ventanas)', 'No detecté ventanas abiertas para posarme.', 'capri');
-                            }
-                        } catch (e) {
-                            showCapriBubble('(ventanas)', 'Error detectando ventana activa: ' + e, 'error');
-                        }
-                        break;
-                    case 'drop-floor':
-                        floatingMode = false;
-                        document.getElementById('menu-floating-val').innerText = 'Desactivado';
-                        standUp(true);
-                        break;
-                    case 'toggle-sit':
-                        if (seated) {
-                            standUp(true);
-                        } else {
-                            const hipX = geom.win_x + 180;
-                            const hipY = geom.win_y + 370;
-                            const ledge = findLedgeAt(hipX, hipY) || findLedgeBelow(hipX, hipY - 60);
-                            if (ledge) {
-                                sitOnLedge(ledge);
-                            } else {
-                                seated = true;
-                                playClip('perch_glitch');
-                            }
-                        }
-                        break;
-                    case 'walk-now':
-                        startStroll();
-                        break;
-                    case 'toggle-dance':
-                        dancing = !dancing;
-                        break;
-                    case 'teleport':
-                        glitchTeleport(null, geom.floor_y);
-                        break;
-                    case 'toggle-sleep':
-                        if (currentClip === 'sleep') {
-                            napping = false;
-                            playClip('wake');
-                        } else {
-                            napping = true;
-                            walking = false;
-                            seated = false;
-                            playClip('sleep');
-                        }
-                        break;
-                    case 'cycle-wander':
-                        wanderLevel = (wanderLevel + 1) % WANDER_NAMES.length;
-                        nextWander = getNow() + 5;
-                        showCapriBubble('(movimiento)', `Modo de caminata autónoma: ${WANDER_NAMES[wanderLevel]}.`, 'capri');
-                        break;
-                    case 'cycle-brain':
-                        const idx = (BRAIN_MODES.indexOf(currentBrainMode) + 1) % BRAIN_MODES.length;
-                        currentBrainMode = BRAIN_MODES[idx];
-                        updateBrainUI();
-                        try { await invoke('set_ai_mode_cmd', { mode: currentBrainMode }); } catch (_) {}
-                        showCapriBubble('(cerebro)', `Ahora pienso con ${BRAIN_MENU_NAMES[currentBrainMode]}.`, currentBrainMode);
-                        break;
-                    case 'toggle-watch':
-                        proactiveWatch = !proactiveWatch;
-                        try { await invoke('set_proactive_mode_cmd', { enabled: proactiveWatch }); } catch (_) {}
-                        showCapriBubble('(vigilancia)', proactiveWatch ? 'Vigilancia de tu pantalla activada, choom.' : 'Modo silencioso activado.', 'capri');
-                        break;
-                    case 'mainframe':
-                        try { await invoke('open_mainframe_cmd'); } catch (_) {}
-                        break;
-                    case 'quit':
-                        playClip(seated ? 'perch_leave' : 'leave');
-                        setTimeout(() => invoke('quit_app_cmd'), 700);
-                        break;
-                }
-            });
-        });
-
-        // =========================================================================
-        // 9. EVENTOS DESDE RUST (ContextWatcher, OpenClawBridge, VoiceEars, Tray)
-        // =========================================================================
-        listen('avatar_speak', (event) => {
-            const p = event.payload;
-            const message = typeof p === 'string' ? p : p.message;
-            const heard = (typeof p === 'object' && p.heard) ? p.heard : '(tu notebook)';
-            const model = (typeof p === 'object' && p.model) ? p.model : '';
-            const thinking = (typeof p === 'object' && typeof p.thinking === 'boolean') ? p.thinking : false;
-            showCapriBubble(heard, message, model, thinking);
-        });
-
-        // Nivel del micrófono en vivo (0..6) desde claudia_ears_daemon.py -> estira las 5 barras de onda de TalkPill
-        listen('ears_level', (event) => {
-            const lvl = Number(event.payload) || 0;
-            if (lvl !== pillLevel) {
-                pillLevel = lvl;
-                renderTalkPill();
-            }
-        });
-
-        // Sincronización de estado de TalkPill (chatting / muted / ready)
-        listen('ears_state', (event) => {
-            const st = event.payload || {};
-            if (typeof st.chatting === 'boolean') pillChatting = st.chatting;
-            if (typeof st.muted === 'boolean') pillMuted = st.muted;
-            renderTalkPill();
-        });
-
-        listen('ears_speech_start', () => {
-            talkPillWrap.classList.add('visible');
-        });
-
-        listen('music_state_changed', (event) => {
-            const { playing } = event.payload || {};
-            musicPlaying = !!playing;
-        });
-
-        listen('capri_action', (event) => {
-            const act = event.payload;
-            if (act === 'toggle_sit') {
-                walking = false;
-                seated = !seated;
-                playClip(seated ? 'perch_glitch' : 'glitch');
-            } else if (act === 'walk_now') {
-                startStroll();
-            } else if (act === 'toggle_dance') {
-                dancing = !dancing;
-            } else if (act === 'teleport_random') {
-                glitchTeleport(null, geom.floor_y);
-            }
-        });
-
-        listen('open_chat_input', () => toggleTyper(true));
-        listen('trigger_analyze_notebook', () => triggerScreenGlance());
-
-        listen('mic_heard_preview', (event) => {
-            const txt = event.payload || '';
-            if (txt) {
-                showCapriBubble(`🎤 ${txt}`, '', currentBrainMode, true);
-            }
-        });
-
-        listen('ai_status_updated', (event) => {
-            const st = event.payload;
-            if (st && st.mode) {
-                currentBrainMode = st.mode;
-                updateBrainUI();
-            }
-            if (st && typeof st.proactive === 'boolean') {
-                proactiveWatch = st.proactive;
-            }
-        });
-
-        // Loop principal a 30fps (33ms exactos como Pet.cs frames.Interval = TimeSpan.FromMilliseconds(33))
-        setInterval(() => tick(getNow()), 33);
-    </script>
-</body>
-</html>
+            playClip('sleep');
+          }
+          break;
+        case 'cycle-wander':
+          wanderLevel = (wanderLevel + 1) % WANDER_NAMES.length;
+          nextWander = getNow() + 5;
+          showCapriBubble('(movimiento)', `Modo de caminata autónoma: ${WANDER_NAMES[wanderLevel]}.`, 'capri');
+          break;
+        case 'cycle-brain':
+          const idx = (BRAIN_MODES.indexOf(currentBrainMode) + 1) % BRAIN_MODES.length;
+          currentBrainMode = BRAIN_MODES[idx];
+          updateBrainUI();
+          try { await invoke('set_ai_mode_cmd', { mode: currentBrainMode }); } catch (_) {}
+          showCapriBubble('(cerebro)', `Ahora pienso con ${BRAIN_MENU_NAMES[currentBrainMode]}.`, currentBrainMode);
+          break;
+        case 'toggle-watch':
+          proactiveWatch = !proactiveWatch;
+          try { await invoke('set_proactive_mode_cmd', { enabled: proactiveWatch }); } catch (_) {}
+          showCapriBubble('(vigilancia)', proactiveWatch ? 'Vigilancia de tu pantalla activada, choom.' : 'Modo silencioso activado.', 'capri');
+          break;
+        case 'mainframe':
+          try { await invoke('open_mainframe_cmd'); } catch (_) {}
+          break;
+        case 'quit':
+          playClip(seated ? 'perch_leave' : 'leave');
+          setTimeout(() => invoke('quit_app_cmd'), 700);
+          break;
+      }
+    });
+  });
+
+  // =========================================================
+  // 9. EVENTOS DESDE RUST (ContextWatcher, OpenClawBridge, VoiceEars, Tray)
+  // =========================================================
+  listen('avatar_speak', (event) => {
+    const p = event.payload;
+    const message = typeof p === 'string' ? p : (p?.message || p?.reply || '');
+    const heard = (typeof p === 'object' && p?.heard) ? p.heard : '(sistema)';
+    const model = (typeof p === 'object' && p?.model) ? p.model : '';
+    const thinking = (typeof p === 'object' && typeof p?.thinking === 'boolean') ? p.thinking : false;
+    showCapriBubble(heard, message, model, thinking);
+  });
+
+  listen('capri_mouth_sync', (event) => {
+    const d = event.payload || {};
+    const len = Number(d.length) || 24;
+    talkingUntil = getNow() + Math.max(1.5, Math.min(9.0, len / CHARS_PER_SEC));
+    if (d.mood === 'burla') playClip('grin');
+    else if (d.mood === 'emocion') playClip('dance');
+  });
+
+  // Nivel del micrófono en vivo (0..6) desde claudia_ears_daemon.py -> estira las 5 barras de onda de TalkPill
+  listen('ears_level', (event) => {
+    const lvl = Number(event.payload) || 0;
+    if (lvl !== pillLevel) {
+      pillLevel = lvl;
+      renderTalkPill();
+    }
+  });
+
+  // Sincronización de estado de TalkPill (chatting / muted / ready)
+  listen('ears_state', (event) => {
+    const st = event.payload || {};
+    if (typeof st.chatting === 'boolean') pillChatting = st.chatting;
+    if (typeof st.muted === 'boolean') pillMuted = st.muted;
+    renderTalkPill();
+  });
+
+  listen('ears_speech_start', () => {
+    talkPillWrap.classList.add('visible');
+  });
+
+  listen('music_state_changed', (event) => {
+    const { playing } = event.payload || {};
+    musicPlaying = !!playing;
+  });
+
+  listen('capri_action', (event) => {
+    const act = event.payload;
+    if (act === 'toggle_sit') {
+      walking = false;
+      seated = !seated;
+      playClip(seated ? 'perch_glitch' : 'glitch');
+    } else if (act === 'walk_now') {
+      startStroll();
+    } else if (act === 'toggle_dance') {
+      dancing = !dancing;
+    } else if (act === 'teleport_random') {
+      glitchTeleport(null, geom.floor_y);
+    }
+  });
+
+  listen('open_chat_input', () => toggleTyper(true));
+  listen('trigger_analyze_notebook', () => triggerScreenGlance());
+
+  listen('mic_heard_preview', (event) => {
+    const txt = event.payload || '';
+    if (txt) {
+      showCapriBubble(` ${txt}`, '', currentBrainMode, true);
+    }
+  });
+
+  listen('ai_status_updated', (event) => {
+    const st = event.payload;
+    if (st && st.mode) {
+      currentBrainMode = st.mode;
+      updateBrainUI();
+    }
+    if (st && typeof st.proactive === 'boolean') {
+      proactiveWatch = st.proactive;
+    }
+  });
+
+  // Loop principal a 30fps (33ms exactos como Pet.cs frames.Interval = TimeSpan.FromMilliseconds(33))
+  setInterval(() => tick(getNow()), 33);
+</script>

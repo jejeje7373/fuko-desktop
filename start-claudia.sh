@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Lanzador de Claudia Desktop Companion (Capri Desktop Engine + OpenClaw + Gemini 4 Argon)
+# Lanzador de Fuko / Claudia Desktop Companion
 set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Cerrar FDs heredados > 2 por seguridad si se lanza desde un IDE Snap
 for fd in $(ls /proc/$$/fd 2>/dev/null); do
@@ -21,4 +23,11 @@ if [ -z "$XAUTHORITY" ] || [ ! -f "$XAUTHORITY" ]; then
   fi
 fi
 
-exec "/home/jejej/.openclaw/workspace/claudia-desktop/src-tauri/target/debug/claudia-desktop" "$@"
+# Priorizar el binario compilado dentro de este mismo repositorio
+if [ -x "$SCRIPT_DIR/src-tauri/target/debug/claudia-desktop" ]; then
+  exec "$SCRIPT_DIR/src-tauri/target/debug/claudia-desktop" "$@"
+elif [ -x "$SCRIPT_DIR/target/debug/claudia-desktop" ]; then
+  exec "$SCRIPT_DIR/target/debug/claudia-desktop" "$@"
+else
+  exec "/home/jejej/.openclaw/workspace/claudia-desktop/src-tauri/target/debug/claudia-desktop" "$@"
+fi

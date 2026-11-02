@@ -1,12 +1,12 @@
 // src/context_watcher.rs
-// Observador reactivo autónomo estilo Capri Desktop:
-// - Vigila archivos (~/Duoc, workspace, Documentos, Descargas)
-// - Detecta música (playerctl) y hace que Claudia baile sola como Capri (CheckMusic)
-// - Detecta ventana activa en X11/Wayland y hace Glances autónomos (CheckGlance) comentando lo que haces
-// - Detecta compilación (cargo/rustc), CPU alta (CheckLag) y batería baja
+// Observador reactivo autónomo en tiempo real para Fuko Desktop:
+// - Vigila la pantalla y la ventana/pestaña activa cada 1.5s (en cualquier navegador: Chrome, Firefox, Brave, Edge, Opera, Chromium, Vivaldi, Zen)
+// - Toma capturas de pantalla en tiempo real y comenta automáticamente cuando abres Google, haces una búsqueda o entras a cualquier página web
+// - Detecta música (playerctl), compilación (cargo/rustc), modificaciones de archivos y batería
 
 use crate::avatar::{AvatarState, AvatarSystem};
-use crate::openclaw_bridge::{ask_claudia, OpenClawBridge};
+use crate::openclaw_bridge::{ask_claudia, glance_at_screen_realtime, OpenClawBridge};
+use crate::overlay_window::fetch_window_ledges;
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -24,6 +24,13 @@ pub struct ContextData {
     pub folder: Option<String>,
     pub summary: String,
     pub timestamp: u64,
+}
+
+#[derive(Clone, Debug)]
+struct ActiveWindowInfo {
+    pub raw_title: String,
+    pub clean_title: String,
+    pub browser_name: Option<String>,
 }
 
 struct ContextWatcherState {
@@ -59,74 +66,83 @@ fn is_ignored_path(path: &Path) -> bool {
     false
 }
 
-/// Obtiene la lista de ventanas reales abiertas desde la extensión ClaudiaPerch (GNOME Wayland)
-/// y devuelve un resumen de qué ventana o pestaña estás viendo (por ejemplo en Google Chrome, VS Code, etc.)
-async fn get_wayland_windows_summary() -> Option<(String, Option<String>)> {
-    let out = Command::new("gdbus")
-        .args([
-            "call",
-            "--session",
-            "--dest",
-            "org.openclaw.ClaudiaPerch",
-            "--object-path",
-            "/org/openclaw/ClaudiaPerch",
-            "--method",
-            "org.openclaw.ClaudiaPerch.GetLedges",
-        ])
-        .output()
-        .await
-        .ok()?;
+/// Detecta si una ventana pertenece a CUALQUIER navegador web y extrae el nombre del navegador y el título limpio de la página/pestaña
+fn classify_browser_window(title: &str, wm_class: &str) -> Option<(String, String)> {
+    let t_low = title.to_lowercase();
+    let c_low = wm_class.to_lowercase();
 
-    let raw = String::from_utf8_lossy(&out.stdout);
-    let start = raw.find('[')?;
-    let end = raw.rfind(']')?;
-    let slice = &raw[start..=end];
-    let unescaped = slice.replace("\\\"", "\"");
+    let browsers = [
+        ("google-chrome", "Google Chrome", " - Google Chrome"),
+        ("chrome", "Google Chrome", " - Google Chrome"),
+        ("chromium", "Chromium", " - Chromium"),
+        ("firefox", "Mozilla Firefox", " — Mozilla Firefox"),
+        ("mozilla firefox", "Mozilla Firefox", " - Mozilla Firefox"),
+        ("brave", "Brave", " - Brave"),
+        ("msedge", "Microsoft Edge", " - Microsoft Edge"),
+        ("microsoft-edge", "Microsoft Edge", " - Microsoft Edge"),
+        ("opera", "Opera", " - Opera"),
+        ("vivaldi", "Vivaldi", " - Vivaldi"),
+        ("zen", "Zen Browser", " — Zen Browser"),
+        ("epiphany", "GNOME Web", " - Web"),
+    ];
 
-    let items: Vec<serde_json::Value> = serde_json::from_str(&unescaped).ok()?;
-    if items.is_empty() {
-        return None;
-    }
-
-    // Buscar ventanas activas prioritarias (Chrome, VS Code, etc.)
-    let mut top_window = String::new();
-    let mut chrome_tab = None;
-
-    for item in &items {
-        let title = item.get("title").and_then(|t| t.as_str()).unwrap_or("");
-        let wm_class = item.get("wm_class").and_then(|c| c.as_str()).unwrap_or("");
-
-        if wm_class == "gjs" || title.is_empty() {
-            continue;
-        }
-
-        if top_window.is_empty() {
-            top_window = title.to_string();
-        }
-
-        if wm_class.contains("chrome") || title.contains("Google Chrome") {
-            chrome_tab = Some(title.replace(" - Google Chrome", "").trim().to_string());
+    for (class_pat, b_label, suffix) in browsers {
+        if c_low.contains(class_pat) || t_low.ends_with(&suffix.to_lowercase()) || t_low.contains(&b_label.to_lowercase()) {
+            let mut clean = title.to_string();
+            for suf in [
+                " - Google Chrome",
+                " - Chromium",
+                " — Mozilla Firefox",
+                " - Mozilla Firefox",
+                " - Brave",
+                " - Microsoft Edge",
+                " - Opera",
+                " - Vivaldi",
+                " — Zen Browser",
+                " - Zen Browser",
+            ] {
+                if clean.ends_with(suf) {
+                    clean = clean.trim_end_matches(suf).trim().to_string();
+                }
+            }
+            if clean.is_empty() {
+                clean = "Nueva pestaña".to_string();
+            }
+            return Some((b_label.to_string(), clean));
         }
     }
 
-    if top_window.is_empty() {
-        None
-    } else {
-        Some((top_window, chrome_tab))
+    // Si el título mismo contiene una búsqueda de Google aunque wm_class sea genérico (ej. X11)
+    if t_low.contains("buscar con google") || t_low.contains("google search") || t_low == "google" {
+        return Some(("Navegador".to_string(), title.trim().to_string()));
     }
+
+    None
 }
 
-/// Obtiene el título de la ventana activa en X11/XWayland o fallback a Wayland
-async fn get_active_window_title() -> Option<String> {
-    // 1. Prioridad: Extensión nativa de GNOME Wayland
-    if let Some((top_win, chrome_tab)) = get_wayland_windows_summary().await {
-        if let Some(tab) = chrome_tab {
-            return Some(format!("Navegador: {}", tab));
+/// Obtiene la ventana activa en tiempo real (Wayland ClaudiaPerch + fallback X11 xprop / xdotool)
+async fn get_active_window_info() -> Option<ActiveWindowInfo> {
+    // 1. Usar la lista de ventanas reales (ordenadas con la ventana enfocada primero)
+    let ledges = fetch_window_ledges().await;
+    if let Some(focused_win) = ledges.iter().find(|w| w.focused).or_else(|| ledges.first()) {
+        let title = focused_win.title.trim().to_string();
+        if !title.is_empty() {
+            if let Some((b_name, clean_tab)) = classify_browser_window(&title, &focused_win.wm_class) {
+                return Some(ActiveWindowInfo {
+                    raw_title: title,
+                    clean_title: clean_tab,
+                    browser_name: Some(b_name),
+                });
+            }
+            return Some(ActiveWindowInfo {
+                raw_title: title.clone(),
+                clean_title: title,
+                browser_name: None,
+            });
         }
-        return Some(top_win);
     }
 
-    // 2. Fallback clásico xprop
+    // 2. Fallback directo con xprop (_NET_ACTIVE_WINDOW)
     let root_out = Command::new("xprop")
         .args(["-root", "_NET_ACTIVE_WINDOW"])
         .output()
@@ -138,27 +154,49 @@ async fn get_active_window_title() -> Option<String> {
         return None;
     }
     let name_out = Command::new("xprop")
-        .args(["-id", win_id, "_NET_WM_NAME", "WM_NAME"])
+        .args(["-id", win_id, "_NET_WM_NAME", "WM_NAME", "WM_CLASS"])
         .output()
         .await
         .ok()?;
     let name_str = String::from_utf8_lossy(&name_out.stdout);
+    let mut found_title = String::new();
+    let mut found_class = String::new();
     for line in name_str.lines() {
-        if let Some((_, val)) = line.split_once('=') {
+        if line.contains("WM_CLASS") {
+            if let Some((_, val)) = line.split_once('=') {
+                found_class = val.trim().to_string();
+            }
+        } else if let Some((_, val)) = line.split_once('=') {
             let clean = val.trim().trim_matches('"').trim().to_string();
             if !clean.is_empty()
                 && !clean.eq_ignore_ascii_case("Claudia")
                 && !clean.eq_ignore_ascii_case("Fuko")
-                && !clean.contains("Claudia Companion")
+                && !clean.contains("Fuko Mainframe")
             {
-                return Some(clean);
+                found_title = clean;
             }
         }
     }
+
+    if !found_title.is_empty() {
+        if let Some((b_name, clean_tab)) = classify_browser_window(&found_title, &found_class) {
+            return Some(ActiveWindowInfo {
+                raw_title: found_title,
+                clean_title: clean_tab,
+                browser_name: Some(b_name),
+            });
+        }
+        return Some(ActiveWindowInfo {
+            raw_title: found_title.clone(),
+            clean_title: found_title,
+            browser_name: None,
+        });
+    }
+
     None
 }
 
-/// Inicia el watcher de archivos y el monitor autónomo estilo Capri
+/// Inicia el watcher de archivos y el monitor visual en tiempo real estilo Capri
 pub fn start_watcher<R: Runtime>(
     app_handle: AppHandle<R>,
     initial_paths: Vec<PathBuf>,
@@ -247,7 +285,7 @@ pub fn start_watcher<R: Runtime>(
                                 let fname = file_name.clone();
                                 tauri::async_runtime::spawn(async move {
                                     let prompt = format!(
-                                        "Acabo de modificar el archivo '{}' en mi notebook. Haz un comentario cortito (1-2 oraciones, estilo cyberpunk/compañera como Capri) reaccionando a lo que estoy haciendo.",
+                                        "Acabo de modificar el archivo '{}' en mi notebook. Haz un comentario cortito (1-2 oraciones, estilo cyberpunk/compañera como Fuko) reaccionando a lo que estoy haciendo.",
                                         fname
                                     );
                                     if let Ok(res) = ask_claudia(
@@ -277,22 +315,28 @@ pub fn start_watcher<R: Runtime>(
         }
     });
 
-    // 2. Loop autónomo del notebook (Música -> Bailar sola, Ventana activa -> Glance autónomo, Compilación, Batería)
+    // 2. Loop visual en tiempo real (cada 1.5s):
+    // Detecta al instante cuando abres una página en Google o cualquier navegador, toma captura de pantalla y comenta en vivo
     let app_for_sys = app_handle.clone();
     tauri::async_runtime::spawn(async move {
         let mut last_song = String::new();
         let mut music_was_playing = false;
         let mut was_compiling = false;
         let mut warned_low_battery = false;
-        let mut last_window_title = String::new();
-        // Primer glance autónomo ocurre ~14 segundos después de iniciar para que Aym vea a Claudia reaccionar sola
-        let mut last_glance_time = Instant::now() - Duration::from_secs(52);
-        let mut interval = tokio::time::interval(Duration::from_secs(4));
+
+        let mut last_commented_window = String::new();
+        let mut pending_window_title = String::new();
+        let mut pending_since = Instant::now();
+        let glance_in_flight = Arc::new(Mutex::new(false));
+        let mut last_glance_time = Instant::now() - Duration::from_secs(25);
+
+        let current_user = std::env::var("USER").unwrap_or_else(|_| "jejej".to_string());
+        let mut interval = tokio::time::interval(Duration::from_millis(1500));
 
         loop {
             interval.tick().await;
 
-            // A. Detectar música con playerctl (Capri CheckMusic: baila sola mientras suene música)
+            // A. Detectar música con playerctl
             let mut music_info: Option<String> = None;
             let mut is_music_playing = false;
             if let Ok(status_out) = Command::new("playerctl").arg("status").output().await {
@@ -349,7 +393,7 @@ pub fn start_watcher<R: Runtime>(
                 ) {
                     let cap: u32 = cap_str.trim().parse().unwrap_or(100);
                     let st = st_str.trim();
-                    battery_info = format!("🔋 {}% ({})", cap, st);
+                    battery_info = format!("Bateria: {}% ({})", cap, st);
                     if cap <= 20 && st == "Discharging" && !warned_low_battery {
                         warned_low_battery = true;
                         let _ = app_for_sys.emit(
@@ -367,11 +411,15 @@ pub fn start_watcher<R: Runtime>(
                 }
             }
 
-            // C. Detectar ventana activa y procesos de trabajo
-            let win_title = get_active_window_title().await;
+            // C. Detectar ventana activa, navegador en tiempo real y procesos
+            let win_info = get_active_window_info().await;
             let mut active_apps = Vec::new();
             let mut is_compiling = false;
-            if let Ok(ps_out) = Command::new("ps").args(["-u", "jejej", "-o", "comm="]).output().await {
+            if let Ok(ps_out) = Command::new("ps")
+                .args(["-u", &current_user, "-o", "comm="])
+                .output()
+                .await
+            {
                 let procs = String::from_utf8_lossy(&ps_out.stdout);
                 let proc_set: HashSet<&str> = procs.lines().map(|l| l.trim()).collect();
 
@@ -380,20 +428,22 @@ pub fn start_watcher<R: Runtime>(
                     active_apps.push("Rust/Cargo (Compilando)");
                 }
                 if proc_set.contains("code") || proc_set.contains("antigravity") {
-                    active_apps.push("Antigravity IDE");
+                    active_apps.push("VS Code / Antigravity");
                 }
-                if proc_set.contains("chrome")
-                    || proc_set.contains("chromium")
-                    || proc_set.contains("firefox")
-                    || proc_set.contains("brave")
-                {
+                if proc_set.iter().any(|p| {
+                    p.contains("chrome")
+                        || p.contains("chromium")
+                        || p.contains("firefox")
+                        || p.contains("brave")
+                        || p.contains("msedge")
+                        || p.contains("opera")
+                        || p.contains("vivaldi")
+                        || p.contains("zen")
+                }) {
                     active_apps.push("Navegador");
                 }
                 if proc_set.contains("libreoffice") || proc_set.contains("soffice.bin") {
                     active_apps.push("LibreOffice");
-                }
-                if proc_set.contains("python3") || proc_set.contains("node") {
-                    active_apps.push("Node/Python");
                 }
             }
 
@@ -417,15 +467,23 @@ pub fn start_watcher<R: Runtime>(
                 }
             }
 
+            let win_display = win_info.as_ref().map(|w| {
+                if let Some(ref b) = w.browser_name {
+                    format!("{}: {}", b, w.clean_title)
+                } else {
+                    w.clean_title.clone()
+                }
+            });
+
             let mut summary_parts = Vec::new();
-            if let Some(ref wt) = win_title {
-                summary_parts.push(format!("Ventana: {}", wt));
+            if let Some(ref wd) = win_display {
+                summary_parts.push(format!("Pantalla activa: {}", wd));
             }
             if !active_apps.is_empty() {
                 summary_parts.push(format!("Apps: {}", active_apps.join(", ")));
             }
             if let Some(ref m) = music_info {
-                summary_parts.push(format!("🎵 {}", m));
+                summary_parts.push(format!("Musica: {}", m));
             }
             if !battery_info.is_empty() {
                 summary_parts.push(battery_info);
@@ -446,58 +504,83 @@ pub fn start_watcher<R: Runtime>(
                     "summary": summary,
                     "music": music_info,
                     "compiling": is_compiling,
-                    "window_title": win_title,
+                    "window_title": win_display,
                 }),
             );
 
-            // D. Glance Autónomo estilo Capri (CheckGlance):
-            // Cada ~65s, si la ventana activa cambió o hay actividad, Claudia mira y comenta por su cuenta
-            let current_wt = win_title.clone().unwrap_or_default();
-            let window_changed = !current_wt.is_empty() && current_wt != last_window_title;
-            if (window_changed && last_glance_time.elapsed() >= Duration::from_secs(45))
-                || last_glance_time.elapsed() >= Duration::from_secs(75)
-            {
-                if let Some(bridge) = app_for_sys.try_state::<Arc<OpenClawBridge>>() {
-                    if bridge.get_status().proactive {
-                        last_glance_time = Instant::now();
-                        if !current_wt.is_empty() {
-                            last_window_title = current_wt.clone();
+            // D. Visión en tiempo real y comentarios automáticos cuando abres páginas en Google / navegador o cambias de ventana
+            let Some(ref info) = win_info else {
+                continue;
+            };
+            let current_key = format!(
+                "{}|{}",
+                info.browser_name.as_deref().unwrap_or("app"),
+                info.clean_title
+            );
+
+            if current_key != pending_window_title {
+                pending_window_title = current_key.clone();
+                pending_since = Instant::now();
+            }
+
+            let is_browser = info.browser_name.is_some();
+            let is_new_page = !info.clean_title.is_empty() && current_key != last_commented_window;
+            // Si abriste una página nueva en un navegador, reaccionar tras ~2.0s de estabilidad (con cooldown corto de 10s).
+            // Si es otra aplicación de escritorio o sigues en la misma pantalla, comentar cada ~38s.
+            let ready_for_browser_reaction = is_browser
+                && is_new_page
+                && pending_since.elapsed() >= Duration::from_millis(1800)
+                && last_glance_time.elapsed() >= Duration::from_secs(10);
+
+            let ready_for_general_glance = (is_new_page
+                && pending_since.elapsed() >= Duration::from_secs(3)
+                && last_glance_time.elapsed() >= Duration::from_secs(22))
+                || last_glance_time.elapsed() >= Duration::from_secs(42);
+
+            if ready_for_browser_reaction || ready_for_general_glance {
+                let busy = *glance_in_flight.lock().unwrap();
+                if !busy {
+                    if let Some(bridge) = app_for_sys.try_state::<Arc<OpenClawBridge>>() {
+                        if bridge.get_status().proactive {
+                            *glance_in_flight.lock().unwrap() = true;
+                            last_glance_time = Instant::now();
+                            last_commented_window = current_key;
+
+                            let app_clone = app_for_sys.clone();
+                            let bridge_clone = bridge.inner().clone();
+                            let summary_snap = summary.clone();
+                            let clean_title_snap = info.clean_title.clone();
+                            let browser_snap = info.browser_name.clone();
+                            let in_flight_clone = glance_in_flight.clone();
+
+                            tauri::async_runtime::spawn(async move {
+                                let heard_tag = if let Some(ref b) = browser_snap {
+                                    format!("(viendo {}: {})", b, clean_title_snap)
+                                } else {
+                                    format!("(viendo: {})", clean_title_snap)
+                                };
+
+                                if let Ok(res) = glance_at_screen_realtime(
+                                    &app_clone,
+                                    &bridge_clone,
+                                    &clean_title_snap,
+                                    browser_snap.as_deref(),
+                                    &summary_snap,
+                                )
+                                .await
+                                {
+                                    let _ = app_clone.emit(
+                                        "avatar_speak",
+                                        serde_json::json!({
+                                            "heard": heard_tag,
+                                            "message": res.reply,
+                                            "model": res.model_used
+                                        }),
+                                    );
+                                }
+                                *in_flight_clone.lock().unwrap() = false;
+                            });
                         }
-                        let app_clone = app_for_sys.clone();
-                        let bridge_clone = bridge.inner().clone();
-                        let summary_snap = summary.clone();
-                        let wt_snap = current_wt.clone();
-                        tauri::async_runtime::spawn(async move {
-                            let prompt = if !wt_snap.is_empty() {
-                                format!(
-                                    "Miraste la pantalla de Aym por tu cuenta (Glance). Tiene abierta la ventana '{}' ({}). Hazle un comentario breve, ingenioso y natural (1-2 frases cortas, estilo Capri cyberpunk) sobre lo que está haciendo.",
-                                    wt_snap, summary_snap
-                                )
-                            } else {
-                                format!(
-                                    "Miraste el notebook de Aym por tu cuenta ({}). Hazle un comentario breve y natural (1-2 frases cortas, estilo Capri cyberpunk) sobre lo que está haciendo.",
-                                    summary_snap
-                                )
-                            };
-                            if let Ok(res) = ask_claudia(
-                                &app_clone,
-                                &bridge_clone,
-                                prompt,
-                                Some("openclaw".to_string()),
-                                true,
-                            )
-                            .await
-                            {
-                                let _ = app_clone.emit(
-                                    "avatar_speak",
-                                    serde_json::json!({
-                                        "heard": "(tu pantalla)",
-                                        "message": res.reply,
-                                        "model": res.model_used
-                                    }),
-                                );
-                            }
-                        });
                     }
                 }
             }
@@ -580,15 +663,14 @@ pub fn get_watched_paths() -> Vec<String> {
     let state_opt = GLOBAL_STATE.lock().unwrap().clone();
     if let Some(state) = state_opt {
         let state_lock = state.lock().unwrap();
-        let mut list: Vec<String> = state_lock
+        state_lock
             .watched_paths
             .iter()
             .map(|p| p.to_string_lossy().to_string())
-            .collect();
-        list.sort();
-        return list;
+            .collect()
+    } else {
+        Vec::new()
     }
-    vec![]
 }
 
 #[tauri::command]
