@@ -675,6 +675,24 @@ pub async fn open_or_fill_login_page(spec: &str) -> Result<String, String> {
     Ok(format!("Abrí la página de inicio de sesión: {}.", login_url))
 }
 
+/// Abre Google Chrome en https://gemini.google.com, selecciona el modelo especificado (ej. 4 Argon)
+/// en el selector de la web de Gemini y escribe la pregunta en el cuadro de texto.
+pub async fn ask_gemini_in_chrome(model: &str, question: &str) -> Result<String, String> {
+    let script = "/home/jejej/.openclaw/workspace/claudia-desktop/scripts/ask_gemini_chrome.py";
+    let mut cmd = prepare_host_command("python3");
+    cmd.arg(script).arg(model.trim()).arg(question.trim());
+
+    let _ = tokio::time::timeout(tokio::time::Duration::from_secs(18), cmd.status())
+        .await
+        .map_err(|_| "Tiempo agotado al interactuar con Gemini en Chrome.".to_string())?
+        .map_err(|e| format!("Error en automatizador de Gemini: {}", e))?;
+
+    Ok(format!(
+        "Gemini abierto en Google Chrome con modelo '{}' y pregunta enviada.",
+        model.trim()
+    ))
+}
+
 /// Crea o actualiza un archivo de código en el notebook (`ruta|contenido`), lo abre en VS Code,
 /// y si es `.html` también lo abre automáticamente en el navegador (cumpliendo la regla de `AGENTS.md`).
 pub fn write_code_file_and_open(spec: &str) -> Result<String, String> {
@@ -1252,6 +1270,15 @@ async fn execute_single_action_tag<R: Runtime>(app_handle: &AppHandle<R>, tag_co
             };
             println!("[Claudia Hands] Bifurcando cerebro: Lóbulo '{}' con tarea: '{}'", lobe, task);
             let _ = crate::brain_forks::spawn_brain_fork(app_handle.clone(), lobe, task);
+        }
+        "ask_gemini_chrome" | "gemini_chrome" | "ask_gemini" | "gemini_web" => {
+            let (model, question) = if let Some(sep) = arg_part.find('|') {
+                (arg_part[..sep].trim(), arg_part[sep + 1..].trim())
+            } else {
+                ("gemini 4 argon", arg_part)
+            };
+            println!("[Claudia Hands] Preguntando a Gemini en Chrome con modelo '{}': '{}'", model, question);
+            let _ = ask_gemini_in_chrome(model, question).await;
         }
         "avatar" | "animate" | "move" => match arg_part.to_lowercase().as_str() {
             "walk" | "wander" => {

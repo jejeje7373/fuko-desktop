@@ -258,7 +258,9 @@ fn build_claudia_prompt(
         - [ACTION: run_cmd(\"comando bash\")]\n\
         - [ACTION: fork_brain(\"coder\" | \"researcher\" | \"sysadmin\" | \"architect\" | \"instruccion detallada\")]\n\
           Usa OBLIGATORIAMENTE fork_brain cuando el usuario te pida tareas complejas, desarrollar un script o programa completo, investigar profundamente en internet o tareas que tomen tiempo.\n\
-          Al usarlo, responde INMEDIATAMENTE en tu dialogo (1 a 2 oraciones) confirmando que bifurcaste o desprendiste un lobulo/parte de tu cerebro cibernetico para resolverlo en segundo plano y que le avisaras cuando termine (ej: \"[burla] Ya bifurque mi lobulo programador para procesar esa tonteria en el fondo. Te aviso cuando esa parte termine de pensar por ti, si?\").\n"
+          Al usarlo, responde INMEDIATAMENTE en tu dialogo (1 a 2 oraciones) confirmando que bifurcaste o desprendiste un lobulo/parte de tu cerebro cibernetico para resolverlo en segundo plano y que le avisaras cuando termine (ej: \"[burla] Ya bifurque mi lobulo programador para procesar esa tonteria en el fondo. Te aviso cuando esa parte termine de pensar por ti, si?\").\n\
+        - [ACTION: ask_gemini_chrome(\"gemini 4 argon|pregunta\")]\n\
+          Usa esta accion OBLIGATORIAMENTE cuando el usuario te pida preguntarle a Gemini en su navegador Google Chrome. Abrira la pagina de Gemini, seleccionara el modelo indicado (ej: 4 Argon) en el selector de la web y escribira la pregunta en su pantalla.\n"
     };
 
     format!(
@@ -597,7 +599,92 @@ pub async fn ask_claudia<R: Runtime>(
         });
     }
 
-    // 0.1 Orden directa de control del notebook (<50ms)
+    // 0.1 Orden de preguntar a Gemini en Chrome (con selección de modelo en la web)
+    let lower_msg = clean_msg.to_lowercase();
+    if !is_short_reaction
+        && (lower_msg.starts_with("preguntale a gemini")
+            || lower_msg.starts_with("pregúntale a gemini")
+            || lower_msg.starts_with("pregunta a gemini")
+            || lower_msg.starts_with("consulta a gemini")
+            || lower_msg.starts_with("dile a gemini")
+            || clean_msg.starts_with("/gemini "))
+    {
+        // Detectar si el usuario especificó un modelo
+        let target_model = if lower_msg.contains("argon")
+            || lower_msg.contains("gemini 4")
+            || lower_msg.contains("4")
+        {
+            "gemini 4 argon"
+        } else if lower_msg.contains("pro") || lower_msg.contains("3.1") {
+            "gemini 3.1 pro"
+        } else if lower_msg.contains("flash") || lower_msg.contains("3.6") {
+            "gemini 3.6 flash"
+        } else {
+            "gemini 4 argon" // preferencia por defecto del usuario
+        };
+
+        // Extraer la pregunta limpia (removiendo frases como "preguntale a gemini", "y usa el gemini 4 argon")
+        let mut question = clean_msg
+            .trim_start_matches("/gemini ")
+            .to_string();
+
+        for prefix in [
+            "pregúntale a gemini",
+            "preguntale a gemini",
+            "pregunta a gemini",
+            "consulta a gemini",
+            "dile a gemini",
+        ] {
+            if let Some(pos) = question.to_lowercase().find(prefix) {
+                question = question[pos + prefix.len()..].trim().to_string();
+                break;
+            }
+        }
+
+        // Si contiene coletilla de "y usa el gemini...", limpiarla para no ensuciar la pregunta enviada
+        let q_clean = if let Some(idx) = question.to_lowercase().find(" y usa") {
+            question[..idx].trim().to_string()
+        } else if let Some(idx) = question.to_lowercase().find(" usando") {
+            question[..idx].trim().to_string()
+        } else if let Some(idx) = question.to_lowercase().find(" con el modelo") {
+            question[..idx].trim().to_string()
+        } else {
+            question.trim().to_string()
+        };
+
+        let model_label = match target_model {
+            "gemini 4 argon" => "Gemini 4 Argon",
+            "gemini 3.1 pro" => "Gemini 3.1 Pro",
+            "gemini 3.6 flash" => "Gemini 3.6 Flash",
+            _ => "Gemini 4 Argon",
+        };
+
+        let model_str = target_model.to_string();
+        let q_to_send = q_clean.clone();
+        tauri::async_runtime::spawn(async move {
+            let _ = crate::notebook_hands::ask_gemini_in_chrome(&model_str, &q_to_send).await;
+        });
+
+        let confirm_reply = format!(
+            "[emocion] ¡Listo! Te abrí Gemini en Google Chrome, seleccioné {} en la web y ya le ingresé tu pregunta. Échale un ojo a tu pantalla.",
+            model_label
+        );
+        let clean_reply = strip_emojis_and_ansi(&confirm_reply);
+
+        if let Ok(mut hist) = bridge.history.lock() {
+            hist.push((clean_msg, clean_reply.clone()));
+            if hist.len() > 12 {
+                hist.remove(0);
+            }
+        }
+        speak_out_loud_async(clean_reply.clone());
+        return Ok(ChatResponse {
+            reply: clean_reply,
+            model_used: format!("chrome/{}", target_model),
+        });
+    }
+
+    // 0.2 Orden directa de control del notebook (<50ms)
     if !is_short_reaction
         && !user_message.starts_with("/argon")
         && !user_message.starts_with("/agy")
