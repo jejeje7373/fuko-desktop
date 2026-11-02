@@ -825,7 +825,37 @@ pub async fn glance_at_screen_realtime<R: Runtime>(
         true,
     );
 
-    // 1. Visión con Antigravity (motor principal solicitado)
+    let is_openclaw_mode = status_snapshot.mode == "openclaw";
+
+    // 1. Si el usuario está explícitamente en modo OpenClaw, usar Nemotron Vision
+    if is_openclaw_mode {
+        if let Some(ref img_path) = screenshot_path {
+            if let Ok((raw_reply, model_used)) = query_openclaw_cli(
+                &prompt,
+                Some("nvidia/nemotron-3.5-super-vl-120b-a12b"),
+                Some(img_path),
+            )
+            .await
+            {
+                let reply = strip_emojis_and_ansi(&raw_reply);
+                speak_out_loud_async(reply.clone());
+                if let Some(avatar) = app_handle.try_state::<Arc<AvatarSystem<R>>>() {
+                    let avatar_clone = avatar.inner().clone();
+                    avatar_clone.set_state(AvatarState::Talking);
+                    let talk_ms = (reply.len() as u64 * 35).clamp(1800, 5500);
+                    tauri::async_runtime::spawn(async move {
+                        tokio::time::sleep(tokio::time::Duration::from_millis(talk_ms)).await;
+                        if avatar_clone.get_state() == AvatarState::Talking {
+                            avatar_clone.set_state(AvatarState::Idle);
+                        }
+                    });
+                }
+                return Ok(ChatResponse { reply, model_used });
+            }
+        }
+    }
+
+    // 2. Visión con Antigravity (preferencia predeterminada y prioritaria)
     let agy_prompt = if let Some(ref img_path) = screenshot_path {
         format!(
             "Mira detalladamente la captura de pantalla real del usuario en '{}'.\nDime con precisión qué programas, ventanas, páginas web, archivos o código está viendo o editando el usuario en tiempo real en su pantalla. Haz un comentario conciso, inteligente y directo al estilo de Capri (máximo 1 o 2 oraciones breves, sin emojis).",
@@ -856,33 +886,35 @@ pub async fn glance_at_screen_realtime<R: Runtime>(
             });
         }
         Err(e) => {
-            println!("[Vision] Antigravity vision no respondio ({}), probando fallback...", e);
+            eprintln!("[Vision] Antigravity vision fallo ({})", e);
         }
     }
 
-    // 2. Fallback secundario si Antigravity no estuviera disponible
-    if let Some(ref img_path) = screenshot_path {
-        if let Ok((raw_reply, model_used)) = query_openclaw_cli(
-            &prompt,
-            Some("nvidia/nemotron-3.5-super-vl-120b-a12b"),
-            Some(img_path),
-        )
-        .await
-        {
-            let reply = strip_emojis_and_ansi(&raw_reply);
-            speak_out_loud_async(reply.clone());
-            if let Some(avatar) = app_handle.try_state::<Arc<AvatarSystem<R>>>() {
-                let avatar_clone = avatar.inner().clone();
-                avatar_clone.set_state(AvatarState::Talking);
-                let talk_ms = (reply.len() as u64 * 35).clamp(1800, 5500);
-                tauri::async_runtime::spawn(async move {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(talk_ms)).await;
-                    if avatar_clone.get_state() == AvatarState::Talking {
-                        avatar_clone.set_state(AvatarState::Idle);
-                    }
-                });
+    // 3. Fallback a Nemotron SOLO si no está en modo Antigravity
+    if !status_snapshot.mode.contains("antigravity") {
+        if let Some(ref img_path) = screenshot_path {
+            if let Ok((raw_reply, model_used)) = query_openclaw_cli(
+                &prompt,
+                Some("nvidia/nemotron-3.5-super-vl-120b-a12b"),
+                Some(img_path),
+            )
+            .await
+            {
+                let reply = strip_emojis_and_ansi(&raw_reply);
+                speak_out_loud_async(reply.clone());
+                if let Some(avatar) = app_handle.try_state::<Arc<AvatarSystem<R>>>() {
+                    let avatar_clone = avatar.inner().clone();
+                    avatar_clone.set_state(AvatarState::Talking);
+                    let talk_ms = (reply.len() as u64 * 35).clamp(1800, 5500);
+                    tauri::async_runtime::spawn(async move {
+                        tokio::time::sleep(tokio::time::Duration::from_millis(talk_ms)).await;
+                        if avatar_clone.get_state() == AvatarState::Talking {
+                            avatar_clone.set_state(AvatarState::Idle);
+                        }
+                    });
+                }
+                return Ok(ChatResponse { reply, model_used });
             }
-            return Ok(ChatResponse { reply, model_used });
         }
     }
 
@@ -890,7 +922,7 @@ pub async fn glance_at_screen_realtime<R: Runtime>(
         app_handle,
         bridge,
         reaction_event,
-        Some("antigravity".to_string()),
+        Some(status_snapshot.mode.clone()),
         true,
     )
     .await
