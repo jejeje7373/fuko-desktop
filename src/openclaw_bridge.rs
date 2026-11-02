@@ -780,6 +780,42 @@ pub async fn glance_at_screen_realtime<R: Runtime>(
         true,
     );
 
+    // 1. Visión con Antigravity (motor principal solicitado)
+    let agy_prompt = if let Some(ref img_path) = screenshot_path {
+        format!(
+            "{}\n[CAPTURA DE PANTALLA EN: {}]\nObserva lo que se ve en la pantalla o en esa captura y haz tu comentario directo al estilo de Capri (sin emojis).",
+            prompt, img_path
+        )
+    } else {
+        prompt.clone()
+    };
+
+    match query_antigravity_cli(&agy_prompt).await {
+        Ok((raw_reply, _)) => {
+            let reply = strip_emojis_and_ansi(&raw_reply);
+            speak_out_loud_async(reply.clone());
+            if let Some(avatar) = app_handle.try_state::<Arc<AvatarSystem<R>>>() {
+                let avatar_clone = avatar.inner().clone();
+                avatar_clone.set_state(AvatarState::Talking);
+                let talk_ms = (reply.len() as u64 * 35).clamp(1800, 5500);
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(talk_ms)).await;
+                    if avatar_clone.get_state() == AvatarState::Talking {
+                        avatar_clone.set_state(AvatarState::Idle);
+                    }
+                });
+            }
+            return Ok(ChatResponse {
+                reply,
+                model_used: "antigravity-vision".to_string(),
+            });
+        }
+        Err(e) => {
+            println!("[Vision] Antigravity vision no respondio ({}), probando fallback...", e);
+        }
+    }
+
+    // 2. Fallback secundario si Antigravity no estuviera disponible
     if let Some(ref img_path) = screenshot_path {
         if let Ok((raw_reply, model_used)) = query_openclaw_cli(
             &prompt,
@@ -809,7 +845,7 @@ pub async fn glance_at_screen_realtime<R: Runtime>(
         app_handle,
         bridge,
         reaction_event,
-        Some("openclaw".to_string()),
+        Some("antigravity".to_string()),
         true,
     )
     .await
