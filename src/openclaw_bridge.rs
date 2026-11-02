@@ -455,10 +455,10 @@ pub async fn query_antigravity_cli(prompt: &str) -> Result<(String, String), Str
         "gemini-3.8-flash-high"
     };
 
-    let timeout_secs = if cfg.antigravity_timeout_secs > 0 {
+    let timeout_secs = if cfg.antigravity_timeout_secs >= 60 {
         cfg.antigravity_timeout_secs
     } else {
-        45
+        90
     };
 
     // Intento 1 con el modelo objetivo
@@ -594,9 +594,20 @@ pub async fn ask_claudia<R: Runtime>(
 
     let result = if is_explicit_antigravity {
         // Modo Antigravity EXCLUSIVO: Responde Antigravity sin saltar a Nemotron
-        query_antigravity_cli(&full_prompt)
-            .await
-            .map(|(r, m)| (r, format!("{}{}", m, skill_badge)))
+        match query_antigravity_cli(&full_prompt).await {
+            Ok((r, m)) => Ok((r, format!("{}{}", m, skill_badge))),
+            Err(e) => {
+                eprintln!("[Antigravity] Error o timeout: {}", e);
+                if e.contains("Timeout") {
+                    Ok((
+                        "[aburrida] Antigravity tardo demasiado en responder a traves de la nube. Intenta de nuevo o presiona el boton para usar OpenClaw.".to_string(),
+                        "antigravity/timeout".to_string(),
+                    ))
+                } else {
+                    Err(e)
+                }
+            }
+        }
     } else if use_antigravity {
         // Modo Auto con preferencia Antigravity
         match query_antigravity_cli(&full_prompt).await {

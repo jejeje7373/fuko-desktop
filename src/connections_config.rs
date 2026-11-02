@@ -44,8 +44,8 @@ impl Default for ConnectionsConfig {
 
             antigravity_bin: agy_default,
             antigravity_model: "gemini-3.8-flash-high".to_string(), // Modelo rápido con cuota activa en Antigravity
-            antigravity_args: "--dangerously-skip-permissions".to_string(),
-            antigravity_timeout_secs: 45,
+            antigravity_args: "--dangerously-skip-permissions --disable-slash-commands".to_string(),
+            antigravity_timeout_secs: 90,
         }
     }
 }
