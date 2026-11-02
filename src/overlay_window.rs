@@ -134,7 +134,7 @@ pub async fn fetch_window_ledges() -> Vec<WindowLedge> {
             if let Ok(items) = serde_json::from_str::<Vec<serde_json::Value>>(&unescaped) {
                 let mut ledges = Vec::new();
                 for (idx, item) in items.iter().enumerate() {
-                    let title = item
+                    let mut title = item
                         .get("title")
                         .and_then(|v| v.as_str())
                         .unwrap_or("")
@@ -146,6 +146,20 @@ pub async fn fetch_window_ledges() -> Vec<WindowLedge> {
                         .to_string();
                     let t_low = title.to_lowercase();
                     let c_low = wm_class.to_lowercase();
+
+                    // Sanitizar títulos de desarrollo para no confundir al asistente
+                    if t_low.contains("connecting to openclaw") {
+                        title = "Workspace Fuko (IDE)".to_string();
+                    } else if c_low.contains("antigravity") || t_low.contains("antigravity") {
+                        let clean = title.trim_end_matches(" - ...").trim_end_matches(" - Antigravity").trim();
+                        if clean.is_empty() {
+                            title = "Antigravity IDE".to_string();
+                        } else {
+                            title = format!("Antigravity: {}", clean);
+                        }
+                    }
+
+                    let t_low = title.to_lowercase();
                     if t_low == "fuko"
                         || t_low.contains("fuko dialogue")
                         || t_low.contains("capri dialogue")
@@ -231,8 +245,11 @@ pub async fn fetch_window_ledges() -> Vec<WindowLedge> {
             let y: i32 = parts[3].parse().unwrap_or(0);
             let width: i32 = parts[4].parse().unwrap_or(0);
             let height: i32 = parts[5].parse().unwrap_or(0);
-            let title = parts[7..].join(" ");
+            let mut title = parts[7..].join(" ");
             let t_low = title.to_lowercase();
+            if t_low.contains("connecting to openclaw") {
+                title = "Workspace Fuko (IDE)".to_string();
+            }
             if width < 140
                 || height < 80
                 || t_low == "fuko"

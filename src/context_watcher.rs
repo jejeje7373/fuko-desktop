@@ -127,12 +127,16 @@ fn classify_app_or_browser(title: &str, wm_class: &str) -> Option<(String, Strin
     }
     let t_low = title.to_lowercase();
     let c_low = wm_class.to_lowercase();
-    if c_low.contains("antigravity") || t_low.contains("antigravity") {
-        let clean = title
+    if c_low.contains("antigravity") || t_low.contains("antigravity") || t_low.contains("connecting to openclaw") {
+        let mut clean = title
             .trim_end_matches(" - ...")
             .trim_end_matches(" - Antigravity")
-            .trim();
-        return Some(("Antigravity IDE".to_string(), clean.to_string()));
+            .trim()
+            .to_string();
+        if clean.to_lowercase().contains("connecting to openclaw") || clean.is_empty() {
+            clean = "Workspace Fuko".to_string();
+        }
+        return Some(("Antigravity IDE".to_string(), clean));
     }
     if c_low.contains("code") || t_low.contains("visual studio code") {
         let clean = title.trim_end_matches(" - Visual Studio Code").trim();
