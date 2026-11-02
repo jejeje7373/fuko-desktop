@@ -593,6 +593,21 @@
                     <div class="agents-grid" id="agents-container">
                         <p style="color: var(--muted); font-size: 11px;">Cargando sesiones...</p>
                     </div>
+
+                    <div style="margin-top: 14px; padding: 12px; background: rgba(123,63,228,0.12); border: 1px solid rgba(123,63,228,0.4); border-radius: 4px;">
+                        <div style="font-weight: 700; color: #fff; font-size: 11px; margin-bottom: 6px;">⚡ Bifurcar Lóbulo Cerebral Manualmente</div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <select id="fork-lobe-select" style="background: rgba(0,0,0,0.6); color: #fff; border: 1px solid rgba(123,63,228,0.5); padding: 6px 8px; font-size: 11px; border-radius: 3px;">
+                                <option value="coder">🛠️ Fuko-Coder (Programador)</option>
+                                <option value="researcher">🔍 Fuko-Researcher (Investigador Web)</option>
+                                <option value="sysadmin">🛡️ Fuko-SysAdmin (Diagnóstico)</option>
+                                <option value="architect">📐 Fuko-Architect (Planificador)</option>
+                            </select>
+                            <input id="fork-task-input" type="text" placeholder="Escribe la instrucción de la tarea compleja..." style="flex: 1; background: rgba(0,0,0,0.6); color: #fff; border: 1px solid rgba(123,63,228,0.5); padding: 6px 8px; font-size: 11px; border-radius: 3px;" onkeydown="if(event.key==='Enter') launchManualFork()">
+                            <button type="button" class="appmenu__toggle-btn" onclick="launchManualFork()" style="background: var(--accent-purple); color: #fff; border: none; padding: 6px 14px; cursor: pointer; border-radius: 3px; font-weight: bold;">Lanzar</button>
+                        </div>
+                        <div id="fork-launch-status" style="font-size: 11px; margin-top: 6px; color: var(--accent-green); min-height: 14px;"></div>
+                    </div>
                 </div>
             </section>
 
@@ -845,11 +860,11 @@
         }
 
         // =========================================================================
-        // 3. SUB-AGENTES DE OPENCLAW
+        // 3. SUB-AGENTES DE OPENCLAW & LÓBULOS CEREBRALES
         // =========================================================================
         async function loadSubAgents() {
             const container = document.getElementById('agents-container');
-            container.innerHTML = '<p style="color: var(--muted); font-size: 11px;">Consultando sub-agentes en OpenClaw...</p>';
+            container.innerHTML = '<p style="color: var(--muted); font-size: 11px;">Consultando agentes y particiones cerebrales...</p>';
             try {
                 const list = await invoke('list_openclaw_sessions_cmd');
                 if (!list || !list.length) {
@@ -859,18 +874,57 @@
                 container.innerHTML = '';
                 list.forEach(agent => {
                     const card = document.createElement('div');
-                    card.style.cssText = 'padding: 8px 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(123,63,228,0.35); display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 6px;';
+                    card.style.cssText = 'padding: 10px 12px; background: rgba(0,0,0,0.35); border: 1px solid rgba(123,63,228,0.35); display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 8px; border-radius: 4px;';
+                    
+                    let statusColor = 'var(--accent-green)';
+                    let statusBg = 'rgba(78, 252, 146, 0.1)';
+                    if (agent.status.includes('PENSANDO') || agent.status.includes('PROCESANDO')) {
+                        statusColor = '#ffca28';
+                        statusBg = 'rgba(255, 202, 40, 0.15)';
+                    } else if (agent.status.includes('REUNIFICADO')) {
+                        statusColor = '#bb86fc';
+                        statusBg = 'rgba(187, 134, 252, 0.15)';
+                    } else if (agent.status.includes('ONLINE')) {
+                        statusColor = '#00e5ff';
+                        statusBg = 'rgba(0, 229, 255, 0.15)';
+                    }
+
                     card.innerHTML = `
-                        <div>
-                            <span style="font-weight:700; color:#fff;">${agent.label || agent.key}</span>
-                            <div style="color:var(--muted); font-size:10px;">Modelo: ${agent.model} · Actividad: ${agent.age}</div>
+                        <div style="flex: 1; padding-right: 12px;">
+                            <div style="font-weight:700; color:#fff; font-size: 12px; margin-bottom: 2px;">${agent.label || agent.key}</div>
+                            <div style="color:var(--muted); font-size:10px;">${agent.age}</div>
+                            <div style="color:rgba(255,255,255,0.45); font-size:9.5px; margin-top: 2px;">Motor: <span style="color:#d1c4e9;">${agent.model}</span></div>
                         </div>
-                        <span style="color:var(--accent-green); font-weight:700;">${agent.status}</span>
+                        <span style="color:${statusColor}; background: ${statusBg}; border: 1px solid ${statusColor}44; padding: 4px 8px; border-radius: 3px; font-weight:700; font-size: 10px; white-space: nowrap;">${agent.status}</span>
                     `;
                     container.appendChild(card);
                 });
             } catch (err) {
                 container.innerHTML = `<p style="color: var(--label); font-size: 11px;">Error cargando sub-agentes: ${err}</p>`;
+            }
+        }
+
+        async function launchManualFork() {
+            const lobe = document.getElementById('fork-lobe-select').value;
+            const input = document.getElementById('fork-task-input');
+            const statusEl = document.getElementById('fork-launch-status');
+            const instruction = input.value.trim();
+            if (!instruction) {
+                statusEl.innerText = 'Por favor escribe una tarea.';
+                statusEl.style.color = '#ff6b6b';
+                return;
+            }
+            statusEl.innerText = 'Bifurcando lóbulo cerebral con preferencia a Antigravity...';
+            statusEl.style.color = 'var(--accent-purple)';
+            try {
+                const reply = await invoke('spawn_brain_task_cmd', { lobe, instruction });
+                statusEl.innerText = reply;
+                statusEl.style.color = 'var(--accent-green)';
+                input.value = '';
+                setTimeout(() => loadSubAgents(), 500);
+            } catch (err) {
+                statusEl.innerText = 'Error: ' + err;
+                statusEl.style.color = '#ff6b6b';
             }
         }
 

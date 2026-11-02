@@ -54,22 +54,80 @@ pub fn get_all_brain_forks() -> Vec<BrainFork> {
 /// Convierte los lóbulos en SubAgentInfo para que se muestren en la pestaña de sub-agentes
 pub fn get_brain_forks_as_subagents() -> Vec<SubAgentInfo> {
     let forks = get_all_brain_forks();
-    forks
-        .into_iter()
-        .map(|f| SubAgentInfo {
-            key: format!("brain-lobe-{}", f.id),
-            label: format!("🧠 {} ({})", f.title, f.id),
+    let mut result = Vec::new();
+
+    // 1. Catálogo permanente de los 4 agentes especializados de Fuko
+    let specialized_lobes = [
+        (
+            "coder",
+            "🛠️ Fuko-Coder (Lóbulo Programador)",
+            "Desarrollo, scripts, refactor y depuración (taskflow-coding, debugpy)",
+        ),
+        (
+            "researcher",
+            "🔍 Fuko-Researcher (Lóbulo Investigador)",
+            "Navegación web, documentación y síntesis (agent-browser, unbrowse)",
+        ),
+        (
+            "sysadmin",
+            "🛡️ Fuko-SysAdmin (Lóbulo Diagnóstico)",
+            "Auditoría de puertos, salud de OpenClaw y red (diagnose-gateway, nmap)",
+        ),
+        (
+            "architect",
+            "📐 Fuko-Architect (Lóbulo Planificador)",
+            "Orquestación, descomposición en fases y síntesis de tareas (taskflow)",
+        ),
+    ];
+
+    for (lobe_key, label, desc) in specialized_lobes {
+        // Verificar si hay alguna tarea en curso o reciente de este lóbulo
+        let active_fork = forks.iter().find(|f| f.lobe == lobe_key && f.status == "PROCESANDO");
+        let last_fork = forks.iter().find(|f| f.lobe == lobe_key);
+
+        let (status, age_text) = if let Some(af) = active_fork {
+            (
+                "⚡ PENSANDO EN SEGUNDO PLANO".to_string(),
+                format!("tarea en curso (#{})", af.id),
+            )
+        } else if let Some(lf) = last_fork {
+            (
+                format!("STANDBY (Última: #{})", lf.id),
+                format!("{} · {}", lf.started_at, desc),
+            )
+        } else {
+            ("STANDBY (LISTO)".to_string(), desc.to_string())
+        };
+
+        result.push(SubAgentInfo {
+            key: format!("fuko-{}", lobe_key),
+            label: label.to_string(),
+            model: "antigravity (gemini-3.8-flash-high) ➜ Fallback OpenClaw".to_string(),
+            status,
+            age: age_text,
+            kind: format!("cerebro/{}", lobe_key),
+            tokens: "auto".to_string(),
+        });
+    }
+
+    // 2. Historial de tareas recientes ejecutadas por los lóbulos
+    for f in forks {
+        result.push(SubAgentInfo {
+            key: format!("brain-task-{}", f.id),
+            label: format!("🧠 [Tarea #{}] {} - {}", f.id, f.title, if f.task.len() > 30 { format!("{}...", &f.task[..28]) } else { f.task.clone() }),
             model: f.engine,
             status: match f.status.as_str() {
-                "PROCESANDO" => "PENSANDO EN SEGUNDO PLANO".to_string(),
-                "REUNIFICADO" => "FINALIZADO (REUNIFICADO)".to_string(),
+                "PROCESANDO" => "⚡ PROCESANDO...".to_string(),
+                "REUNIFICADO" => "✓ REUNIFICADO".to_string(),
                 _ => f.status,
             },
             age: f.started_at,
-            kind: format!("cerebro/{}", f.lobe),
+            kind: "tarea-ejecutada".to_string(),
             tokens: "auto".to_string(),
-        })
-        .collect()
+        });
+    }
+
+    result
 }
 
 /// Genera una frase tsundere/sarcástica al bifurcar el cerebro

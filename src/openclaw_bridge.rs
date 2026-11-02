@@ -1105,6 +1105,16 @@ pub async fn list_openclaw_sessions_cmd() -> Result<Vec<SubAgentInfo>, String> {
 }
 
 #[tauri::command]
+pub async fn spawn_brain_task_cmd<R: Runtime>(
+    app_handle: AppHandle<R>,
+    lobe: String,
+    instruction: String,
+) -> Result<String, String> {
+    let confirm = crate::brain_forks::spawn_brain_fork(app_handle, &lobe, &instruction);
+    Ok(confirm)
+}
+
+#[tauri::command]
 pub async fn probe_antigravity_cmd() -> Result<ProbeResult, String> {
     let start = Instant::now();
     match query_antigravity_cli("Responde unicamente: ONLINE").await {

@@ -163,6 +163,7 @@ pub fn run() {
             openclaw_bridge::set_proactive_mode_cmd,
             openclaw_bridge::analyze_notebook_cmd,
             openclaw_bridge::list_openclaw_sessions_cmd,
+            openclaw_bridge::spawn_brain_task_cmd,
             openclaw_bridge::probe_gemini_argon_cmd,
             openclaw_bridge::probe_antigravity_cmd,
             connections_config::get_connections_config_cmd,
