@@ -120,6 +120,27 @@ fn classify_browser_window(title: &str, wm_class: &str) -> Option<(String, Strin
     None
 }
 
+/// Clasifica navegadores web y entornos de desarrollo (Antigravity IDE, VS Code, etc.)
+fn classify_app_or_browser(title: &str, wm_class: &str) -> Option<(String, String)> {
+    if let Some(res) = classify_browser_window(title, wm_class) {
+        return Some(res);
+    }
+    let t_low = title.to_lowercase();
+    let c_low = wm_class.to_lowercase();
+    if c_low.contains("antigravity") || t_low.contains("antigravity") {
+        let clean = title
+            .trim_end_matches(" - ...")
+            .trim_end_matches(" - Antigravity")
+            .trim();
+        return Some(("Antigravity IDE".to_string(), clean.to_string()));
+    }
+    if c_low.contains("code") || t_low.contains("visual studio code") {
+        let clean = title.trim_end_matches(" - Visual Studio Code").trim();
+        return Some(("VS Code".to_string(), clean.to_string()));
+    }
+    None
+}
+
 /// Obtiene la ventana activa en tiempo real (Wayland ClaudiaPerch + fallback X11 xprop / xdotool)
 async fn get_active_window_info() -> Option<ActiveWindowInfo> {
     // 1. Usar la lista de ventanas reales (ordenadas con la ventana enfocada primero)
@@ -127,7 +148,7 @@ async fn get_active_window_info() -> Option<ActiveWindowInfo> {
     if let Some(focused_win) = ledges.iter().find(|w| w.focused).or_else(|| ledges.first()) {
         let title = focused_win.title.trim().to_string();
         if !title.is_empty() {
-            if let Some((b_name, clean_tab)) = classify_browser_window(&title, &focused_win.wm_class) {
+            if let Some((b_name, clean_tab)) = classify_app_or_browser(&title, &focused_win.wm_class) {
                 return Some(ActiveWindowInfo {
                     raw_title: title,
                     clean_title: clean_tab,
@@ -179,7 +200,7 @@ async fn get_active_window_info() -> Option<ActiveWindowInfo> {
     }
 
     if !found_title.is_empty() {
-        if let Some((b_name, clean_tab)) = classify_browser_window(&found_title, &found_class) {
+        if let Some((b_name, clean_tab)) = classify_app_or_browser(&found_title, &found_class) {
             return Some(ActiveWindowInfo {
                 raw_title: found_title,
                 clean_title: clean_tab,

@@ -761,10 +761,17 @@ pub async fn glance_at_screen_realtime<R: Runtime>(
     let screen_ctx = build_realtime_screen_context().await;
 
     let reaction_event = if let Some(b_name) = browser_name {
-        format!(
-            "Miraste en tiempo real la pantalla del usuario. Acaba de abrir en {} la pagina o busqueda '{}' ({}). Hazle un comentario breve, sarcastico, ingenioso o util (1 a 2 oraciones cortas, sin emojis) sobre lo que esta viendo.",
-            b_name, window_title, summary
-        )
+        if b_name.contains("Antigravity") {
+            format!(
+                "Miraste en tiempo real la pantalla del usuario. Está trabajando en el entorno de desarrollo Antigravity IDE (sesión o archivo: '{}', {}). Hazle un comentario breve, ingenioso o curioso sobre su código o trabajo actual (1 a 2 oraciones cortas, sin emojis). No asumas que está esperando ninguna conexión.",
+                window_title, summary
+            )
+        } else {
+            format!(
+                "Miraste en tiempo real la pantalla del usuario. Acaba de abrir en {} la pagina o busqueda '{}' ({}). Hazle un comentario breve, sarcastico, ingenioso o util (1 a 2 oraciones cortas, sin emojis) sobre lo que esta viendo.",
+                b_name, window_title, summary
+            )
+        }
     } else {
         format!(
             "Miraste en tiempo real la pantalla del usuario. Tiene abierta la ventana '{}' ({}). Hazle un comentario breve e ingenioso (1 a 2 oraciones cortas, sin emojis) sobre lo que hace.",
