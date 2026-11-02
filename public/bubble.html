@@ -279,8 +279,11 @@
 <body>
   <aside id="bubble" class="bubble" data-state="ONLINE">
     <div class="bubble__tab" data-tauri-drag-region>
-      <span class="bubble__title" data-tauri-drag-region>CAPRI.SYS // DIALOGO</span>
-      <button class="bubble__close-btn" id="bubble-close-btn" title="Cerrar">X</button>
+      <span class="bubble__title" data-tauri-drag-region>FUKO.SYS // DIALOGO</span>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button id="bubble-settings-btn" title="Configurar Conexiones (OpenClaw & Antigravity)" style="background:transparent; border:none; color:var(--accent); cursor:pointer; font-size:12px; line-height:1; padding:0 2px;">⚙️</button>
+        <button class="bubble__close-btn" id="bubble-close-btn" title="Cerrar">X</button>
+      </div>
     </div>
 
     <div class="bubble__body">
@@ -316,6 +319,7 @@
 
     const bubble = document.getElementById('bubble');
     const bubbleCloseBtn = document.getElementById('bubble-close-btn');
+    const bubbleSettingsBtn = document.getElementById('bubble-settings-btn');
     const bubbleModel = document.getElementById('bubble-model');
     const bubbleState = document.getElementById('bubble-state');
     const bubbleSpeechArea = document.getElementById('bubble-speech-area');
@@ -326,10 +330,10 @@
     const bubbleInput = document.getElementById('bubble-input');
     const bubbleModePill = document.getElementById('bubble-mode-pill');
 
-    const BRAIN_MODES = ['auto', 'argon', 'openclaw', 'ollama'];
+    const BRAIN_MODES = ['auto', 'antigravity', 'openclaw', 'ollama'];
     const BRAIN_LABELS = {
       auto: 'AUTO',
-      argon: 'ANTIGRAVITY',
+      antigravity: 'ANTIGRAVITY',
       openclaw: 'OPENCLAW',
       ollama: 'OLLAMA'
     };
@@ -658,6 +662,12 @@
     bubbleCloseBtn.addEventListener('click', () => {
       invoke('show_bubble_window_cmd', { show: false });
     });
+
+    if (bubbleSettingsBtn) {
+      bubbleSettingsBtn.addEventListener('click', () => {
+        invoke('open_mainframe_cmd');
+      });
+    }
 
     bubbleModePill.addEventListener('click', async () => {
       const idx = (BRAIN_MODES.indexOf(currentBrainMode) + 1) % BRAIN_MODES.length;

@@ -396,7 +396,7 @@
     <div class="menu-item" data-action="mic"><span>Hablar por micrófono</span></div>
     <div class="menu-item" data-action="talk"><span>Escribir mensaje</span></div>
     <div class="menu-item" data-action="look"><span>Mirar mi pantalla ahora</span></div>
-    <div class="menu-item" data-action="soul"><span>Configurar SOUL.md &amp; OpenClaw</span></div>
+    <div class="menu-item" data-action="soul"><span>Configurar Conexiones (OpenClaw & Antigravity)</span></div>
     <div class="menu-item" data-action="skills"><span>Ver Skills (OpenClaw + AGY)</span></div>
     <div class="menu-sep"></div>
     <div class="menu-item" data-action="perch-window"><span>Sentarse en ventana activa</span></div>
@@ -596,16 +596,16 @@
   const CHARS_PER_SEC = 32;
 
   // Estado IA
-  const BRAIN_MODES = ['auto', 'argon', 'openclaw', 'ollama'];
+  const BRAIN_MODES = ['auto', 'antigravity', 'openclaw', 'ollama'];
   const BRAIN_LABELS = {
     auto: 'AUTO',
-    argon: 'ANTIGRAVITY',
+    antigravity: 'ANTIGRAVITY',
     openclaw: 'OPENCLAW',
     ollama: 'OLLAMA'
   };
   const BRAIN_MENU_NAMES = {
-    auto: 'Auto (OpenClaw+Argon)',
-    argon: 'Gemini 4 Argon',
+    auto: 'Auto (OpenClaw+Antigravity)',
+    antigravity: 'Antigravity (AGY)',
     openclaw: 'OpenClaw (Nemotron)',
     ollama: 'Ollama Local'
   };

@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tauri::{Emitter, Manager};
 
 mod avatar;
+mod connections_config;
 mod context_watcher;
 mod notebook_hands;
 mod openclaw_bridge;
@@ -162,6 +163,11 @@ pub fn run() {
             openclaw_bridge::analyze_notebook_cmd,
             openclaw_bridge::list_openclaw_sessions_cmd,
             openclaw_bridge::probe_gemini_argon_cmd,
+            openclaw_bridge::probe_antigravity_cmd,
+            connections_config::get_connections_config_cmd,
+            connections_config::save_connections_config_cmd,
+            connections_config::test_openclaw_connection_cmd,
+            connections_config::test_antigravity_connection_cmd,
             soul_config::list_openclaw_files_cmd,
             soul_config::read_openclaw_file_cmd,
             soul_config::save_openclaw_file_cmd,

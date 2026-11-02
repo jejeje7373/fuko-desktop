@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fuko · Ajustes & Mainframe (Capri / OpenClaw / Antigravity)</title>
+    <title>Fuko · Configuración de Conexiones (OpenClaw & Antigravity)</title>
     <style>
         :root {
             --bg: #09030f;
@@ -30,7 +30,7 @@
 
         body {
             margin: 0;
-            min-width: 720px;
+            min-width: 760px;
             height: 100vh;
             background: radial-gradient(circle at 18% 0%, rgba(123, 63, 228, 0.28), transparent 60%), var(--bg);
             display: flex;
@@ -39,13 +39,13 @@
             font-family: 'Share Tech Mono', 'JetBrains Mono', Consolas, monospace;
         }
 
-        /* Barra superior Cyberpunk (MtGhozt/Capri-Desktop settings__bar) */
+        /* Barra superior Cyberpunk */
         .settings__bar {
-            height: 44px;
+            height: 46px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 16px;
+            padding: 0 18px;
             color: var(--accent);
             border-bottom: 1.5px solid var(--line);
             background: var(--panel);
@@ -89,7 +89,7 @@
             color: var(--accent-green);
             background: rgba(61, 255, 143, 0.1);
             border: 1px solid rgba(61, 255, 143, 0.4);
-            padding: 3px 10px;
+            padding: 4px 12px;
             clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
         }
 
@@ -107,18 +107,17 @@
             50% { opacity: 0.4; transform: scale(0.85); }
         }
 
-        /* Estructura principal con tabs a la izquierda */
+        /* Estructura con navegación lateral */
         .settings__main {
             display: flex;
             flex: 1;
-            height: calc(100vh - 44px);
+            height: calc(100vh - 46px);
             overflow: hidden;
             background: var(--panel);
         }
 
-        /* Tabs laterales Cyberpunk (.settings__tabs) */
         .settings__tabs {
-            width: 220px;
+            width: 230px;
             flex: none;
             padding: 16px 0;
             border-right: 1px solid rgba(123, 63, 228, 0.35);
@@ -139,7 +138,7 @@
             background: transparent;
             color: var(--muted);
             font-family: inherit;
-            font-size: 12px;
+            font-size: 11.5px;
             letter-spacing: 0.08em;
             text-transform: uppercase;
             text-align: left;
@@ -160,7 +159,6 @@
             text-shadow: 0 0 8px rgba(255, 45, 111, 0.6);
         }
 
-        /* Contenido de la pestaña activa */
         .settings__content {
             flex: 1;
             min-width: 0;
@@ -180,13 +178,7 @@
             display: flex;
         }
 
-        /* Cyberpunk Brain Cards (.appmenu__brain-card) */
-        .appmenu__brain {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
+        /* Cyberpunk Cards */
         .appmenu__brain-card {
             display: flex;
             flex-direction: column;
@@ -222,11 +214,58 @@
             border-radius: 2px;
         }
 
+        /* Formularios y campos Cyberpunk */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 10px 14px;
+            align-items: center;
+            margin: 6px 0;
+        }
+
+        .form-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 7px 10px;
+            background: rgba(7, 2, 12, 0.95);
+            border: 1px solid rgba(123, 63, 228, 0.6);
+            color: #fff;
+            font-family: inherit;
+            font-size: 12px;
+            outline: none;
+            clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+            transition: border-color 0.15s;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 8px rgba(94, 246, 255, 0.3);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 7px 10px;
+            background: #140a1f;
+            border: 1px solid rgba(123, 63, 228, 0.6);
+            color: #fff;
+            font-family: inherit;
+            font-size: 12px;
+            outline: none;
+            cursor: pointer;
+        }
+
         .appmenu__brain-picks {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .appmenu__toggle-btn {
@@ -259,107 +298,70 @@
         }
 
         .appmenu__toggle-btn.is-green {
-            background: rgba(61, 255, 143, 0.15);
             border-color: var(--accent-green);
             color: var(--accent-green);
         }
 
         .appmenu__toggle-btn.is-green:hover {
-            background: var(--accent-green);
-            color: #09030f;
-            box-shadow: 0 0 10px var(--accent-green);
+            background: rgba(61, 255, 143, 0.15);
+            color: #fff;
         }
 
-        .appmenu__probe-box {
+        /* Caja de prueba de conexión */
+        .probe-box {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            background: rgba(0, 0, 0, 0.35);
-            padding: 10px 14px;
-            border: 1px dashed rgba(123, 63, 228, 0.45);
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(123, 63, 228, 0.4);
+            margin-top: 4px;
         }
 
-        .appmenu__probe-status {
+        .probe-status {
             font-size: 11px;
-            color: var(--accent);
+            color: var(--muted);
+            overflow-wrap: anywhere;
         }
 
-        /* Tabla de Agentes (Sub-agentes de OpenClaw) */
-        .agents-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .agent-card {
+        .save-bar {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-end;
             gap: 14px;
-            padding: 12px 14px;
-            background: rgba(11, 5, 18, 0.85);
-            border: 1px solid rgba(123, 63, 228, 0.4);
-            clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+            padding: 12px 0;
+            border-top: 1px solid rgba(123, 63, 228, 0.35);
+            margin-top: 10px;
         }
 
-        .agent-info {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            min-width: 0;
+        .save-toast {
+            font-size: 11.5px;
+            color: var(--accent-green);
+            opacity: 0;
+            transition: opacity 0.2s ease;
         }
 
-        .agent-label {
-            font-size: 12.5px;
-            font-weight: 700;
-            color: #fff;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        .save-toast.is-show {
+            opacity: 1;
         }
 
-        .agent-meta {
-            font-size: 10px;
-            color: var(--muted);
-            display: flex;
-            gap: 10px;
-        }
-
-        .agent-badge {
-            font-size: 9px;
-            padding: 2px 7px;
-            text-transform: uppercase;
-            font-weight: 700;
-            clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
-        }
-
-        .agent-badge.is-done { background: rgba(61, 255, 143, 0.2); color: var(--accent-green); border: 1px solid var(--accent-green); }
-        .agent-badge.is-running { background: rgba(94, 246, 255, 0.2); color: var(--accent); border: 1px solid var(--accent); }
-        .agent-badge.is-failed { background: rgba(255, 45, 111, 0.2); color: var(--label); border: 1px solid var(--label); }
-
-        /* Editor de Memoria (SOUL.md, IDENTITY.md, etc.) */
+        /* Editor y archivos de memoria */
         .file-pills {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 12px;
+            gap: 6px;
+            margin: 6px 0 12px;
         }
 
         .file-pill {
-            padding: 6px 12px;
+            padding: 5px 10px;
             border: 1px solid rgba(123, 63, 228, 0.5);
             background: rgba(20, 10, 32, 0.7);
             color: var(--muted);
             font-size: 11px;
             cursor: pointer;
             clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
-            transition: all 0.12s;
-        }
-
-        .file-pill:hover {
-            color: #fff;
-            border-color: var(--label);
         }
 
         .file-pill.is-active {
@@ -385,16 +387,10 @@
             color: var(--accent);
         }
 
-        .editor-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
         .editor-textarea {
             width: 100%;
-            height: 380px;
-            padding: 14px;
+            height: 340px;
+            padding: 12px;
             background: rgba(7, 2, 12, 0.95);
             border: 1px solid rgba(123, 63, 228, 0.6);
             color: #f2e9ff;
@@ -403,26 +399,10 @@
             line-height: 1.5;
             resize: vertical;
             outline: none;
-            box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.6);
             white-space: pre-wrap;
         }
 
-        .editor-textarea:focus {
-            border-color: var(--accent);
-        }
-
-        .save-toast {
-            font-size: 11px;
-            color: var(--accent-green);
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-
-        .save-toast.is-show {
-            opacity: 1;
-        }
-
-        /* Checkboxes y switches */
+        /* Toggle switch */
         .toggle-switch {
             display: flex;
             align-items: center;
@@ -454,94 +434,144 @@
             <figure class="settings__bar-logo">
                 <img src="icons/capri.png" alt="Capri / Fuko">
             </figure>
-            <span class="settings__bar-title">FUKO.SYS // AJUSTES & MAINFRAME</span>
+            <span class="settings__bar-title">FUKO.SYS // CONEXIONES & MAINFRAME</span>
         </div>
         <div class="settings__bar-status">
             <span class="pulse-dot"></span>
-            <span id="gateway-status-pill">OPENCLAW & GEMINI 4 ARGON // ONLINE</span>
+            <span id="gateway-status-pill">OPENCLAW & ANTIGRAVITY // ONLINE</span>
         </div>
     </header>
 
     <div class="settings__main">
-        <!-- Pestañas a la izquierda -->
+        <!-- Navegación lateral -->
         <nav class="settings__tabs">
-            <button type="button" class="is-active" onclick="switchTab('brain')">🧠 Cerebro</button>
-            <button type="button" onclick="switchTab('agents')">👥 Agentes</button>
-            <button type="button" onclick="switchTab('memory')">💾 Memoria</button>
-            <button type="button" onclick="switchTab('hearing')">🎙️ Oído</button>
-            <button type="button" onclick="switchTab('sensors')">⚡ Sensores & Manos</button>
+            <button type="button" class="is-active" onclick="switchTab('connections')">⚡ Conexiones (Tú)</button>
+            <button type="button" onclick="switchTab('brain')">🧠 Enrutamiento IA</button>
+            <button type="button" onclick="switchTab('agents')">👥 Sub-agentes</button>
+            <button type="button" onclick="switchTab('memory')">💾 Memoria & Alma</button>
+            <button type="button" onclick="switchTab('hearing')">🎙️ Oído & Voz</button>
+            <button type="button" onclick="switchTab('sensors')">📂 Carpetas & Manos</button>
         </nav>
 
         <!-- Contenido principal -->
         <main class="settings__content">
 
-            <!-- PESTAÑA 1: CEREBRO (Antigravity Gemini 4 Argon + OpenClaw Gateway) -->
-            <section class="tab-panel is-active" id="panel-brain">
-                <div class="appmenu__brain">
+            <!-- PESTAÑA 1: CONEXIONES CONFIGURABLES POR EL USUARIO -->
+            <section class="tab-panel is-active" id="panel-connections">
 
-                    <!-- TARJETA 1: GEMINI 4 ARGON HIGH (ANTIGRAVITY CLI) -->
-                    <div class="appmenu__brain-card">
-                        <div class="appmenu__brain-card-title">
-                            <span>💎 Google Gemini 4 Argon (High) · Antigravity CLI</span>
-                            <span style="color: var(--accent); font-size: 11px;">Motor Pesado / Razonamiento</span>
-                        </div>
-                        <p class="appmenu__hint">
-                            Conexión de máxima capacidad para programación compleja, análisis profundo de arquitectura, bugs difíciles, refactorizaciones y auditoría de ciberseguridad sin costo a través del CLI oficial <code>agy</code>.
-                        </p>
-                        <div class="appmenu__probe-box">
-                            <div>
-                                <span style="font-weight: 700; color: #fff;">Estado CLI:</span>
-                                <span class="appmenu__probe-status" id="argon-probe-status">gemini-4-argon-high disponible (agy)</span>
-                            </div>
-                            <button type="button" class="appmenu__toggle-btn is-green" id="btn-probe-argon" onclick="probeArgon()">PROBAR CONEXIÓN (PING)</button>
-                        </div>
+                <!-- TARJETA 1: CONEXIÓN ANTIGRAVITY -->
+                <div class="appmenu__brain-card">
+                    <div class="appmenu__brain-card-title">
+                        <span>🚀 Conexión a Antigravity (AGY)</span>
+                        <span style="color: var(--accent); font-size: 11px;">Motor de Razonamiento & Programación</span>
+                    </div>
+                    <p class="appmenu__hint">
+                        Configura libremente tu conexión a <b>Antigravity</b>. Puedes elegir la ruta del CLI <code>agy</code>, dejar el modelo por defecto de tu Antigravity o especificar el modelo que prefieras usar.
+                    </p>
+
+                    <div class="form-grid">
+                        <label class="form-label" for="cfg-agy-bin">Ejecutable / Bin:</label>
+                        <input type="text" class="form-input" id="cfg-agy-bin" placeholder="agy o /home/jejej/.gemini/bin/agy">
+
+                        <label class="form-label" for="cfg-agy-model">Modelo Antigravity:</label>
+                        <input type="text" class="form-input" id="cfg-agy-model" placeholder="(Opcional: déjalo vacío para usar el modelo por defecto de tu Antigravity)">
+
+                        <label class="form-label" for="cfg-agy-args">Argumentos:</label>
+                        <input type="text" class="form-input" id="cfg-agy-args" placeholder="--dangerously-skip-permissions">
+
+                        <label class="form-label" for="cfg-agy-timeout">Timeout (segundos):</label>
+                        <input type="number" class="form-input" id="cfg-agy-timeout" min="10" max="180" value="45">
                     </div>
 
-                    <!-- TARJETA 2: OPENCLAW GATEWAY & MODELOS -->
-                    <div class="appmenu__brain-card">
-                        <div class="appmenu__brain-card-title">
-                            <span>🦞 OpenClaw Gateway 2026 · Agente & Skills</span>
-                            <span style="color: var(--accent-green); font-size: 11px;">Stack Local / loopback :18789</span>
+                    <div class="probe-box">
+                        <div>
+                            <span style="font-weight: 700; color: #fff;">Estado Antigravity:</span>
+                            <span class="probe-status" id="agy-test-status">Sin probar aún</span>
                         </div>
-                        <p class="appmenu__hint">
-                            Compañera en vivo conectada al gateway con acceso a tus 44 Skills, control de ventanas, manos de teclado nativas y sensores de pantalla.
-                        </p>
-                        <div class="appmenu__brain-picks">
-                            <button type="button" class="appmenu__toggle-btn is-active" id="btn-model-ultra" onclick="pickModel('nvidia/nemotron-3-ultra-550b-a55b')">Nemotron 3 Ultra 550B (Recomendado)</button>
-                            <button type="button" class="appmenu__toggle-btn" id="btn-model-bolt" onclick="pickModel('nvidia/nemotron-3.5-bolt-e4b')">Nemotron 3.5 Bolt E4B (Rápido)</button>
-                            <button type="button" class="appmenu__toggle-btn" id="btn-model-super" onclick="pickModel('nvidia/nemotron-3-super-120b-a12b')">Nemotron 3 Super 120B</button>
-                        </div>
+                        <button type="button" class="appmenu__toggle-btn is-green" id="btn-test-agy" onclick="testAntigravityConnection()">PROBAR ANTIGRAVITY (PING)</button>
+                    </div>
+                </div>
+
+                <!-- TARJETA 2: CONEXIÓN OPENCLAW -->
+                <div class="appmenu__brain-card">
+                    <div class="appmenu__brain-card-title">
+                        <span>🦞 Conexión a OpenClaw</span>
+                        <span style="color: var(--accent-green); font-size: 11px;">Gateway, Agente & Skills</span>
+                    </div>
+                    <p class="appmenu__hint">
+                        Configura la conexión local a <b>OpenClaw</b> (CLI local <code>agent exec</code> o Gateway HTTP loopback).
+                    </p>
+
+                    <div class="form-grid">
+                        <label class="form-label" for="cfg-oc-mode">Modo Conexión:</label>
+                        <select class="form-select" id="cfg-oc-mode">
+                            <option value="cli">CLI (openclaw agent exec / infer)</option>
+                            <option value="gateway">Gateway HTTP API</option>
+                        </select>
+
+                        <label class="form-label" for="cfg-oc-endpoint">Endpoint / URL:</label>
+                        <input type="text" class="form-input" id="cfg-oc-endpoint" placeholder="http://127.0.0.1:18789 o openclaw">
+
+                        <label class="form-label" for="cfg-oc-token">Token / API Key:</label>
+                        <input type="password" class="form-input" id="cfg-oc-token" placeholder="(Opcional para Gateway local)">
+
+                        <label class="form-label" for="cfg-oc-model">Modelo OpenClaw:</label>
+                        <input type="text" class="form-input" id="cfg-oc-model" placeholder="nvidia/nemotron-3-ultra-550b-a55b">
                     </div>
 
-                    <!-- TARJETA 3: MODO DE ENRUTAMIENTO (ROUTING) -->
-                    <div class="appmenu__brain-card">
-                        <div class="appmenu__brain-card-title">
-                            <span>⚡ Modo de Enrutamiento Inteligente</span>
-                            <span id="current-mode-label" style="color: var(--label); font-size: 11px;">AUTO (HÍBRIDO)</span>
-                        </div>
-                        <p class="appmenu__hint">
-                            Elige si deseas que Fuko alterne automáticamente entre OpenClaw y Gemini 4 Argon según la dificultad de la tarea, o fuerce un motor específico.
-                        </p>
-                        <div class="appmenu__brain-picks">
-                            <button type="button" class="appmenu__toggle-btn is-active" id="mode-btn-auto" onclick="setRoutingMode('auto')">⚡ Auto (Híbrido Inteligente)</button>
-                            <button type="button" class="appmenu__toggle-btn" id="mode-btn-argon" onclick="setRoutingMode('argon')">💎 Solo Gemini 4 Argon</button>
-                            <button type="button" class="appmenu__toggle-btn" id="mode-btn-openclaw" onclick="setRoutingMode('openclaw')">🦞 Solo OpenClaw</button>
-                            <button type="button" class="appmenu__toggle-btn" id="mode-btn-ollama" onclick="setRoutingMode('ollama')">🏠 Ollama Local</button>
-                        </div>
-
-                        <div class="toggle-switch">
-                            <div>
-                                <label for="proactive-check">Reacción Proactiva a Archivos y Pantalla del Notebook</label>
-                                <p class="appmenu__hint">Comenta autónomamente cuando guardas código o abres proyectos.</p>
-                            </div>
-                            <input type="checkbox" id="proactive-check" checked onchange="toggleProactive(this.checked)">
-                        </div>
+                    <!-- Botones rápidos de modelos OpenClaw -->
+                    <div class="appmenu__brain-picks">
+                        <span style="font-size: 10px; color: var(--muted); text-transform: uppercase;">Modelos rápidos:</span>
+                        <button type="button" class="appmenu__toggle-btn" onclick="setQuickOpenClawModel('nvidia/nemotron-3-ultra-550b-a55b')">Nemotron 3 Ultra 550B</button>
+                        <button type="button" class="appmenu__toggle-btn" onclick="setQuickOpenClawModel('nvidia/nemotron-3.5-bolt-e4b')">Nemotron 3.5 Bolt E4B</button>
+                        <button type="button" class="appmenu__toggle-btn" onclick="setQuickOpenClawModel('nvidia/nemotron-3-super-120b-a12b')">Nemotron 3 Super 120B</button>
                     </div>
 
+                    <div class="probe-box">
+                        <div>
+                            <span style="font-weight: 700; color: #fff;">Estado OpenClaw:</span>
+                            <span class="probe-status" id="oc-test-status">Sin probar aún</span>
+                        </div>
+                        <button type="button" class="appmenu__toggle-btn is-green" id="btn-test-oc" onclick="testOpenClawConnection()">PROBAR OPENCLAW (PING)</button>
+                    </div>
+                </div>
+
+                <!-- BARRA DE GUARDADO -->
+                <div class="save-bar">
+                    <span class="save-toast" id="connections-save-toast">✓ Conexiones guardadas exitosamente</span>
+                    <button type="button" class="appmenu__toggle-btn is-active" style="padding: 10px 22px; font-size: 12px;" onclick="saveConnections()">💾 GUARDAR CONFIGURACIÓN</button>
+                </div>
+
+            </section>
+
+            <!-- PESTAÑA 2: ENRUTAMIENTO IA -->
+            <section class="tab-panel" id="panel-brain">
+                <div class="appmenu__brain-card">
+                    <div class="appmenu__brain-card-title">
+                        <span>⚡ Modo de Enrutamiento Inteligente</span>
+                        <span id="current-mode-label" style="color: var(--label); font-size: 11px;">AUTO (HÍBRIDO)</span>
+                    </div>
+                    <p class="appmenu__hint">
+                        Elige si deseas que Fuko alterne automáticamente entre OpenClaw y Antigravity según la tarea, o fuerce un motor específico.
+                    </p>
+                    <div class="appmenu__brain-picks">
+                        <button type="button" class="appmenu__toggle-btn is-active" id="mode-btn-auto" onclick="setRoutingMode('auto')">⚡ Auto (Híbrido Inteligente)</button>
+                        <button type="button" class="appmenu__toggle-btn" id="mode-btn-antigravity" onclick="setRoutingMode('antigravity')">🚀 Solo Antigravity</button>
+                        <button type="button" class="appmenu__toggle-btn" id="mode-btn-openclaw" onclick="setRoutingMode('openclaw')">🦞 Solo OpenClaw</button>
+                        <button type="button" class="appmenu__toggle-btn" id="mode-btn-ollama" onclick="setRoutingMode('ollama')">🏠 Ollama Local</button>
+                    </div>
+
+                    <div class="toggle-switch">
+                        <div>
+                            <label for="proactive-check">Vigilancia Proactiva de Pantalla y Archivos</label>
+                            <p class="appmenu__hint">Comenta autónomamente al abrir búsquedas web, guardar código o cambiar de ventana.</p>
+                        </div>
+                        <input type="checkbox" id="proactive-check" checked onchange="toggleProactive(this.checked)">
+                    </div>
                 </div>
             </section>
 
-            <!-- PESTAÑA 2: AGENTES (Sub-agentes de OpenClaw) -->
+            <!-- PESTAÑA 3: SUB-AGENTES -->
             <section class="tab-panel" id="panel-agents">
                 <div class="appmenu__brain-card">
                     <div class="appmenu__brain-card-title">
@@ -549,15 +579,15 @@
                         <button type="button" class="appmenu__toggle-btn" onclick="loadSubAgents()">🔄 Actualizar</button>
                     </div>
                     <p class="appmenu__hint">
-                        Sub-agentes creados en OpenClaw ejecutando tareas en segundo plano para programación, análisis y chat.
+                        Sesiones de sub-agentes en segundo plano para tareas concurrentes.
                     </p>
                     <div class="agents-grid" id="agents-container">
-                        <p style="color: var(--muted); font-size: 11px;">Cargando sesiones de sub-agentes...</p>
+                        <p style="color: var(--muted); font-size: 11px;">Cargando sesiones...</p>
                     </div>
                 </div>
             </section>
 
-            <!-- PESTAÑA 3: MEMORIA (SOUL.md, IDENTITY.md, USER.md, etc.) -->
+            <!-- PESTAÑA 4: MEMORIA Y SOUL.MD -->
             <section class="tab-panel" id="panel-memory">
                 <div class="appmenu__brain-card">
                     <div class="appmenu__brain-card-title">
@@ -565,7 +595,7 @@
                         <span id="current-file-badge" style="color: var(--accent); font-size: 11px;">SOUL.md</span>
                     </div>
                     <p class="appmenu__hint">
-                        Archivos de personalidad, memoria y reglas de OpenClaw en <code>/home/jejej/.openclaw/workspace</code>. Se sincronizan en vivo.
+                        Archivos de personalidad, memoria y reglas en <code>~/.openclaw/workspace</code>.
                     </p>
 
                     <div class="file-pills" id="memory-file-pills"></div>
@@ -584,16 +614,13 @@
                 </div>
             </section>
 
-            <!-- PESTAÑA 4: OÍDO (Micrófono & Voz Piper TTS) -->
+            <!-- PESTAÑA 5: OÍDO Y VOZ -->
             <section class="tab-panel" id="panel-hearing">
                 <div class="appmenu__brain-card">
                     <div class="appmenu__brain-card-title">
-                        <span>🎙️ Oído (Reconocimiento de Voz faster-whisper)</span>
-                        <span style="color: var(--accent-green); font-size: 11px;">Modelo Local / Latencia Cero</span>
+                        <span>🎙️ Oído (faster-whisper daemon)</span>
+                        <span style="color: var(--accent-green); font-size: 11px;">Escucha en tiempo real</span>
                     </div>
-                    <p class="appmenu__hint">
-                        Reconoce órdenes naturales en español desde el micrófono de tu notebook.
-                    </p>
                     <div class="toggle-switch">
                         <label for="mic-continuous-check">Escucha Continua (TalkPill activo)</label>
                         <input type="checkbox" id="mic-continuous-check" checked onchange="toggleContinuousListen(this.checked)">
@@ -602,28 +629,25 @@
 
                 <div class="appmenu__brain-card">
                     <div class="appmenu__brain-card-title">
-                        <span>🔊 Voz de Fuko (Piper TTS)</span>
-                        <span style="color: var(--label); font-size: 11px;">Modelo es_ES-davefx</span>
+                        <span>🔊 Síntesis de Sonido Cyberpunk (Capri Bleeps & Arpegios)</span>
+                        <span style="color: var(--label); font-size: 11px;">CERO voz humana</span>
                     </div>
                     <p class="appmenu__hint">
-                        Sintetizador neuronal local de voz en tiempo real con acento y personalidad rápida.
+                        Emite bleeps pentatónicos y arpegios cyberpunk nativos al responder.
                     </p>
                     <div class="toggle-switch">
-                        <label for="tts-enabled-check">Voz Activada al Responder</label>
+                        <label for="tts-enabled-check">Sonido Sintético Activado al Hablar</label>
                         <input type="checkbox" id="tts-enabled-check" checked onchange="toggleTts(this.checked)">
                     </div>
                 </div>
             </section>
 
-            <!-- PESTAÑA 5: SENSORES & MANOS -->
+            <!-- PESTAÑA 6: CARPETAS Y MANOS -->
             <section class="tab-panel" id="panel-sensors">
                 <div class="appmenu__brain-card">
                     <div class="appmenu__brain-card-title">
                         <span>📂 Carpetas Vigiladas del Notebook</span>
                     </div>
-                    <p class="appmenu__hint">
-                        Rutas locales monitoreadas para reaccionar a tus cambios de código:
-                    </p>
                     <div id="watched-paths-list" style="display: flex; flex-direction: column; gap: 6px; margin: 8px 0;"></div>
                     <div style="display: flex; gap: 8px;">
                         <input type="text" id="new-path-input" placeholder="/home/jejej/Duoc/nuevo-ramo" style="flex: 1; padding: 6px 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--line); color: #fff; font-family: inherit; font-size: 11px; outline: none;">
@@ -652,7 +676,6 @@
     <script>
         const tauri = window.__TAURI__ || null;
         const invoke = tauri ? tauri.core.invoke : async () => ({});
-        const listen = tauri ? tauri.event.listen : () => {};
 
         let openclawFiles = [];
         let activeFileName = 'SOUL.md';
@@ -669,12 +692,113 @@
             const btn = Array.from(document.querySelectorAll('.settings__tabs button')).find(b => b.getAttribute('onclick')?.includes(tabId));
             if (btn) btn.classList.add('is-active');
 
+            if (tabId === 'connections') loadConnectionsConfig();
+            if (tabId === 'brain') loadAiStatus();
             if (tabId === 'agents') loadSubAgents();
             if (tabId === 'memory') loadOpenClawFiles();
             if (tabId === 'sensors') loadWatchedPaths();
         }
 
-        // --- CEREBRO & ROUTING ---
+        // =========================================================================
+        // 1. GESTIÓN DE CONEXIONES (OPENCLAW & ANTIGRAVITY)
+        // =========================================================================
+        async function loadConnectionsConfig() {
+            try {
+                const cfg = await invoke('get_connections_config_cmd');
+                if (cfg) {
+                    document.getElementById('cfg-agy-bin').value = cfg.antigravity_bin || 'agy';
+                    document.getElementById('cfg-agy-model').value = cfg.antigravity_model || '';
+                    document.getElementById('cfg-agy-args').value = cfg.antigravity_args || '--dangerously-skip-permissions';
+                    document.getElementById('cfg-agy-timeout').value = cfg.antigravity_timeout_secs || 45;
+
+                    document.getElementById('cfg-oc-mode').value = cfg.openclaw_mode || 'cli';
+                    document.getElementById('cfg-oc-endpoint').value = cfg.openclaw_endpoint || 'http://127.0.0.1:18789';
+                    document.getElementById('cfg-oc-token').value = cfg.openclaw_token || '';
+                    document.getElementById('cfg-oc-model').value = cfg.openclaw_model || 'nvidia/nemotron-3-ultra-550b-a55b';
+                }
+            } catch (err) {
+                console.error('Error cargando conexiones:', err);
+            }
+        }
+
+        function collectConnectionsConfig() {
+            return {
+                openclaw_mode: document.getElementById('cfg-oc-mode').value,
+                openclaw_endpoint: document.getElementById('cfg-oc-endpoint').value.trim(),
+                openclaw_token: document.getElementById('cfg-oc-token').value.trim(),
+                openclaw_model: document.getElementById('cfg-oc-model').value.trim(),
+                openclaw_custom_args: '',
+
+                antigravity_bin: document.getElementById('cfg-agy-bin').value.trim() || 'agy',
+                antigravity_model: document.getElementById('cfg-agy-model').value.trim(),
+                antigravity_args: document.getElementById('cfg-agy-args').value.trim(),
+                antigravity_timeout_secs: parseInt(document.getElementById('cfg-agy-timeout').value, 10) || 45
+            };
+        }
+
+        async function saveConnections() {
+            const cfg = collectConnectionsConfig();
+            const toast = document.getElementById('connections-save-toast');
+            try {
+                await invoke('save_connections_config_cmd', { config: cfg });
+                toast.classList.add('is-show');
+                setTimeout(() => toast.classList.remove('is-show'), 2500);
+            } catch (err) {
+                alert(`Error al guardar configuración: ${err}`);
+            }
+        }
+
+        function setQuickOpenClawModel(m) {
+            document.getElementById('cfg-oc-model').value = m;
+        }
+
+        async function testAntigravityConnection() {
+            const btn = document.getElementById('btn-test-agy');
+            const statusEl = document.getElementById('agy-test-status');
+            btn.innerText = 'PROBANDO...';
+            statusEl.innerText = 'Consultando Antigravity CLI...';
+
+            const cfg = collectConnectionsConfig();
+            try {
+                const res = await invoke('test_antigravity_connection_cmd', { config: cfg });
+                if (res.ok) {
+                    statusEl.innerText = `ONLINE (${res.latency_ms}ms) · ${res.details}`;
+                    btn.innerText = 'ONLINE ✓';
+                } else {
+                    statusEl.innerText = `FALLO: ${res.message} (${res.details})`;
+                    btn.innerText = 'REINTENTAR';
+                }
+            } catch (err) {
+                statusEl.innerText = `Error: ${err}`;
+                btn.innerText = 'ERROR';
+            }
+        }
+
+        async function testOpenClawConnection() {
+            const btn = document.getElementById('btn-test-oc');
+            const statusEl = document.getElementById('oc-test-status');
+            btn.innerText = 'PROBANDO...';
+            statusEl.innerText = 'Consultando OpenClaw...';
+
+            const cfg = collectConnectionsConfig();
+            try {
+                const res = await invoke('test_openclaw_connection_cmd', { config: cfg });
+                if (res.ok) {
+                    statusEl.innerText = `ONLINE (${res.latency_ms}ms) · ${res.details}`;
+                    btn.innerText = 'ONLINE ✓';
+                } else {
+                    statusEl.innerText = `FALLO: ${res.message} (${res.details})`;
+                    btn.innerText = 'REINTENTAR';
+                }
+            } catch (err) {
+                statusEl.innerText = `Error: ${err}`;
+                btn.innerText = 'ERROR';
+            }
+        }
+
+        // =========================================================================
+        // 2. ENRUTAMIENTO Y ESTADO IA
+        // =========================================================================
         async function loadAiStatus() {
             try {
                 const st = await invoke('get_ai_status_cmd');
@@ -684,11 +808,11 @@
         }
 
         function updateRoutingUI(mode) {
-            ['auto', 'argon', 'openclaw', 'ollama'].forEach(m => {
+            ['auto', 'antigravity', 'openclaw', 'ollama'].forEach(m => {
                 const btn = document.getElementById(`mode-btn-${m}`);
-                if (btn) btn.classList.toggle('is-active', m === mode);
+                if (btn) btn.classList.toggle('is-active', m === mode || (m === 'antigravity' && mode === 'argon'));
             });
-            const labelMap = { auto: 'AUTO (HÍBRIDO)', argon: 'SOLO GEMINI 4 ARGON', openclaw: 'SOLO OPENCLAW', ollama: 'OLLAMA LOCAL' };
+            const labelMap = { auto: 'AUTO (HÍBRIDO)', antigravity: 'SOLO ANTIGRAVITY', openclaw: 'SOLO OPENCLAW', ollama: 'OLLAMA LOCAL', argon: 'SOLO ANTIGRAVITY' };
             document.getElementById('current-mode-label').innerText = labelMap[mode] || mode.toUpperCase();
         }
 
@@ -707,32 +831,9 @@
             } catch (_) {}
         }
 
-        async function probeArgon() {
-            const btn = document.getElementById('btn-probe-argon');
-            const statusEl = document.getElementById('argon-probe-status');
-            btn.innerText = 'PROBANDO...';
-            statusEl.innerText = 'Invocando agy -m gemini-4-argon-high...';
-            try {
-                const res = await invoke('probe_gemini_argon_cmd');
-                if (res.ok) {
-                    statusEl.innerText = `Online (${res.latency_ms}ms) · Respuesta: "${res.reply}"`;
-                    btn.innerText = 'ONLINE ✓';
-                } else {
-                    statusEl.innerText = `Fallo: ${res.reply}`;
-                    btn.innerText = 'REINTENTAR';
-                }
-            } catch (err) {
-                statusEl.innerText = `Error: ${err}`;
-                btn.innerText = 'ERROR';
-            }
-        }
-
-        function pickModel(modelId) {
-            document.querySelectorAll('.appmenu__brain-picks .appmenu__toggle-btn').forEach(b => b.classList.remove('is-active'));
-            event.target.classList.add('is-active');
-        }
-
-        // --- SUB-AGENTES DE OPENCLAW ---
+        // =========================================================================
+        // 3. SUB-AGENTES DE OPENCLAW
+        // =========================================================================
         async function loadSubAgents() {
             const container = document.getElementById('agents-container');
             container.innerHTML = '<p style="color: var(--muted); font-size: 11px;">Consultando sub-agentes en OpenClaw...</p>';
@@ -745,18 +846,13 @@
                 container.innerHTML = '';
                 list.forEach(agent => {
                     const card = document.createElement('div');
-                    card.className = 'agent-card';
-                    const statusClass = agent.status === 'running' ? 'is-running' : (agent.status === 'done' ? 'is-done' : 'is-failed');
+                    card.style.cssText = 'padding: 8px 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(123,63,228,0.35); display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 6px;';
                     card.innerHTML = `
-                        <div class="agent-info">
-                            <span class="agent-label">${agent.label || agent.key}</span>
-                            <div class="agent-meta">
-                                <span><b>Modelo:</b> ${agent.model}</span>
-                                <span><b>Tokens:</b> ${agent.tokens}</span>
-                                <span><b>Actividad:</b> ${agent.age}</span>
-                            </div>
+                        <div>
+                            <span style="font-weight:700; color:#fff;">${agent.label || agent.key}</span>
+                            <div style="color:var(--muted); font-size:10px;">Modelo: ${agent.model} · Actividad: ${agent.age}</div>
                         </div>
-                        <span class="agent-badge ${statusClass}">${agent.status}</span>
+                        <span style="color:var(--accent-green); font-weight:700;">${agent.status}</span>
                     `;
                     container.appendChild(card);
                 });
@@ -765,7 +861,9 @@
             }
         }
 
-        // --- MEMORIA Y SOUL.MD ---
+        // =========================================================================
+        // 4. MEMORIA Y SOUL.MD
+        // =========================================================================
         async function loadOpenClawFiles() {
             try {
                 openclawFiles = await invoke('list_openclaw_files_cmd') || [];
@@ -828,7 +926,9 @@
             }
         }
 
-        // --- OÍDO & PIPER TTS ---
+        // =========================================================================
+        // 5. OÍDO, SENSORES Y ANIMACIONES
+        // =========================================================================
         async function toggleContinuousListen(enabled) {
             try {
                 await invoke('set_continuous_listen_cmd', { enabled });
@@ -841,7 +941,6 @@
             } catch (_) {}
         }
 
-        // --- SENSORES & MANOS ---
         async function loadWatchedPaths() {
             const box = document.getElementById('watched-paths-list');
             try {
@@ -880,15 +979,21 @@
             } catch (_) {}
         }
 
-        // Atajo Ctrl+S para guardar en el editor
+        // Atajo Ctrl+S
         window.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                 e.preventDefault();
-                saveCurrentFile();
+                const activeTab = document.querySelector('.tab-panel.is-active');
+                if (activeTab && activeTab.id === 'panel-connections') {
+                    saveConnections();
+                } else if (activeTab && activeTab.id === 'panel-memory') {
+                    saveCurrentFile();
+                }
             }
         });
 
-        // Inicio
+        // Inicializar
+        loadConnectionsConfig();
         loadAiStatus();
         loadOpenClawFiles();
         loadSubAgents();

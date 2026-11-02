@@ -147,17 +147,17 @@ pub async fn build_realtime_screen_context() -> String {
     )
 }
 
-fn should_use_argon(mode: &str, message: &str) -> bool {
-    if mode == "argon" {
+fn should_use_antigravity(mode: &str, message: &str) -> bool {
+    if mode == "antigravity" || mode == "argon" {
         return true;
     }
     if mode != "auto" {
         return false;
     }
     let lower = message.to_lowercase();
-    lower.starts_with("/argon")
-        || lower.starts_with("/heavy")
+    lower.starts_with("/antigravity")
         || lower.starts_with("/agy")
+        || lower.starts_with("/heavy")
         || lower.contains("antigravity")
         || lower.contains("ciberseguridad")
         || lower.contains("pentest")
@@ -435,8 +435,12 @@ pub async fn query_openclaw_cli(
     Err(format!("OpenClaw sin respuesta: {}", stderr))
 }
 
-pub async fn query_gemini_argon_cli(prompt: &str) -> Result<(String, String), String> {
-    let agy_bin = if Path::new("/home/jejej/.gemini/bin/agy").exists() {
+pub async fn query_antigravity_cli(prompt: &str) -> Result<(String, String), String> {
+    let cfg = crate::connections_config::load_connections_config();
+
+    let agy_bin = if Path::new(&cfg.antigravity_bin).exists() {
+        cfg.antigravity_bin.as_str()
+    } else if Path::new("/home/jejej/.gemini/bin/agy").exists() {
         "/home/jejej/.gemini/bin/agy"
     } else if Path::new("/usr/local/bin/agy").exists() {
         "/usr/local/bin/agy"
@@ -444,27 +448,48 @@ pub async fn query_gemini_argon_cli(prompt: &str) -> Result<(String, String), St
         "agy"
     };
 
-    let output = tokio::time::timeout(
-        tokio::time::Duration::from_secs(55),
-        Command::new(agy_bin)
-            .arg("-p")
-            .arg(prompt)
-            .arg("--model")
-            .arg("gemini-4-argon-high")
-            .arg("--dangerously-skip-permissions")
-            .output(),
-    )
-    .await
-    .map_err(|_| "Timeout consultando a Antigravity (Gemini 4 Argon)".to_string())?
-    .map_err(|e| format!("Error invocando Antigravity (agy): {}", e))?;
+    let mut cmd = Command::new(agy_bin);
+    cmd.arg("-p").arg(prompt);
+
+    // Solo agregar --model si el usuario especificó uno; si está vacío, Antigravity usa su propio modelo configurado
+    if !cfg.antigravity_model.trim().is_empty() {
+        cmd.arg("--model").arg(cfg.antigravity_model.trim());
+    }
+
+    // Argumentos adicionales configurados por el usuario
+    if !cfg.antigravity_args.trim().is_empty() {
+        for arg in cfg.antigravity_args.split_whitespace() {
+            cmd.arg(arg);
+        }
+    }
+
+    let timeout_secs = if cfg.antigravity_timeout_secs > 0 {
+        cfg.antigravity_timeout_secs
+    } else {
+        45
+    };
+
+    let output = tokio::time::timeout(tokio::time::Duration::from_secs(timeout_secs), cmd.output())
+        .await
+        .map_err(|_| format!("Timeout ({}s) consultando a Antigravity ({})", timeout_secs, agy_bin))?
+        .map_err(|e| format!("Error invocando Antigravity ({}): {}", agy_bin, e))?;
 
     let stdout = strip_emojis_and_ansi(&String::from_utf8_lossy(&output.stdout));
     if !stdout.is_empty() {
-        return Ok((stdout, "antigravity/gemini-4-argon".to_string()));
+        let model_label = if cfg.antigravity_model.is_empty() {
+            "antigravity".to_string()
+        } else {
+            format!("antigravity/{}", cfg.antigravity_model)
+        };
+        return Ok((stdout, model_label));
     }
 
     let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
     Err(format!("Antigravity sin salida: {}", stderr))
+}
+
+pub async fn query_gemini_argon_cli(prompt: &str) -> Result<(String, String), String> {
+    query_antigravity_cli(prompt).await
 }
 
 pub async fn ask_claudia<R: Runtime>(
@@ -535,25 +560,29 @@ pub async fn ask_claudia<R: Runtime>(
         is_short_reaction,
     );
 
-    let use_argon = !is_short_reaction && should_use_argon(&effective_mode, &user_message);
+    let cfg = crate::connections_config::load_connections_config();
+    let use_antigravity = !is_short_reaction && should_use_antigravity(&effective_mode, &user_message);
     let use_agent_exec =
         !is_short_reaction && (!matched_skills.is_empty() || user_message.starts_with("/skill") || effective_mode == "openclaw");
 
-    // Enrutamiento híbrido con respaldo mutuo completo entre OpenClaw y Antigravity (agy)
-    let result = if use_argon {
-        match query_gemini_argon_cli(&full_prompt).await {
+    // Enrutamiento con respaldo mutuo entre OpenClaw y Antigravity (agy)
+    let oc_model = if !cfg.openclaw_model.is_empty() {
+        cfg.openclaw_model.as_str()
+    } else {
+        "nvidia/nemotron-3-ultra-550b-a55b"
+    };
+
+    let result = if use_antigravity {
+        match query_antigravity_cli(&full_prompt).await {
             Ok((r, m)) => Ok((r, format!("{}{}", m, skill_badge))),
-            Err(_) => query_openclaw_agent_exec(
-                &full_prompt,
-                Some("nvidia/nemotron-3-ultra-550b-a55b"),
-            )
-            .await
-            .map(|(r, m)| (r, format!("{}{}", m, skill_badge))),
+            Err(_) => query_openclaw_agent_exec(&full_prompt, Some(oc_model))
+                .await
+                .map(|(r, m)| (r, format!("{}{}", m, skill_badge))),
         }
     } else {
         let model_choice = match effective_mode.as_str() {
             "ollama" => Some("ollama/qwen3.5:cloud"),
-            _ => Some("nvidia/nemotron-3-ultra-550b-a55b"),
+            _ => Some(oc_model),
         };
         let oc_res = if use_agent_exec {
             query_openclaw_agent_exec(&full_prompt, model_choice).await
@@ -562,7 +591,7 @@ pub async fn ask_claudia<R: Runtime>(
         };
         match oc_res {
             Ok((r, m)) => Ok((r, format!("{}{}", m, skill_badge))),
-            Err(_) => query_gemini_argon_cli(&full_prompt)
+            Err(_) => query_antigravity_cli(&full_prompt)
                 .await
                 .map(|(r, m)| (r, format!("{}{}", m, skill_badge))),
         }
@@ -864,9 +893,9 @@ pub async fn list_openclaw_sessions_cmd() -> Result<Vec<SubAgentInfo>, String> {
 }
 
 #[tauri::command]
-pub async fn probe_gemini_argon_cmd() -> Result<ProbeResult, String> {
+pub async fn probe_antigravity_cmd() -> Result<ProbeResult, String> {
     let start = Instant::now();
-    match query_gemini_argon_cli("Responde unicamente: ONLINE").await {
+    match query_antigravity_cli("Responde unicamente: ONLINE").await {
         Ok((reply, model)) => Ok(ProbeResult {
             ok: true,
             latency_ms: start.elapsed().as_millis() as u64,
@@ -877,7 +906,12 @@ pub async fn probe_gemini_argon_cmd() -> Result<ProbeResult, String> {
             ok: false,
             latency_ms: start.elapsed().as_millis() as u64,
             reply: e,
-            model: "antigravity/gemini-4-argon".to_string(),
+            model: "antigravity".to_string(),
         }),
     }
+}
+
+#[tauri::command]
+pub async fn probe_gemini_argon_cmd() -> Result<ProbeResult, String> {
+    probe_antigravity_cmd().await
 }
