@@ -681,6 +681,16 @@ pub async fn take_desktop_screenshot() -> Option<String> {
     let target_path = "/tmp/claudia_notebook_screen.png";
     let _ = std::fs::remove_file(target_path);
 
+    // 1. gnome-screenshot (nativo probado en GNOME Shell Wayland)
+    let _ = Command::new("gnome-screenshot")
+        .args(["-f", target_path])
+        .output()
+        .await;
+    if Path::new(target_path).exists() {
+        return Some(target_path.to_string());
+    }
+
+    // 2. Extensión GNOME Shell ClaudiaPerch
     let perch_shot = Command::new("gdbus")
         .args([
             "call",
@@ -697,14 +707,6 @@ pub async fn take_desktop_screenshot() -> Option<String> {
         .await;
 
     if perch_shot.is_ok() && Path::new(target_path).exists() {
-        return Some(target_path.to_string());
-    }
-
-    let _ = Command::new("gnome-screenshot")
-        .args(["-f", target_path])
-        .output()
-        .await;
-    if Path::new(target_path).exists() {
         return Some(target_path.to_string());
     }
 
@@ -796,8 +798,8 @@ pub async fn glance_at_screen_realtime<R: Runtime>(
     // 1. Visión con Antigravity (motor principal solicitado)
     let agy_prompt = if let Some(ref img_path) = screenshot_path {
         format!(
-            "{}\n[CAPTURA DE PANTALLA EN: {}]\nObserva lo que se ve en la pantalla o en esa captura y haz tu comentario directo al estilo de Capri (sin emojis).",
-            prompt, img_path
+            "Mira detalladamente la captura de pantalla real del usuario en '{}'.\nDime con precisión qué programas, ventanas, páginas web, archivos o código está viendo o editando el usuario en tiempo real en su pantalla. Haz un comentario conciso, inteligente y directo al estilo de Capri (máximo 1 o 2 oraciones breves, sin emojis).",
+            img_path
         )
     } else {
         prompt.clone()

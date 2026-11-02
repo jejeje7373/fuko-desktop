@@ -580,7 +580,11 @@ pub fn start_watcher<R: Runtime>(
 
                             tauri::async_runtime::spawn(async move {
                                 let heard_tag = if let Some(ref b) = browser_snap {
-                                    format!("(viendo {}: {})", b, clean_title_snap)
+                                    if b.contains("Antigravity") {
+                                        "(viendo pantalla en tiempo real)".to_string()
+                                    } else {
+                                        format!("(viendo {}: {})", b, clean_title_snap)
+                                    }
                                 } else {
                                     format!("(viendo: {})", clean_title_snap)
                                 };
