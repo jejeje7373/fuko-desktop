@@ -43,7 +43,7 @@ impl Default for ConnectionsConfig {
             openclaw_custom_args: "".to_string(),
 
             antigravity_bin: agy_default,
-            antigravity_model: "".to_string(), // Vacío para que Antigravity use el modelo que el usuario tenga configurado
+            antigravity_model: "gemini-3.8-flash-high".to_string(), // Modelo rápido con cuota activa en Antigravity
             antigravity_args: "--dangerously-skip-permissions".to_string(),
             antigravity_timeout_secs: 45,
         }

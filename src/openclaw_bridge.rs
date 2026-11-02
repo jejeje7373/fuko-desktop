@@ -448,20 +448,12 @@ pub async fn query_antigravity_cli(prompt: &str) -> Result<(String, String), Str
         "agy"
     };
 
-    let mut cmd = Command::new(agy_bin);
-    cmd.arg("-p").arg(prompt);
-
-    // Solo agregar --model si el usuario especificó uno; si está vacío, Antigravity usa su propio modelo configurado
-    if !cfg.antigravity_model.trim().is_empty() {
-        cmd.arg("--model").arg(cfg.antigravity_model.trim());
-    }
-
-    // Argumentos adicionales configurados por el usuario
-    if !cfg.antigravity_args.trim().is_empty() {
-        for arg in cfg.antigravity_args.split_whitespace() {
-            cmd.arg(arg);
-        }
-    }
+    // Modelo a usar: si está configurado se usa, si está vacío se usa "gemini-3.8-flash-high" (cuota activa)
+    let target_model = if !cfg.antigravity_model.trim().is_empty() {
+        cfg.antigravity_model.trim()
+    } else {
+        "gemini-3.8-flash-high"
+    };
 
     let timeout_secs = if cfg.antigravity_timeout_secs > 0 {
         cfg.antigravity_timeout_secs
@@ -469,23 +461,50 @@ pub async fn query_antigravity_cli(prompt: &str) -> Result<(String, String), Str
         45
     };
 
-    let output = tokio::time::timeout(tokio::time::Duration::from_secs(timeout_secs), cmd.output())
-        .await
-        .map_err(|_| format!("Timeout ({}s) consultando a Antigravity ({})", timeout_secs, agy_bin))?
-        .map_err(|e| format!("Error invocando Antigravity ({}): {}", agy_bin, e))?;
+    // Intento 1 con el modelo objetivo
+    let mut cmd = Command::new(agy_bin);
+    cmd.arg("-p").arg(prompt);
+    cmd.arg("--model").arg(target_model);
 
-    let stdout = strip_emojis_and_ansi(&String::from_utf8_lossy(&output.stdout));
-    if !stdout.is_empty() {
-        let model_label = if cfg.antigravity_model.is_empty() {
-            "antigravity".to_string()
-        } else {
-            format!("antigravity/{}", cfg.antigravity_model)
-        };
-        return Ok((stdout, model_label));
+    if !cfg.antigravity_args.trim().is_empty() {
+        for arg in cfg.antigravity_args.split_whitespace() {
+            cmd.arg(arg);
+        }
     }
 
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-    Err(format!("Antigravity sin salida: {}", stderr))
+    let output_res = tokio::time::timeout(tokio::time::Duration::from_secs(timeout_secs), cmd.output()).await;
+    let output = match output_res {
+        Ok(Ok(out)) => out,
+        Ok(Err(e)) => return Err(format!("Error invocando Antigravity ({}): {}", agy_bin, e)),
+        Err(_) => return Err(format!("Timeout ({}s) consultando a Antigravity ({})", timeout_secs, agy_bin)),
+    };
+
+    let stdout = strip_emojis_and_ansi(&String::from_utf8_lossy(&output.stdout));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    if output.status.success() && !stdout.is_empty() {
+        return Ok((stdout, format!("antigravity/{}", target_model)));
+    }
+
+    // Si falló por créditos insuficientes (RESOURCE_EXHAUSTED) y no era gemini-3.8-flash-high, reintentar con flash-high
+    if (stderr.contains("credits balance is too low") || stderr.contains("RESOURCE_EXHAUSTED"))
+        && target_model != "gemini-3.8-flash-high"
+    {
+        println!("[Antigravity] Modelo {} sin créditos. Reintentando con gemini-3.8-flash-high...", target_model);
+        let mut retry_cmd = Command::new(agy_bin);
+        retry_cmd.arg("-p").arg(prompt);
+        retry_cmd.arg("--model").arg("gemini-3.8-flash-high");
+        retry_cmd.arg("--dangerously-skip-permissions");
+
+        if let Ok(Ok(retry_out)) = tokio::time::timeout(tokio::time::Duration::from_secs(timeout_secs), retry_cmd.output()).await {
+            let retry_stdout = strip_emojis_and_ansi(&String::from_utf8_lossy(&retry_out.stdout));
+            if retry_out.status.success() && !retry_stdout.is_empty() {
+                return Ok((retry_stdout, "antigravity/gemini-3.8-flash-high".to_string()));
+            }
+        }
+    }
+
+    Err(format!("Antigravity ({}): {}", target_model, stderr.trim()))
 }
 
 pub async fn query_gemini_argon_cli(prompt: &str) -> Result<(String, String), String> {
@@ -561,23 +580,33 @@ pub async fn ask_claudia<R: Runtime>(
     );
 
     let cfg = crate::connections_config::load_connections_config();
-    let use_antigravity = !is_short_reaction && should_use_antigravity(&effective_mode, &user_message);
+    let is_explicit_antigravity = effective_mode == "antigravity" || effective_mode == "argon";
+    let use_antigravity = is_explicit_antigravity || (!is_short_reaction && should_use_antigravity(&effective_mode, &user_message));
     let use_agent_exec =
         !is_short_reaction && (!matched_skills.is_empty() || user_message.starts_with("/skill") || effective_mode == "openclaw");
 
-    // Enrutamiento con respaldo mutuo entre OpenClaw y Antigravity (agy)
+    // Modelo de OpenClaw configurado
     let oc_model = if !cfg.openclaw_model.is_empty() {
         cfg.openclaw_model.as_str()
     } else {
         "nvidia/nemotron-3-ultra-550b-a55b"
     };
 
-    let result = if use_antigravity {
+    let result = if is_explicit_antigravity {
+        // Modo Antigravity EXCLUSIVO: Responde Antigravity sin saltar a Nemotron
+        query_antigravity_cli(&full_prompt)
+            .await
+            .map(|(r, m)| (r, format!("{}{}", m, skill_badge)))
+    } else if use_antigravity {
+        // Modo Auto con preferencia Antigravity
         match query_antigravity_cli(&full_prompt).await {
             Ok((r, m)) => Ok((r, format!("{}{}", m, skill_badge))),
-            Err(_) => query_openclaw_agent_exec(&full_prompt, Some(oc_model))
-                .await
-                .map(|(r, m)| (r, format!("{}{}", m, skill_badge))),
+            Err(e) => {
+                println!("[Bridge] Antigravity fallo ({}), usando OpenClaw fallback...", e);
+                query_openclaw_agent_exec(&full_prompt, Some(oc_model))
+                    .await
+                    .map(|(r, m)| (r, format!("{}+fallback{}", m, skill_badge)))
+            }
         }
     } else {
         let model_choice = match effective_mode.as_str() {
