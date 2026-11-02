@@ -681,7 +681,26 @@ pub async fn take_desktop_screenshot() -> Option<String> {
     let target_path = "/tmp/claudia_notebook_screen.png";
     let _ = std::fs::remove_file(target_path);
 
-    // 1. gnome-screenshot (nativo probado en GNOME Shell Wayland)
+    // 1. Captura nativa silenciosa en segundo plano (flash=false, 0 destellos ni interrupciones visuales)
+    for py_script in [
+        "scripts/silent_screenshot.py",
+        "../scripts/silent_screenshot.py",
+        "/home/jejej/.openclaw/workspace/claudia-desktop/scripts/silent_screenshot.py",
+        "/home/jejej/fuko-desktop/scripts/silent_screenshot.py",
+    ] {
+        if Path::new(py_script).exists() {
+            let res = Command::new("python3")
+                .arg(py_script)
+                .arg(target_path)
+                .output()
+                .await;
+            if res.is_ok() && Path::new(target_path).exists() {
+                return Some(target_path.to_string());
+            }
+        }
+    }
+
+    // 2. Fallbacks de respaldo
     let _ = Command::new("gnome-screenshot")
         .args(["-f", target_path])
         .output()
