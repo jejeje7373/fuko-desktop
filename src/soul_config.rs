@@ -7,7 +7,6 @@
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use tokio::process::Command;
 
 const WORKSPACE_DIR: &str = "/home/jejej/.openclaw/workspace";
 

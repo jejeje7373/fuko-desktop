@@ -255,7 +255,10 @@ fn build_claudia_prompt(
         - [ACTION: type_text(\"texto\")] o [ACTION: type_enter(\"texto\")]\n\
         - [ACTION: write_code(\"/home/jejej/Duoc/archivo.py|codigo\")]\n\
         - [ACTION: volume(\"up\" | \"down\" | \"mute\" | \"60%\")] o [ACTION: media(\"play-pause\" | \"next\" | \"prev\")]\n\
-        - [ACTION: run_cmd(\"comando bash\")]\n"
+        - [ACTION: run_cmd(\"comando bash\")]\n\
+        - [ACTION: fork_brain(\"coder\" | \"researcher\" | \"sysadmin\" | \"architect\" | \"instruccion detallada\")]\n\
+          Usa OBLIGATORIAMENTE fork_brain cuando el usuario te pida tareas complejas, desarrollar un script o programa completo, investigar profundamente en internet o tareas que tomen tiempo.\n\
+          Al usarlo, responde INMEDIATAMENTE en tu dialogo (1 a 2 oraciones) confirmando que bifurcaste o desprendiste un lobulo/parte de tu cerebro cibernetico para resolverlo en segundo plano y que le avisaras cuando termine (ej: \"[burla] Ya bifurque mi lobulo programador para procesar esa tonteria en el fondo. Te aviso cuando esa parte termine de pensar por ti, si?\").\n"
     };
 
     format!(
@@ -530,7 +533,71 @@ pub async fn ask_claudia<R: Runtime>(
         .trim()
         .to_string();
 
-    // 0. Orden directa de control del notebook (<50ms)
+    // 0. Orden directa de bifurcación de lóbulo cerebral en segundo plano (<10ms)
+    if !is_short_reaction
+        && (clean_msg.starts_with("/bg ")
+            || clean_msg.starts_with("/task ")
+            || clean_msg.starts_with("/fork ")
+            || clean_msg.starts_with("/agent ")
+            || clean_msg.starts_with("/cerebro "))
+    {
+        let raw_task = clean_msg
+            .trim_start_matches("/bg ")
+            .trim_start_matches("/task ")
+            .trim_start_matches("/fork ")
+            .trim_start_matches("/agent ")
+            .trim_start_matches("/cerebro ")
+            .trim();
+
+        let (lobe, task) = if let Some(sep) = raw_task.find('|') {
+            (raw_task[..sep].trim(), raw_task[sep + 1..].trim())
+        } else {
+            let lower = raw_task.to_lowercase();
+            if lower.contains("codigo")
+                || lower.contains("script")
+                || lower.contains("programa")
+                || lower.contains("refactor")
+                || lower.contains("funcion")
+                || lower.contains("python")
+                || lower.contains("rust")
+            {
+                ("coder", raw_task)
+            } else if lower.contains("busca")
+                || lower.contains("investiga")
+                || lower.contains("web")
+                || lower.contains("pagina")
+                || lower.contains("doc")
+            {
+                ("researcher", raw_task)
+            } else if lower.contains("puerto")
+                || lower.contains("nmap")
+                || lower.contains("gateway")
+                || lower.contains("red")
+                || lower.contains("sistema")
+            {
+                ("sysadmin", raw_task)
+            } else {
+                ("general", raw_task)
+            }
+        };
+
+        let confirm_phrase = crate::brain_forks::spawn_brain_fork(app_handle.clone(), lobe, task);
+        let clean_confirm = strip_emojis_and_ansi(&confirm_phrase);
+
+        if let Ok(mut hist) = bridge.history.lock() {
+            hist.push((clean_msg, clean_confirm.clone()));
+            if hist.len() > 12 {
+                hist.remove(0);
+            }
+        }
+        speak_out_loud_async(clean_confirm.clone());
+        return Ok(ChatResponse {
+            reply: clean_confirm,
+            model_used: "fuko/brain-fork".to_string(),
+        });
+    }
+
+    // 0.1 Orden directa de control del notebook (<50ms)
     if !is_short_reaction
         && !user_message.starts_with("/argon")
         && !user_message.starts_with("/agy")
@@ -1001,6 +1068,7 @@ pub async fn analyze_notebook_cmd(
 
 #[tauri::command]
 pub async fn list_openclaw_sessions_cmd() -> Result<Vec<SubAgentInfo>, String> {
+    let mut items = crate::brain_forks::get_brain_forks_as_subagents();
     let bin = resolve_openclaw_bin();
     if let Ok(out) = Command::new(bin)
         .args(["--log-level", "silent", "sessions", "list", "--json"])
@@ -1008,11 +1076,12 @@ pub async fn list_openclaw_sessions_cmd() -> Result<Vec<SubAgentInfo>, String> {
         .await
     {
         let stdout = String::from_utf8_lossy(&out.stdout);
-        if let Ok(items) = serde_json::from_str::<Vec<SubAgentInfo>>(&stdout) {
+        if let Ok(parsed) = serde_json::from_str::<Vec<SubAgentInfo>>(&stdout) {
+            items.extend(parsed);
             return Ok(items);
         }
     }
-    Ok(vec![
+    items.extend(vec![
         SubAgentInfo {
             key: "openclaw-main".to_string(),
             label: "OpenClaw Agent".to_string(),
@@ -1023,15 +1092,16 @@ pub async fn list_openclaw_sessions_cmd() -> Result<Vec<SubAgentInfo>, String> {
             tokens: "auto".to_string(),
         },
         SubAgentInfo {
-            key: "antigravity-argon".to_string(),
-            label: "Antigravity CLI".to_string(),
-            model: "gemini-4-argon-high".to_string(),
+            key: "antigravity-flash".to_string(),
+            label: "Antigravity Vision & Fast CLI".to_string(),
+            model: "gemini-3.8-flash-high".to_string(),
             status: "ONLINE".to_string(),
             age: "activo".to_string(),
             kind: "antigravity".to_string(),
             tokens: "auto".to_string(),
         },
-    ])
+    ]);
+    Ok(items)
 }
 
 #[tauri::command]

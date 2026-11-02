@@ -1,6 +1,7 @@
 // src/lib.rs - Library root
 
 pub mod avatar;
+pub mod brain_forks;
 pub mod context_watcher;
 pub mod notebook_hands;
 pub mod openclaw_bridge;

@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tauri::{Emitter, Manager};
 
 mod avatar;
+mod brain_forks;
 mod connections_config;
 mod context_watcher;
 mod notebook_hands;

@@ -1244,6 +1244,15 @@ async fn execute_single_action_tag<R: Runtime>(app_handle: &AppHandle<R>, tag_co
             let _ = crate::overlay_window::open_mainframe(app_handle);
             let _ = app_handle.emit("open_soul_tab", arg_part);
         }
+        "fork_brain" | "spawn_brain" | "subagent" | "brain_fork" | "brain" => {
+            let (lobe, task) = if let Some(sep) = arg_part.find('|') {
+                (arg_part[..sep].trim(), arg_part[sep + 1..].trim())
+            } else {
+                ("general", arg_part)
+            };
+            println!("[Claudia Hands] Bifurcando cerebro: Lóbulo '{}' con tarea: '{}'", lobe, task);
+            let _ = crate::brain_forks::spawn_brain_fork(app_handle.clone(), lobe, task);
+        }
         "avatar" | "animate" | "move" => match arg_part.to_lowercase().as_str() {
             "walk" | "wander" => {
                 let _ = app_handle.emit("capri_action", "walk_now");
