@@ -151,8 +151,8 @@ pub fn setup_window<R: Runtime>(app_handle: &AppHandle<R>) -> Result<(), String>
         .map_err(|e| format!("Failed to build overlay window: {}", e))?;
     }
 
-    let bubble_start_x = (start_x - BUBBLE_WIDTH - 16).max(16);
-    let bubble_start_y = (start_y + 40).clamp(36, (geom.screen_height - BUBBLE_HEIGHT - 40).max(36));
+    let bubble_start_x = (geom.screen_width - BUBBLE_WIDTH - 20).max(16);
+    let bubble_start_y = (geom.screen_height - BUBBLE_HEIGHT - 115).max(36);
 
     if let Some(existing_bubble) = app_handle.get_webview_window(BUBBLE_WINDOW_NAME) {
         let _ = existing_bubble.set_size(tauri::Size::Physical(tauri::PhysicalSize {
@@ -198,23 +198,9 @@ pub fn toggle_window<R: Runtime>(window: &WebviewWindow<R>, show: bool) -> Resul
     Ok(())
 }
 
-pub fn position_bubble_near_avatar<R: Runtime>(app_handle: &AppHandle<R>) -> Result<(), String> {
-    let geom = query_geometry(app_handle);
-    let av_x = LAST_WIN_X.load(Ordering::Relaxed).max(0);
-    let av_y = LAST_WIN_Y.load(Ordering::Relaxed).max(0);
-
-    let mut bubble_x = av_x - BUBBLE_WIDTH + 20;
-    if bubble_x < 12 {
-        bubble_x = (av_x + OVERLAY_WIDTH - 20).min(geom.screen_width - BUBBLE_WIDTH - 12);
-    }
-    let bubble_y = (av_y + 30).clamp(36, (geom.screen_height - BUBBLE_HEIGHT - 36).max(36));
-
-    if let Some(bubble) = app_handle.get_webview_window(BUBBLE_WINDOW_NAME) {
-        let _ = bubble.set_position(Position::Physical(PhysicalPosition {
-            x: bubble_x,
-            y: bubble_y,
-        }));
-    }
+pub fn position_bubble_near_avatar<R: Runtime>(_app_handle: &AppHandle<R>) -> Result<(), String> {
+    // El usuario requiere que el bloque de texto (FUKO.SYS // DIALOGO) permanezca fijo
+    // en la esquina inferior derecha como en la imagen y no se desplace con el avatar.
     Ok(())
 }
 
@@ -284,7 +270,6 @@ pub async fn move_overlay_window_cmd(
             y: clamped_y,
         }));
     }
-    let _ = position_bubble_near_avatar(&app_handle);
     Ok(())
 }
 

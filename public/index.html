@@ -764,8 +764,9 @@
     isPeekingActive = true;
 
     // Subir la ventana HASTA ARRIBA DEL TODO (y = 32px, justo bajo la barra superior de GNOME)
+    // El usuario pide que las expresiones estén un poco más a la derecha (columna derecha del monitor)
     const topY = 32;
-    const topX = Math.max(30, Math.min((geom.screen_width || 1920) - geom.win_width - 30, geom.win_x));
+    const topX = Math.max(30, (geom.screen_width || 1920) - geom.win_width - 50);
     await moveWindowTo(topX, topY);
 
     // Ocultar avatar de cuerpo completo para simular que está adentro de la notebook
@@ -1497,9 +1498,8 @@
       playClip('wake');
     }
 
-    // 1. Mostrar y posicionar bubble_window (bubble.html) y enviarle 'capri_bubble_render' (SIN re-emitir avatar_speak para no crear bucle infinito)
+    // 1. Mostrar bubble_window (bubble.html) en su posición fija derecha y enviarle 'capri_bubble_render'
     try {
-      await invoke('position_bubble_near_avatar_cmd');
       await invoke('show_bubble_window_cmd', { show: true, focus: false });
       if (tauri && tauri.event) {
         await tauri.event.emit('capri_bubble_render', {
@@ -2110,7 +2110,6 @@
   // =========================================================
   async function toggleTyper(force = null) {
     try {
-      await invoke('position_bubble_near_avatar_cmd');
       await invoke('show_bubble_window_cmd', { show: force !== null ? force : true, focus: true });
       if (tauri && tauri.event) {
         await tauri.event.emit('focus_bubble_input', true);
@@ -2315,7 +2314,8 @@
             avatarSavedY = geom.win_y;
             if (petStage) petStage.classList.add('hidden-inside');
             if (talkPillWrap) talkPillWrap.classList.add('hidden-inside');
-            await moveWindowTo(geom.win_x, 32);
+            const rightTopX = Math.max(30, (geom.screen_width || 1920) - geom.win_width - 50);
+            await moveWindowTo(rightTopX, 32);
             triggerNotebookPeek('look', '[MODO NOTEBOOK: FUKO ADENTRO]', 3500);
           } else {
             if (petStage) petStage.classList.remove('hidden-inside');
