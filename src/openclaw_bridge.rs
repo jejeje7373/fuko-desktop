@@ -460,14 +460,11 @@ pub async fn query_antigravity_cli(prompt: &str) -> Result<(String, String), Str
         "gemini-3.8-flash-high"
     };
 
-    let timeout_secs = if cfg.antigravity_timeout_secs >= 60 {
-        cfg.antigravity_timeout_secs
-    } else {
-        90
-    };
+    let timeout_secs = 18;
 
     // Intento 1 con el modelo objetivo
     let mut cmd = Command::new(agy_bin);
+    cmd.stdin(std::process::Stdio::null());
     cmd.arg("-p").arg(prompt);
     cmd.arg("--model").arg(target_model);
 
@@ -497,6 +494,7 @@ pub async fn query_antigravity_cli(prompt: &str) -> Result<(String, String), Str
     {
         println!("[Antigravity] Modelo {} sin créditos. Reintentando con gemini-3.8-flash-high...", target_model);
         let mut retry_cmd = Command::new(agy_bin);
+        retry_cmd.stdin(std::process::Stdio::null());
         retry_cmd.arg("-p").arg(prompt);
         retry_cmd.arg("--model").arg("gemini-3.8-flash-high");
         retry_cmd.arg("--dangerously-skip-permissions");
@@ -695,12 +693,23 @@ pub async fn ask_claudia<R: Runtime>(
         {
             let clean_direct = strip_emojis_and_ansi(&direct_reply);
             if let Ok(mut hist) = bridge.history.lock() {
-                hist.push((clean_msg, clean_direct.clone()));
+                hist.push((clean_msg.clone(), clean_direct.clone()));
                 if hist.len() > 12 {
                     hist.remove(0);
                 }
             }
             speak_out_loud_async(clean_direct.clone());
+
+            let _ = app_handle.emit(
+                "avatar_speak",
+                serde_json::json!({
+                    "heard": clean_msg,
+                    "message": clean_direct,
+                    "model": "capri-hands",
+                    "thinking": false
+                }),
+            );
+
             return Ok(ChatResponse {
                 reply: clean_direct,
                 model_used: "capri-hands".to_string(),
@@ -747,19 +756,20 @@ pub async fn ask_claudia<R: Runtime>(
     };
 
     let result = if is_explicit_antigravity {
-        // Modo Antigravity EXCLUSIVO: Responde Antigravity sin saltar a Nemotron
+        // Modo Antigravity: si tarda más de 18s o falla, fallback a OpenClaw para no colgar al usuario
         match query_antigravity_cli(&full_prompt).await {
             Ok((r, m)) => Ok((r, format!("{}{}", m, skill_badge))),
             Err(e) => {
-                eprintln!("[Antigravity] Error o timeout: {}", e);
-                if e.contains("Timeout") {
-                    Ok((
-                        "[aburrida] Antigravity tardo demasiado en responder a traves de la nube. Intenta de nuevo o presiona el boton para usar OpenClaw.".to_string(),
-                        "antigravity/timeout".to_string(),
-                    ))
-                } else {
-                    Err(e)
-                }
+                eprintln!("[Antigravity] Fallo o timeout ({}), usando fallback veloz OpenClaw...", e);
+                query_openclaw_cli(&full_prompt, Some(oc_model), None)
+                    .await
+                    .map(|(r, m)| (r, format!("{}+fast-fallback{}", m, skill_badge)))
+                    .or_else(|_| {
+                        Ok((
+                            "[burla] Glitch en la nube, pero sigo conectada a tu máquina. ¿Qué necesitas, choom?".to_string(),
+                            "offline-fallback".to_string(),
+                        ))
+                    })
             }
         }
     } else if use_antigravity {
@@ -1091,7 +1101,13 @@ pub async fn send_chat_message(
     app_handle: AppHandle<tauri::Wry>,
     bridge: tauri::State<'_, Arc<OpenClawBridge>>,
 ) -> Result<ChatResponse, String> {
-    ask_claudia(&app_handle, bridge.inner(), message, mode, false).await
+    eprintln!("[Chat IPC] Mensaje recibido: '{}' (modo: {:?})", message, mode);
+    let res = ask_claudia(&app_handle, bridge.inner(), message, mode, false).await;
+    match &res {
+        Ok(r) => eprintln!("[Chat IPC] Respuesta enviada: '{}' (modelo: {})", r.reply, r.model_used),
+        Err(e) => eprintln!("[Chat IPC] Error: '{}'", e),
+    }
+    res
 }
 
 #[tauri::command]

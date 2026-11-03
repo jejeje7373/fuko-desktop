@@ -553,10 +553,8 @@
       }
       isThinking = false;
 
-      if (model) {
-        const cleanModel = stripEmojisAndTags(model).clean.toUpperCase();
-        bubbleModel.innerText = model === 'error' ? '[ERROR]' : `[${BRAIN_LABELS[model] || cleanModel || 'CAPRI'}]`;
-      }
+      const cleanModel = model ? stripEmojisAndTags(model).clean.toUpperCase() : 'CAPRI';
+      bubbleModel.innerText = model === 'error' ? '[ERROR]' : `[${BRAIN_LABELS[model] || cleanModel || 'CAPRI'}]`;
 
       setBubbleState('HABLANDO');
       const lower = finalMsg.toLowerCase();
@@ -640,7 +638,7 @@
 
     async function submitUserMessage() {
       const text = bubbleInput.value.trim();
-      if (!text || isThinking) return;
+      if (!text) return;
       bubbleInput.value = '';
 
       addLogEntry('pregunta', text);
@@ -730,7 +728,19 @@
         bubbleReply.textContent = stripEmojisAndTags(msg).clean || 'pensando';
         bubbleNoise.textContent = '...';
         bubbleCaret.style.display = 'inline-block';
+        if (window.__thinkingSafetyTimer) clearTimeout(window.__thinkingSafetyTimer);
+        window.__thinkingSafetyTimer = setTimeout(() => {
+          isThinking = false;
+          if (bubbleReply.textContent === 'pensando') {
+            setBubbleState('EN ESPERA');
+            bubbleCaret.style.display = 'none';
+          }
+        }, 12000);
       } else if (msg) {
+        if (window.__thinkingSafetyTimer) {
+          clearTimeout(window.__thinkingSafetyTimer);
+          window.__thinkingSafetyTimer = null;
+        }
         startTypewriter(msg, model);
       }
     }

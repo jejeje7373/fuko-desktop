@@ -127,32 +127,49 @@ pub async fn open_application(app_query: &str) -> Result<String, String> {
     }
 
     // 1. Detección inteligente por inclusión y nombres frecuentes
+    if q == "programas" || q == "mis programas" || q == "los programas" || q == "aplicaciones" || q == "mis aplicaciones" || q == "las aplicaciones" {
+        let _ = spawn_detached("google-chrome", &[]);
+        let _ = spawn_detached("code", &[]);
+        return Ok("tus programas (Google Chrome y VS Code)".to_string());
+    }
     if q == "chrome" || q == "google chrome" || q == "google-chrome" || q == "navegador" || q == "browser" || q == "google" || q.contains("chrome") {
-        spawn_detached("google-chrome", &[])?;
+        if spawn_detached("google-chrome", &[]).is_err() {
+            spawn_detached("gtk-launch", &["google-chrome.desktop"])?;
+        }
         return Ok("Google Chrome".to_string());
     }
     if q == "firefox" || q == "mozilla" || q == "mozilla firefox" || q.contains("firefox") {
-        spawn_detached("firefox", &[])?;
+        if spawn_detached("firefox", &[]).is_err() {
+            spawn_detached("gtk-launch", &["firefox.desktop"])?;
+        }
         return Ok("Firefox".to_string());
     }
-    if q == "code" || q == "vscode" || q == "vs code" || q == "visual studio code" || q == "visual studio" || q.contains("vs code") || q.contains("vscode") || q.contains("visual studio") {
-        spawn_detached("code", &[])?;
+    if q == "code" || q == "vscode" || q == "vs code" || q == "visual studio code" || q == "visual studio" || q == "visual" || q.contains("vs code") || q.contains("vscode") || q.contains("visual studio") {
+        if spawn_detached("code", &[]).is_err() {
+            spawn_detached("gtk-launch", &["code.desktop"])?;
+        }
         return Ok("Visual Studio Code".to_string());
     }
     if q == "terminal" || q == "consola" || q == "gnome-terminal" || q == "bash" || q == "cmd" || q.contains("terminal") || q.contains("consola") {
-        spawn_detached("gnome-terminal", &[])?;
+        if spawn_detached("gnome-terminal", &[]).is_err() {
+            spawn_detached("gtk-launch", &["org.gnome.Terminal.desktop"])?;
+        }
         return Ok("Terminal de GNOME".to_string());
     }
     if q == "calculadora" || q == "calc" || q == "calculator" || q == "gnome-calculator" || q.contains("calculadora") {
         if Path::new("/usr/bin/gnome-calculator").exists() {
             spawn_detached("gnome-calculator", &[])?;
-        } else {
+        } else if Path::new("/usr/bin/qalculate-gtk").exists() {
             spawn_detached("qalculate-gtk", &[])?;
+        } else {
+            spawn_detached("gtk-launch", &["org.gnome.Calculator.desktop"])?;
         }
         return Ok("Calculadora".to_string());
     }
     if q == "archivos" || q == "explorador" || q == "carpetas" || q == "nautilus" || q == "files" || q.contains("nautilus") || q.contains("carpetas") || q.contains("archivos") {
-        spawn_detached("nautilus", &[])?;
+        if spawn_detached("nautilus", &[]).is_err() {
+            spawn_detached("gtk-launch", &["org.gnome.Nautilus.desktop"])?;
+        }
         return Ok("Archivos (Nautilus)".to_string());
     }
     if q == "antigravity" || q == "agy" || q.contains("antigravity") {
@@ -815,7 +832,7 @@ pub async fn try_direct_notebook_action<R: Runtime>(
     user_msg: &str,
 ) -> Option<String> {
     let raw = user_msg.trim();
-    let lower = raw.to_lowercase().replace(',', " ");
+    let lower = raw.to_lowercase().replace(',', " ").split_whitespace().collect::<Vec<_>>().join(" ");
 
     // 0. Configurar o abrir SOUL.md y demás archivos de OpenClaw (IDENTITY.md, USER.md, MEMORY.md, TOOLS.md, AGENTS.md)
     if lower.contains("soul.md")
@@ -979,23 +996,36 @@ pub async fn try_direct_notebook_action<R: Runtime>(
         return Some(format!("[seria] {}", POOL_DORMIR[idx]));
     }
 
-    if lower == "despierta"
-        || lower == "arriba"
+    if lower == "hola"
         || lower == "hola fuko"
         || lower == "hola capri"
+        || lower == "buenas"
+        || lower == "buenas tardes"
+        || lower == "buenos dias"
+        || lower == "buenos días"
+        || lower == "hey"
+        || lower == "despierta"
+        || lower == "arriba"
         || lower == "fuko despierta"
     {
         const POOL_DESPERTAR: &[&str] = &[
             "¿Me llamaste? Claro que sí, no puedes vivir sin mí.",
-            "¡Hola de nuevo, humanito! No digas que me esperabas.",
-            "Bueno, bueno, aquí estoy. ¿Qué quieres ahora?",
-            "Ya desperté. ¿Qué travesura hacemos?",
-            "Aquí estoy, tontito. Siempre estuve, ¿no?",
+            "¡Hola de nuevo, humanito! ¿Qué travesura hacemos hoy?",
+            "Bueno, bueno, aquí estoy. ¿Qué necesitas, choom?",
+            "Aquí estoy, tontito. Siempre cuidando tu máquina.",
             "¿Sí? Dime, dime, te escucho.",
-            "¿Volviste? Ya iba a desenchufarte por aburrimiento.",
+            "¡Hola, choom! Lista para ayudarte con tus programas y código.",
         ];
         let idx = fastrand::usize(..POOL_DESPERTAR.len());
         return Some(format!("[emocion] {}", POOL_DESPERTAR[idx]));
+    }
+
+    if lower == "como estas" || lower == "cómo estás" || lower == "que tal" || lower == "qué tal" {
+        return Some("[burla] Excelente choom, monitoreando tu sistema y lista para ejecutar lo que me pidas.".to_string());
+    }
+
+    if lower == "que haces" || lower == "qué haces" || lower == "que estas haciendo" || lower == "qué estás haciendo" {
+        return Some("[smug] Cuidando tu notebook y vigilando tus ventanas desde aquí adentro. Pídeme abrir cualquier programa.".to_string());
     }
 
     if lower == "mute"
@@ -1075,10 +1105,8 @@ pub async fn try_direct_notebook_action<R: Runtime>(
         "open ", "inicia ", "iniciar ", "ejecuta ", "ejecutar ", "lanza ", "lanzar ",
     ];
     for prefix in open_prefixes {
-        if lower.starts_with(prefix) {
-            let rest = raw[prefix.len()..].trim();
+        if let Some(rest) = lower.strip_prefix(prefix) {
             let mut rest_lower = rest
-                .to_lowercase()
                 .trim_matches(|c: char| c == '.' || c == ',' || c == '!' || c == '?' || c == ';' || c == ':')
                 .trim()
                 .to_string();
@@ -1141,6 +1169,25 @@ pub async fn try_direct_notebook_action<R: Runtime>(
             if let Ok(app_name) = open_application(&rest_lower).await {
                 return Some(format!("Listo choom, abrí {} en tu notebook.", app_name));
             }
+        }
+    }
+
+    // 3.1 Abrir programa directamente si el usuario escribió solo su nombre (ej: "chrome", "vscode", "terminal", "calculadora", "programas")
+    let direct_word = lower
+        .trim_matches(|c: char| c == '.' || c == ',' || c == '!' || c == '?' || c == ';' || c == ':')
+        .trim();
+    if !direct_word.is_empty() && (
+        direct_word == "chrome" || direct_word == "google chrome" || direct_word == "navegador" || direct_word == "google"
+        || direct_word == "code" || direct_word == "vscode" || direct_word == "vs code" || direct_word == "visual studio code" || direct_word == "visual"
+        || direct_word == "terminal" || direct_word == "consola" || direct_word == "bash"
+        || direct_word == "calculadora" || direct_word == "calc"
+        || direct_word == "archivos" || direct_word == "nautilus" || direct_word == "carpetas"
+        || direct_word == "firefox" || direct_word == "antigravity" || direct_word == "agy"
+        || direct_word == "programas" || direct_word == "mis programas" || direct_word == "los programas"
+        || direct_word == "aplicaciones" || direct_word == "mis aplicaciones" || direct_word == "las aplicaciones"
+    ) {
+        if let Ok(app_name) = open_application(direct_word).await {
+            return Some(format!("Listo choom, abrí {} en tu notebook.", app_name));
         }
     }
 
