@@ -754,10 +754,18 @@
 
   async function triggerNotebookPeek(faceKey = 'cutin-eyes', hintText = '', durationMs = 4200) {
     playSynthBlip(faceKey && faceKey.includes('laugh') ? 'laugh' : 'look');
-    if (permanentNotebookMode) {
-      if (petStage) petStage.classList.add('hidden-inside');
-      if (talkPillWrap) talkPillWrap.classList.add('hidden-inside');
-    }
+
+    // Ocultar avatar de cuerpo completo para simular que Fuko está adentro de la notebook
+    if (petStage) petStage.classList.add('hidden-inside');
+    if (talkPillWrap) talkPillWrap.classList.add('hidden-inside');
+
+    if (peekHideTimer) clearTimeout(peekHideTimer);
+    peekHideTimer = setTimeout(() => {
+      if (!permanentNotebookMode) {
+        if (petStage) petStage.classList.remove('hidden-inside');
+        if (talkPillWrap) talkPillWrap.classList.remove('hidden-inside');
+      }
+    }, (durationMs || 4200) + 200);
   }
 
   // Interacción al hacer click sobre el cut-in que se asoma
@@ -917,12 +925,15 @@
   // Distancia desde el tope del overlay hasta el asiento de Fuko cuando está perchada (top: 0px, shiftY: -52)
   const SEAT_OFFSET_FROM_TOP = 116;
 
-  // Calcula la coordenada Y del overlay para que el asiento de Fuko repose EXACTAMENTE
-  // sobre el borde superior (title bar) de la ventana activa detectada
+  // Calcula la coordenada Y del overlay para que el asiento de Fuko repose sobre el marco superior
   function getLedgePerchY(ledge) {
     if (!ledge) return geom.floor_y;
+    // Si la ventana está pegada al panel superior o maximizada (y <= 75), fijar en 32 para que la cabeza no quede fuera de la pantalla
+    if (ledge.y <= 75 || ledge.maximized || ledge.is_maximized) {
+      return 32;
+    }
     const targetY = (ledge.y || 0) - SEAT_OFFSET_FROM_TOP;
-    return Math.max(-140, Math.min(geom.floor_y, targetY));
+    return Math.max(32, Math.min(geom.floor_y, targetY));
   }
 
   function adjustStageForTopPerch(winY) {
@@ -2382,6 +2393,15 @@
   listen('capri_peek_expression', (event) => {
     const data = event.payload || {};
     triggerNotebookPeek(data.face || 'cutin-eyes', '', data.duration_ms || 4200);
+  });
+
+  // Cuando la ventana de expresiones (peek_window) se cierra, Fuko regresa de inmediato a su asiento
+  listen('fuko_peek_closed', () => {
+    if (!permanentNotebookMode) {
+      if (peekHideTimer) clearTimeout(peekHideTimer);
+      if (petStage) petStage.classList.remove('hidden-inside');
+      if (talkPillWrap) talkPillWrap.classList.remove('hidden-inside');
+    }
   });
 
   // Nivel del micrófono en vivo (0..6) desde claudia_ears_daemon.py -> estira las 5 barras de onda de TalkPill

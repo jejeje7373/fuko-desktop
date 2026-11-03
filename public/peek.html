@@ -206,6 +206,11 @@
           try {
             await invoke('show_peek_window_cmd', { show: false });
           } catch (_) {}
+          try {
+            if (tauri && tauri.event && tauri.event.emit) {
+              await tauri.event.emit('fuko_peek_closed', true);
+            }
+          } catch (_) {}
         }, 380);
       }, durationMs);
     }
@@ -213,6 +218,11 @@
     if (peekWrap) {
       peekWrap.addEventListener('click', () => {
         showPeek('cutin-laugh', 'FUKO.SYS // GIGGLE', 3500);
+        try {
+          if (tauri && tauri.event && tauri.event.emit) {
+            tauri.event.emit('capri_peek_expression', { face: 'cutin-laugh', duration_ms: 3500 });
+          }
+        } catch (_) {}
       });
     }
 
