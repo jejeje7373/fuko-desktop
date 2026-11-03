@@ -238,6 +238,32 @@
       filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
     }
 
+    /* Cut-in dinámico estilo anime de Capri */
+    .cutin-wrap {
+      position: absolute;
+      top: -45px;
+      right: -75px;
+      width: 140px;
+      height: 95px;
+      pointer-events: none;
+      z-index: 2500;
+      opacity: 0;
+      transform: scale(0.6) rotate(6deg);
+      transition: opacity 0.16s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      filter: drop-shadow(0 0 10px rgba(255, 45, 111, 0.75));
+    }
+
+    .cutin-wrap.active {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+
+    .cutin-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
     .fx {
       width: 100vw;
       height: 100vh;
@@ -388,6 +414,9 @@
 
   <!-- Escenario del personaje -->
   <div id="pet-stage">
+    <div id="cutin-wrap" class="cutin-wrap">
+      <img id="cutin-img" src="assets/capri/cutin-grin.png" alt="Cut-in" />
+    </div>
     <canvas id="avatar-canvas" width="260" height="270"></canvas>
   </div>
 
@@ -495,7 +524,41 @@
     perch_music:        { src: 'sprites/perch_music.png',        count: 60, fps: 30, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
     perch_arrive:       { src: 'sprites/perch_arrive.png',       count: 14, fps: 15, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
     perch_leave:        { src: 'sprites/perch_leave.png',        count: 12, fps: 15, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
+    perch_flipped:              { src: 'sprites/perch_flipped.png',              count: 60, fps: 30, fw: 384, fh: 384, height: 0.92, shiftX: 14, shiftY: 16 },
+    perch_blink_flipped:        { src: 'sprites/perch_blink_flipped.png',        count: 8,  fps: 30, fw: 384, fh: 384, height: 0.92, shiftX: 14, shiftY: 16 },
+    perch_blink_glitch_flipped: { src: 'sprites/perch_blink_glitch_flipped.png', count: 8,  fps: 30, fw: 384, fh: 384, height: 0.92, shiftX: 14, shiftY: 16 },
+    perch_glitch_flipped:       { src: 'sprites/perch_glitch_flipped.png',       count: 10, fps: 15, fw: 384, fh: 384, height: 0.92, shiftX: 14, shiftY: 16 },
+    perch_music_flipped:        { src: 'sprites/perch_music_flipped.png',        count: 60, fps: 30, fw: 384, fh: 384, height: 0.92, shiftX: 14, shiftY: 16 },
+    perch_talk:                 { src: 'sprites/perch_talk.png',                 count: 60, fps: 30, fw: 384, fh: 384, height: 0.92, shiftX: -14, shiftY: 16 },
+    perch_talk_flipped:         { src: 'sprites/perch_talk_flipped.png',         count: 60, fps: 30, fw: 384, fh: 384, height: 0.92, shiftX: 14, shiftY: 16 },
+    laydown:                    { src: 'sprites/laydown.png',                    count: 60, fps: 30, fw: 372, fh: 250, height: 0.82, shiftX: 0,   shiftY: 28 },
+    laydown_blink:              { src: 'sprites/laydown_blink.png',              count: 8,  fps: 30, fw: 372, fh: 250, height: 0.82, shiftX: 0,   shiftY: 28 },
+    laydown_blink_glitch:       { src: 'sprites/laydown_blink_glitch.png',       count: 8,  fps: 30, fw: 372, fh: 250, height: 0.82, shiftX: 0,   shiftY: 28 },
+    laydown_glitch:             { src: 'sprites/laydown_glitch.png',             count: 10, fps: 15, fw: 440, fh: 250, height: 0.82, shiftX: 0,   shiftY: 28 },
+    laydown_sleep:              { src: 'sprites/laydown_sleep.png',              count: 60, fps: 30, fw: 372, fh: 250, height: 0.82, shiftX: 0,   shiftY: 28 },
+    laydown_talk:               { src: 'sprites/laydown_talk.png',               count: 60, fps: 30, fw: 372, fh: 250, height: 0.82, shiftX: 0,   shiftY: 28 },
+    laydown_leave:              { src: 'sprites/laydown_leave.png',              count: 12, fps: 15, fw: 440, fh: 250, height: 0.82, shiftX: 0,   shiftY: 28 },
   };
+
+  const CUTINS = {
+    grin: 'assets/capri/cutin-grin.png',
+    laugh: 'assets/capri/cutin-laugh.png',
+    eyes: 'assets/capri/cutin-eyes.png',
+    look: 'assets/capri/cutin-look.png',
+    many: 'assets/capri/cutin-many.png'
+  };
+
+  function flashCutin(kind = 'grin', duration = 900) {
+    const wrap = document.getElementById('cutin-wrap');
+    const img = document.getElementById('cutin-img');
+    if (!wrap || !img) return;
+    const src = CUTINS[kind] || CUTINS.grin;
+    img.src = src;
+    wrap.classList.add('active');
+    setTimeout(() => {
+      wrap.classList.remove('active');
+    }, duration);
+  }
 
   const images = {};
   function getClipImage(key) {
@@ -1051,6 +1114,12 @@
       }
     }
 
+    // Hablar mientras está sentada usando perch_talk
+    if (isTalkingNow(now) && currentClip === 'perch' && CLIPS.perch_talk) {
+      shownKey = 'perch_talk';
+      cell = index % CLIPS.perch_talk.count;
+    }
+
     // Respiración suave y balanceo (Pet.cs líneas 1000-1002)
     const settled = !dragging && currentClip !== 'dangle' && currentClip !== 'sleep';
     const breathe = settled ? Math.sin(now * 1.75) * 2.2 : 0;
@@ -1340,6 +1409,7 @@
 
   function triggerHeadPat() {
     walking = false;
+    flashCutin(Math.random() < 0.5 ? 'laugh' : 'grin', 1100);
     if (seated) {
       playClip('perch');
       blinkWith = 'perch_blink';
@@ -2015,8 +2085,15 @@
     const d = event.payload || {};
     const len = Number(d.length) || 24;
     talkingUntil = getNow() + Math.max(1.5, Math.min(9.0, len / CHARS_PER_SEC));
-    if (d.mood === 'burla') playClip('grin');
-    else if (d.mood === 'emocion') playClip('dance');
+    if (d.mood === 'burla') {
+      playClip('grin');
+      flashCutin('grin', 950);
+    } else if (d.mood === 'emocion') {
+      playClip('dance');
+      flashCutin('many', 1100);
+    } else if (d.mood === 'sorpresa') {
+      flashCutin('eyes', 900);
+    }
   });
 
   // Nivel del micrófono en vivo (0..6) desde claudia_ears_daemon.py -> estira las 5 barras de onda de TalkPill

@@ -142,6 +142,40 @@
     }
 
     /* Area principal de respuesta de Capri: siempre visible y con scroll propio */
+    .bubble__content-row {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+      flex: 1;
+      min-height: 74px;
+      max-height: 122px;
+    }
+
+    .bubble__portrait-wrap {
+      flex: none;
+      width: 66px;
+      height: 78px;
+      border: 1px solid rgba(255, 45, 111, 0.65);
+      background: rgba(16, 10, 30, 0.95);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 10px rgba(255, 45, 111, 0.35);
+      clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+    }
+
+    .bubble__portrait {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity 0.15s ease, filter 0.15s ease;
+    }
+
+    .bubble__portrait.glitch {
+      filter: invert(0.2) hue-rotate(90deg) drop-shadow(0 0 4px var(--capri-cyan));
+    }
+
     .bubble__speech-area {
       flex: 1;
       min-height: 74px;
@@ -294,11 +328,17 @@
         </div>
       </header>
 
-      <div class="bubble__speech-area" id="bubble-speech-area">
-        <span class="bubble__speaker">CAPRI &gt;</span>
-        <p class="bubble__line">
-          <span class="bubble__text" id="bubble-reply">Lista. Escribe o habla cuando quieras.</span><span class="bubble__noise" id="bubble-noise"></span><span class="bubble__cursor" id="bubble-caret">_</span>
-        </p>
+      <div class="bubble__content-row">
+        <figure class="bubble__portrait-wrap" id="bubble-portrait-wrap">
+          <img id="bubble-portrait" src="assets/capri/face-calm.png" alt="Capri Face" class="bubble__portrait" />
+        </figure>
+
+        <div class="bubble__speech-area" id="bubble-speech-area">
+          <span class="bubble__speaker">CAPRI &gt;</span>
+          <p class="bubble__line">
+            <span class="bubble__text" id="bubble-reply">Lista. Escribe o habla cuando quieras.</span><span class="bubble__noise" id="bubble-noise"></span><span class="bubble__cursor" id="bubble-caret">_</span>
+          </p>
+        </div>
       </div>
 
       <ol class="bubble__log" id="bubble-log" aria-live="polite"></ol>
@@ -329,6 +369,27 @@
     const bubbleLog = document.getElementById('bubble-log');
     const bubbleInput = document.getElementById('bubble-input');
     const bubbleModePill = document.getElementById('bubble-mode-pill');
+    const bubblePortrait = document.getElementById('bubble-portrait');
+
+    const FACES = {
+      calm: 'assets/capri/face-calm.png',
+      aside: 'assets/capri/face-aside.png',
+      smug: 'assets/capri/face-smug.png',
+      wide: 'assets/capri/face-wide.png',
+      look: 'assets/capri/face-look.png',
+      laugh: 'assets/capri/face-laugh.png',
+      many: 'assets/capri/face-many.png'
+    };
+
+    function setPortraitFace(faceKey) {
+      if (!bubblePortrait) return;
+      const targetSrc = FACES[faceKey] || FACES.calm;
+      if (bubblePortrait.getAttribute('src') !== targetSrc) {
+        bubblePortrait.classList.add('glitch');
+        bubblePortrait.src = targetSrc;
+        setTimeout(() => bubblePortrait.classList.remove('glitch'), 160);
+      }
+    }
 
     const BRAIN_MODES = ['auto', 'antigravity', 'openclaw', 'ollama'];
     const BRAIN_LABELS = {
@@ -482,6 +543,11 @@
     function setBubbleState(st) {
       bubble.dataset.state = st;
       bubbleState.innerText = st;
+      if (st === 'PENSANDO') {
+        setPortraitFace('aside');
+      } else if (st === 'EN ESPERA') {
+        setPortraitFace('calm');
+      }
     }
 
     function addLogEntry(kind, rawText) {
@@ -553,6 +619,16 @@
       }
 
       setBubbleState('HABLANDO');
+      const lower = finalMsg.toLowerCase();
+      if (lower.includes('jaja') || lower.includes('haha') || lower.includes('heh')) {
+        setPortraitFace('laugh');
+      } else if (finalMsg.includes('?') || finalMsg.includes('¿')) {
+        setPortraitFace('wide');
+      } else if (lower.includes('tontito') || lower.includes('choom') || lower.includes('bueno') || mood === 'burla') {
+        setPortraitFace('smug');
+      } else {
+        setPortraitFace('look');
+      }
       addLogEntry('fuko', finalMsg);
 
       // Notificar al avatar en index.html para que sincronice la boca y gesto sin reenviar avatar_speak
