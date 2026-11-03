@@ -9,6 +9,8 @@ use tokio::process::Command;
 pub const WINDOW_NAME: &str = "overlay_window";
 pub const OVERLAY_WIDTH: i32 = 1920;
 pub const OVERLAY_HEIGHT: i32 = 1080;
+pub const AVATAR_WIDTH: i32 = 240;
+pub const AVATAR_HEIGHT: i32 = 248;
 
 pub const BUBBLE_WINDOW_NAME: &str = "bubble_window";
 pub const BUBBLE_WIDTH: i32 = 440;
@@ -103,8 +105,8 @@ pub fn query_geometry<R: Runtime>(app_handle: &AppHandle<R>) -> DesktopGeometry 
         work_height,
         win_x,
         win_y,
-        win_width: OVERLAY_WIDTH,
-        win_height: OVERLAY_HEIGHT,
+        win_width: AVATAR_WIDTH,
+        win_height: AVATAR_HEIGHT,
         floor_y,
     }
 }
