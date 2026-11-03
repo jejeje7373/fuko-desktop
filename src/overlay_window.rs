@@ -350,6 +350,12 @@ pub async fn show_peek_window_cmd(
 ) -> Result<(), String> {
     if let Some(peek) = app_handle.get_webview_window(PEEK_WINDOW_NAME) {
         if show {
+            let geom = query_geometry(&app_handle);
+            let peek_start_x = (geom.screen_width - PEEK_WIDTH - 20).max(16);
+            let _ = peek.set_position(Position::Physical(PhysicalPosition {
+                x: peek_start_x,
+                y: 32,
+            }));
             let _ = peek.show();
             let _ = peek.set_always_on_top(true);
         } else {

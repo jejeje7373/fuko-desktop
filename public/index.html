@@ -753,19 +753,11 @@
   let isPeekingActive = false;
 
   async function triggerNotebookPeek(faceKey = 'cutin-eyes', hintText = '', durationMs = 4200) {
-    // Cuando se asoma una expresión desde el borde superior (peek_window), ocultar temporalmente
-    // el avatar de cuerpo completo para simular que está adentro de la notebook
-    if (petStage) petStage.classList.add('hidden-inside');
-    if (talkPillWrap) talkPillWrap.classList.add('hidden-inside');
     playSynthBlip(faceKey && faceKey.includes('laugh') ? 'laugh' : 'look');
-
-    if (peekHideTimer) clearTimeout(peekHideTimer);
-    peekHideTimer = setTimeout(() => {
-      if (!permanentNotebookMode) {
-        if (petStage) petStage.classList.remove('hidden-inside');
-        if (talkPillWrap) talkPillWrap.classList.remove('hidden-inside');
-      }
-    }, durationMs);
+    if (permanentNotebookMode) {
+      if (petStage) petStage.classList.add('hidden-inside');
+      if (talkPillWrap) talkPillWrap.classList.add('hidden-inside');
+    }
   }
 
   // Interacción al hacer click sobre el cut-in que se asoma
@@ -934,9 +926,9 @@
   }
 
   function adjustStageForTopPerch(winY) {
-    if (seated && perchedWindowId) {
+    if (seated && (perchedWindowId || pinnedInAir)) {
       if (petStage) petStage.classList.add('perched');
-    } else {
+    } else if (!seated) {
       if (petStage) petStage.classList.remove('perched');
       petStage.style.bottom = '24px';
     }
@@ -1025,6 +1017,21 @@
         }
       }
     }
+  }
+
+  // Busca si el usuario soltó a Fuko justo sobre el borde superior (title bar) de una ventana para acoplarla
+  function findTitleBarSnapLedgeAt(winX, winY) {
+    if (!windowLedges || windowLedges.length === 0) return null;
+    const centerX = winX + geom.win_width / 2;
+
+    for (const ledge of windowLedges) {
+      if (centerX < ledge.x - 20 || centerX > ledge.x + ledge.width + 20) continue;
+      const perchY = getLedgePerchY(ledge);
+      if (Math.abs(winY - perchY) <= 55) {
+        return ledge;
+      }
+    }
+    return null;
   }
 
   // Busca el mejor borde de ventana debajo o cerca de Fuko
@@ -1598,6 +1605,9 @@
       falling = false;
       seated = false;
       napping = false;
+      // Desacoplar inmediatamente de la ventana al moverla con el mouse (sin botones)
+      perchedWindowId = null;
+      pinnedInAir = true;
       playClip('dangle');
     }
 
@@ -1614,14 +1624,20 @@
       const dropY = e.screenY - grabOffsetY;
       await moveWindowTo(dropX, dropY);
 
-      // Si se suelta sobre o cerca de una ventana, se sienta en el borde de esa ventana
       await syncWindowLedges();
-      const dropLedge = findBestWindowLedgeAt(geom.win_x, geom.win_y);
-      if (dropLedge) {
-        perchOnWindowLedge(dropLedge, geom.win_x);
+      // Solo acoplar si el usuario la soltó deliberadamente pegada al borde superior (title bar) de una ventana
+      const snapLedge = findTitleBarSnapLedgeAt(geom.win_x, geom.win_y);
+      if (snapLedge) {
+        perchOnWindowLedge(snapLedge, geom.win_x);
       } else {
-        // Si no hay ventana debajo, cae al suelo por gravedad
-        startFall(true);
+        // Desacoplada: se queda sentada flotando exactamente donde se soltó sin caerse al suelo
+        perchedWindowId = null;
+        falling = false;
+        walking = false;
+        pinnedInAir = true;
+        seated = true;
+        if (petStage) petStage.classList.add('perched');
+        playClip('perch');
       }
     } else {
       // Fue un click simple sobre ella (React en Pet.cs)
