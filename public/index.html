@@ -655,23 +655,6 @@
     }
   }
 
-  function updateStagePosition(x, y) {
-    if (petStage) {
-      petStage.style.position = 'absolute';
-      petStage.style.left = `${x}px`;
-      petStage.style.top = `${y}px`;
-      petStage.style.bottom = 'auto';
-      petStage.style.transform = 'none';
-    }
-    if (talkPillWrap) {
-      talkPillWrap.style.position = 'absolute';
-      talkPillWrap.style.left = `${x + 36}px`;
-      talkPillWrap.style.top = `${y + 225}px`;
-      talkPillWrap.style.bottom = 'auto';
-      talkPillWrap.style.transform = 'none';
-    }
-  }
-
   async function syncGeometry() {
     try {
       const g = await invoke('get_desktop_geometry_cmd');
@@ -683,7 +666,6 @@
           geom.win_x = oldWinX;
           geom.win_y = oldWinY;
         }
-        updateStagePosition(geom.win_x, geom.win_y);
       }
     } catch (_) {}
   }
@@ -722,12 +704,10 @@
   let lastSentY = -9999;
 
   async function moveWindowTo(x, y) {
-    const petW = (geom.win_width && geom.win_width < 500) ? geom.win_width : 240;
-    const clampedX = Math.max(-50, Math.min((geom.screen_width || 1920) - petW + 50, Math.round(x)));
+    const clampedX = Math.max(-50, Math.min((geom.screen_width || 1920) - geom.win_width + 50, Math.round(x)));
     const clampedY = Math.max(-135, Math.min(geom.floor_y, Math.round(y)));
     geom.win_x = clampedX;
     geom.win_y = clampedY;
-    updateStagePosition(clampedX, clampedY);
     adjustStageForTopPerch(clampedY);
 
     if (moveInFlight) {

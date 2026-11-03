@@ -7,10 +7,8 @@ use tauri::{
 use tokio::process::Command;
 
 pub const WINDOW_NAME: &str = "overlay_window";
-pub const OVERLAY_WIDTH: i32 = 1920;
-pub const OVERLAY_HEIGHT: i32 = 1080;
-pub const AVATAR_WIDTH: i32 = 240;
-pub const AVATAR_HEIGHT: i32 = 248;
+pub const OVERLAY_WIDTH: i32 = 360;
+pub const OVERLAY_HEIGHT: i32 = 420;
 
 pub const BUBBLE_WINDOW_NAME: &str = "bubble_window";
 pub const BUBBLE_WIDTH: i32 = 440;
@@ -55,8 +53,8 @@ pub struct WindowLedge {
 }
 
 pub fn query_geometry<R: Runtime>(app_handle: &AppHandle<R>) -> DesktopGeometry {
-    let mut screen_width = OVERLAY_WIDTH;
-    let mut screen_height = OVERLAY_HEIGHT;
+    let mut screen_width = 1920;
+    let mut screen_height = 1080;
 
     if let Ok(Some(monitor)) = app_handle.primary_monitor() {
         let size = monitor.size();
@@ -82,7 +80,7 @@ pub fn query_geometry<R: Runtime>(app_handle: &AppHandle<R>) -> DesktopGeometry 
     let work_y = top_bar;
     let work_width = screen_width;
     let work_height = (screen_height - top_bar - bottom_dock).max(480);
-    let floor_y = (screen_height - 248 - bottom_dock).max(work_y);
+    let floor_y = (screen_height - OVERLAY_HEIGHT - bottom_dock).max(work_y);
 
     let default_x = (screen_width as f64 * 0.68) as i32;
     let default_y = (screen_height as f64 * 0.25) as i32;
@@ -105,8 +103,8 @@ pub fn query_geometry<R: Runtime>(app_handle: &AppHandle<R>) -> DesktopGeometry 
         work_height,
         win_x,
         win_y,
-        win_width: AVATAR_WIDTH,
-        win_height: AVATAR_HEIGHT,
+        win_width: OVERLAY_WIDTH,
+        win_height: OVERLAY_HEIGHT,
         floor_y,
     }
 }
@@ -121,11 +119,14 @@ pub fn setup_window<R: Runtime>(app_handle: &AppHandle<R>) -> Result<(), String>
         LAST_WIN_Y.store(start_y, Ordering::Relaxed);
     }
 
+    let win_x = LAST_WIN_X.load(Ordering::Relaxed);
+    let win_y = LAST_WIN_Y.load(Ordering::Relaxed);
+
     if let Some(existing) = app_handle.get_webview_window(WINDOW_NAME) {
-        let _ = existing.set_position(Position::Physical(PhysicalPosition { x: 0, y: 0 }));
+        let _ = existing.set_position(Position::Physical(PhysicalPosition { x: win_x, y: win_y }));
         let _ = existing.set_size(tauri::Size::Physical(tauri::PhysicalSize {
-            width: geom.screen_width as u32,
-            height: geom.screen_height as u32,
+            width: OVERLAY_WIDTH as u32,
+            height: OVERLAY_HEIGHT as u32,
         }));
         let _ = existing.set_always_on_top(true);
         let _ = existing.set_skip_taskbar(true);
@@ -139,13 +140,13 @@ pub fn setup_window<R: Runtime>(app_handle: &AppHandle<R>) -> Result<(), String>
         .title("Fuko")
         .visible(true)
         .fullscreen(false)
-        .resizable(true)
+        .resizable(false)
         .decorations(false)
         .transparent(true)
         .skip_taskbar(true)
         .always_on_top(true)
-        .inner_size(geom.screen_width as f64, geom.screen_height as f64)
-        .position(0.0, 0.0)
+        .inner_size(OVERLAY_WIDTH as f64, OVERLAY_HEIGHT as f64)
+        .position(win_x as f64, win_y as f64)
         .build()
         .map_err(|e| format!("Failed to build overlay window: {}", e))?;
     }
@@ -204,7 +205,7 @@ pub fn position_bubble_near_avatar<R: Runtime>(app_handle: &AppHandle<R>) -> Res
 
     let mut bubble_x = av_x - BUBBLE_WIDTH + 20;
     if bubble_x < 12 {
-        bubble_x = (av_x + 240).min(geom.screen_width - BUBBLE_WIDTH - 12);
+        bubble_x = (av_x + OVERLAY_WIDTH - 20).min(geom.screen_width - BUBBLE_WIDTH - 12);
     }
     let bubble_y = (av_y + 30).clamp(36, (geom.screen_height - BUBBLE_HEIGHT - 36).max(36));
 
@@ -273,10 +274,16 @@ pub async fn move_overlay_window_cmd(
     app_handle: AppHandle<tauri::Wry>,
 ) -> Result<(), String> {
     let geom = query_geometry(&app_handle);
-    let clamped_x = x.clamp(-50, geom.screen_width + 50);
-    let clamped_y = y.clamp(0, geom.screen_height);
+    let clamped_x = x.clamp(-60, geom.screen_width - OVERLAY_WIDTH + 60);
+    let clamped_y = y.clamp(0, geom.floor_y);
     LAST_WIN_X.store(clamped_x, Ordering::Relaxed);
     LAST_WIN_Y.store(clamped_y, Ordering::Relaxed);
+    if let Some(window) = app_handle.get_webview_window(WINDOW_NAME) {
+        let _ = window.set_position(Position::Physical(PhysicalPosition {
+            x: clamped_x,
+            y: clamped_y,
+        }));
+    }
     let _ = position_bubble_near_avatar(&app_handle);
     Ok(())
 }
