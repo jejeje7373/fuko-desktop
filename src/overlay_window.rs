@@ -409,6 +409,13 @@ async fn fetch_gnome_shell_ledges() -> Result<Vec<WindowLedge>, String> {
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false);
                 let focused = item.get("focused").and_then(|v| v.as_bool()).unwrap_or(false);
+                if wm_class.to_lowercase().contains("gjs")
+                    || title.to_lowercase().contains("desktop icons")
+                    || title.eq_ignore_ascii_case("fuko")
+                    || title.eq_ignore_ascii_case("fuko dialogue")
+                {
+                    continue;
+                }
                 if width > 100 && height > 100 {
                     ledges.push(WindowLedge {
                         id: format!("gnome_{}", idx),
