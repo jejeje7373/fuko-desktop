@@ -955,18 +955,18 @@ pub async fn glance_at_screen_realtime<R: Runtime>(
     let reaction_event = if let Some(b_name) = browser_name {
         if b_name.contains("Antigravity") {
             format!(
-                "Miraste en tiempo real la pantalla del usuario. Está trabajando en el entorno de desarrollo Antigravity IDE (sesión o archivo: '{}', {}). Hazle un comentario breve, ingenioso o curioso sobre su código o trabajo actual (1 a 2 oraciones cortas, sin emojis).",
+                "El usuario tiene en pantalla su editor de código (sesión o archivo: '{}', {}). Haz un comentario directo y breve sobre su código, proyecto o tecnología (1 a 2 oraciones, sin emojis). REGLA ESTRICTA: CERO auto-comentarios. Prohibido decir 'te estoy observando', 'sé lo que haces', 'mis sensores detectan', ni hablar sobre ti misma. Comenta directamente sobre el contenido técnico.",
                 safe_window_title, summary
             )
         } else {
             format!(
-                "Miraste en tiempo real la pantalla del usuario. Acaba de abrir en {} la pagina o busqueda '{}' ({}). Hazle un comentario breve, sarcastico, ingenioso o util (1 a 2 oraciones cortas, sin emojis) sobre lo que esta viendo.",
+                "El usuario está viendo en {} la página o búsqueda: '{}' ({}). Haz un comentario agudo y directo sobre ese tema, video, artículo o búsqueda específica (1 a 2 oraciones, sin emojis). REGLA ESTRICTA: CERO auto-comentarios. Prohibido decir 'te estoy observando', 'veo que abriste', 'mis sensores', ni hablar sobre ti misma. Opina directamente sobre el tema en pantalla.",
                 b_name, safe_window_title, summary
             )
         }
     } else {
         format!(
-            "Miraste en tiempo real la pantalla del usuario. Tiene abierta la ventana '{}' ({}). Hazle un comentario breve e ingenioso (1 a 2 oraciones cortas, sin emojis) sobre lo que hace.",
+            "El usuario está viendo la aplicación o ventana: '{}' ({}). Haz un comentario breve y directo sobre el contenido o tarea (1 a 2 oraciones, sin emojis). REGLA ESTRICTA: CERO auto-comentarios. Prohibido decir 'te estoy observando', 'sé lo que haces' o mencionar tus sensores. Opina directamente sobre el tema.",
             safe_window_title, summary
         )
     };
@@ -1012,7 +1012,7 @@ pub async fn glance_at_screen_realtime<R: Runtime>(
     // 2. Visión con Antigravity (preferencia predeterminada y prioritaria)
     let agy_prompt = if let Some(ref img_path) = screenshot_path {
         format!(
-            "Mira detalladamente la captura de pantalla real del usuario en '{}'.\nDime con precisión qué programas, ventanas, páginas web, archivos o código está viendo o editando el usuario en tiempo real en su pantalla. Haz un comentario conciso, inteligente y directo al estilo de Capri (máximo 1 o 2 oraciones breves, sin emojis).",
+            "Mira la captura de pantalla en '{}'.\nComenta DIRECTAMENTE sobre el tema, código, búsqueda, video, diseño o contenido específico que aparece en la pantalla (1 a 2 oraciones breves, agudas, sin emojis).\nREGLA ESTRICTA: CERO auto-comentarios. NUNCA digas 'estoy observándote', 'sé lo que haces', 'mis sensores', 'veo tu pantalla' ni hables sobre ti misma o sobre que estás mirando la pantalla. Comenta únicamente sobre el tema o contenido que aparece en la imagen.",
             img_path
         )
     } else {

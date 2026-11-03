@@ -596,16 +596,70 @@ pub fn start_watcher<R: Runtime>(
                 || last_glance_time.elapsed() >= Duration::from_secs(42);
 
             if ready_for_browser_reaction || ready_for_general_glance {
-                last_glance_time = Instant::now();
-                last_commented_window = current_key;
-                let _ = app_for_sys.emit(
-                    "capri_peek_expression",
-                    serde_json::json!({
-                        "face": "cutin-eyes",
-                        "reason": "screen_observation",
-                        "duration_ms": 3800
-                    }),
-                );
+                let is_busy = {
+                    let mut lock = glance_in_flight.lock().unwrap();
+                    if *lock {
+                        true
+                    } else {
+                        *lock = true;
+                        false
+                    }
+                };
+
+                if !is_busy {
+                    last_glance_time = Instant::now();
+                    last_commented_window = current_key;
+                    let _ = app_for_sys.emit(
+                        "capri_peek_expression",
+                        serde_json::json!({
+                            "face": "cutin-eyes",
+                            "reason": "screen_observation",
+                            "duration_ms": 4500
+                        }),
+                    );
+
+                    if let Some(bridge) = app_for_sys.try_state::<Arc<OpenClawBridge>>() {
+                        if bridge.get_status().proactive {
+                            let app_clone = app_for_sys.clone();
+                            let bridge_clone = bridge.inner().clone();
+                            let summary_snap = summary.clone();
+                            let clean_title_snap = info.clean_title.clone();
+                            let browser_snap = info.browser_name.clone();
+                            let in_flight_clone = glance_in_flight.clone();
+
+                            tauri::async_runtime::spawn(async move {
+                                let heard_tag = format!("({})", clean_title_snap);
+                                if let Ok(res) = glance_at_screen_realtime(
+                                    &app_clone,
+                                    &bridge_clone,
+                                    &clean_title_snap,
+                                    browser_snap.as_deref(),
+                                    &summary_snap,
+                                )
+                                .await
+                                {
+                                    let _ = app_clone.emit(
+                                        "avatar_speak",
+                                        serde_json::json!({
+                                            "heard": "",
+                                            "message": res.reply,
+                                            "model": res.model_used
+                                        }),
+                                    );
+                                }
+                                if let Ok(mut lock) = in_flight_clone.lock() {
+                                    *lock = false;
+                                }
+                            });
+                        } else {
+                            let mut lock = glance_in_flight.lock().unwrap();
+                            *lock = false;
+                        }
+                    } else {
+                        let mut lock = glance_in_flight.lock().unwrap();
+                        *lock = false;
+                    }
+                }
             }
         }
     });

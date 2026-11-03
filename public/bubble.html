@@ -720,7 +720,7 @@
       const thinking = typeof data === 'object' ? !!data.thinking : false;
       const heard = typeof data === 'object' ? (data.heard || '') : '';
 
-      if (heard && heard !== 'startup') {
+      if (heard && heard !== 'startup' && !heard.startsWith('(')) {
         addLogEntry('pregunta', heard);
       }
 
