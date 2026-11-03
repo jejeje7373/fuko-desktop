@@ -628,7 +628,7 @@ pub fn start_watcher<R: Runtime>(
                             let in_flight_clone = glance_in_flight.clone();
 
                             tauri::async_runtime::spawn(async move {
-                                let heard_tag = format!("({})", clean_title_snap);
+                                let _heard_tag = format!("({})", clean_title_snap);
                                 if let Ok(res) = glance_at_screen_realtime(
                                     &app_clone,
                                     &bridge_clone,

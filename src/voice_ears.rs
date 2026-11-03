@@ -32,6 +32,15 @@ pub struct EarsStatePayload {
     pub ready: bool,
 }
 
+fn sync_mute_flag() {
+    let should_hold = !CHATTING_ACTIVE.load(Ordering::Relaxed) || MIC_MUTED.load(Ordering::Relaxed);
+    if should_hold {
+        let _ = std::fs::write("/tmp/claudia-mic-muted.flag", "1");
+    } else {
+        let _ = std::fs::remove_file("/tmp/claudia-mic-muted.flag");
+    }
+}
+
 fn current_ears_state() -> EarsStatePayload {
     EarsStatePayload {
         chatting: CHATTING_ACTIVE.load(Ordering::Relaxed),
@@ -212,6 +221,8 @@ pub fn start_ears_daemon(app_handle: AppHandle<tauri::Wry>, bridge: Arc<OpenClaw
             return;
         }
 
+        sync_mute_flag();
+
         let child_res = StdCommand::new("python3")
             .arg("-u")
             .arg(&script_path)
@@ -236,7 +247,11 @@ pub fn start_ears_daemon(app_handle: AppHandle<tauri::Wry>, bridge: Arc<OpenClaw
             let Ok(val) = serde_json::from_str::<serde_json::Value>(trimmed) else {
                 continue;
             };
-            let ev_type = val.get("event").and_then(|v| v.as_str()).unwrap_or("");
+            let ev_type = val
+                .get("type")
+                .or_else(|| val.get("event"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
 
             match ev_type {
                 "ready" => {
@@ -256,6 +271,12 @@ pub fn start_ears_daemon(app_handle: AppHandle<tauri::Wry>, bridge: Arc<OpenClaw
                         let _ = app_handle.emit("ears_speech_start", true);
                     }
                 }
+                "transcribing" => {
+                    if CHATTING_ACTIVE.load(Ordering::Relaxed) && !MIC_MUTED.load(Ordering::Relaxed)
+                    {
+                        let _ = app_handle.emit("ears_transcribing", true);
+                    }
+                }
                 "heard" => {
                     if !CHATTING_ACTIVE.load(Ordering::Relaxed) || MIC_MUTED.load(Ordering::Relaxed)
                     {
@@ -271,24 +292,37 @@ pub fn start_ears_daemon(app_handle: AppHandle<tauri::Wry>, bridge: Arc<OpenClaw
                         continue;
                     }
 
+                    println!("[Ears] Escuchado de voz: '{}'", text);
                     let _ = app_handle.emit("ears_speech_recognized", &text);
                     let _ = app_handle.emit("mic_heard_preview", &text);
 
                     let app_clone = app_handle.clone();
                     let bridge_clone = bridge.clone();
                     tauri::async_runtime::spawn(async move {
-                        if let Ok(res) =
-                            ask_claudia(&app_clone, &bridge_clone, text.clone(), None, false).await
-                        {
-                            let _ = app_clone.emit(
-                                "avatar_speak",
-                                serde_json::json!({
-                                    "heard": text,
-                                    "message": res.reply,
-                                    "model": res.model_used,
-                                    "thinking": false
-                                }),
-                            );
+                        match ask_claudia(&app_clone, &bridge_clone, text.clone(), None, false).await {
+                            Ok(res) => {
+                                let _ = app_clone.emit(
+                                    "avatar_speak",
+                                    serde_json::json!({
+                                        "heard": text,
+                                        "message": res.reply,
+                                        "model": res.model_used,
+                                        "thinking": false
+                                    }),
+                                );
+                            }
+                            Err(e) => {
+                                eprintln!("[Ears] Error en ask_claudia: {}", e);
+                                let _ = app_clone.emit(
+                                    "avatar_speak",
+                                    serde_json::json!({
+                                        "heard": text,
+                                        "message": format!("[aburrida] Glitch de red: {}.", e),
+                                        "model": "error",
+                                        "thinking": false
+                                    }),
+                                );
+                            }
                         }
                     });
                 }
@@ -310,6 +344,7 @@ pub fn toggle_voice_chat_cmd(
 ) -> Result<EarsStatePayload, String> {
     let next = enabled.unwrap_or_else(|| !CHATTING_ACTIVE.load(Ordering::Relaxed));
     CHATTING_ACTIVE.store(next, Ordering::Relaxed);
+    sync_mute_flag();
     let st = current_ears_state();
     let _ = app_handle.emit("ears_state", &st);
     Ok(st)
@@ -322,6 +357,7 @@ pub fn toggle_mic_mute_cmd(
 ) -> Result<EarsStatePayload, String> {
     let next = muted.unwrap_or_else(|| !MIC_MUTED.load(Ordering::Relaxed));
     MIC_MUTED.store(next, Ordering::Relaxed);
+    sync_mute_flag();
     let st = current_ears_state();
     let _ = app_handle.emit("ears_state", &st);
     Ok(st)
@@ -344,6 +380,7 @@ pub async fn set_continuous_listen_cmd(
     app_handle: AppHandle<tauri::Wry>,
 ) -> Result<bool, String> {
     CHATTING_ACTIVE.store(enabled, Ordering::Relaxed);
+    sync_mute_flag();
     let _ = app_handle.emit("ears_state", current_ears_state());
     Ok(enabled)
 }

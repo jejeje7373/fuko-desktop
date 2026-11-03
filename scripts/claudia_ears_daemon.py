@@ -48,6 +48,10 @@ HALLUCINATION_PHRASES = {
 
 def emit(payload: dict):
     try:
+        if "type" in payload and "event" not in payload:
+            payload["event"] = payload["type"]
+        elif "event" in payload and "type" not in payload:
+            payload["type"] = payload["event"]
         sys.stdout.write(json.dumps(payload, ensure_ascii=False) + "\n")
         sys.stdout.flush()
     except Exception:
@@ -263,6 +267,14 @@ def run_daemon():
                     continue
 
                 now = time.monotonic()
+
+                # Si el flag de TTS lleva más de 8s, es huérfano y se limpia
+                if os.path.exists(TTS_SPEAKING_FLAG):
+                    try:
+                        if (time.time() - os.path.getmtime(TTS_SPEAKING_FLAG)) > 8.0:
+                            os.remove(TTS_SPEAKING_FLAG)
+                    except Exception:
+                        pass
 
                 # Si el micrófono está silenciado (MUTED en TalkPill) o Claudia está hablando por TTS:
                 if os.path.exists(MIC_MUTED_FLAG) or os.path.exists(TTS_SPEAKING_FLAG):

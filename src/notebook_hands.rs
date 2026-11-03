@@ -34,7 +34,22 @@ fn prepare_host_command(program: &str) -> Command {
 /// Lanza un proceso desacoplado en segundo plano en el notebook usando `std::process::Command`
 /// (seguro desde cualquier hilo, sin depender del reactor pidfd de Tokio).
 fn spawn_detached(program: &str, args: &[&str]) -> Result<(), String> {
-    let mut cmd = std::process::Command::new(program);
+    let resolved_prog = if Path::new(program).exists() {
+        program.to_string()
+    } else {
+        let common = [
+            format!("/usr/bin/{}", program),
+            format!("/snap/bin/{}", program),
+            format!("/usr/local/bin/{}", program),
+            format!("/bin/{}", program),
+        ];
+        common
+            .into_iter()
+            .find(|p| Path::new(p).exists())
+            .unwrap_or_else(|| program.to_string())
+    };
+
+    let mut cmd = std::process::Command::new(&resolved_prog);
     cmd.env_remove("GTK_MODULES")
         .env_remove("GDK_BACKEND")
         .env_remove("SNAP")
@@ -52,9 +67,20 @@ fn spawn_detached(program: &str, args: &[&str]) -> Result<(), String> {
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .args(args);
+
+    if let Ok(d) = std::env::var("DISPLAY") {
+        cmd.env("DISPLAY", d);
+    }
+    if let Ok(w) = std::env::var("WAYLAND_DISPLAY") {
+        cmd.env("WAYLAND_DISPLAY", w);
+    }
+    if let Ok(r) = std::env::var("XDG_RUNTIME_DIR") {
+        cmd.env("XDG_RUNTIME_DIR", r);
+    }
+
     cmd.spawn()
         .map(|_| ())
-        .map_err(|e| format!("No pude iniciar '{}': {}", program, e))
+        .map_err(|e| format!("No pude iniciar '{}': {}", resolved_prog, e))
 }
 
 /// Expande `~` al directorio home real (`/home/jejej`)
@@ -72,27 +98,45 @@ pub fn expand_path(raw: &str) -> PathBuf {
 
 /// Abre una aplicación instalada en el notebook por nombre común o archivo .desktop
 pub async fn open_application(app_query: &str) -> Result<String, String> {
-    let q = app_query
+    let mut q = app_query
         .trim()
-        .trim_matches('"')
-        .trim_matches('\'')
+        .trim_matches(|c: char| c == '"' || c == '\'' || c == '.' || c == ',' || c == '!' || c == '?' || c == ';' || c == ':')
+        .trim()
         .to_lowercase();
+
+    for art in ["el ", "la ", "los ", "las ", "un ", "una ", "mi ", "mis ", "programa ", "aplicacion ", "aplicación "] {
+        if q.starts_with(art) {
+            q = q[art.len()..].trim().to_string();
+        }
+    }
+
+    if q.ends_with(" por favor") {
+        q = q.trim_end_matches(" por favor").trim().to_string();
+    } else if q.ends_with(" porfa") {
+        q = q.trim_end_matches(" porfa").trim().to_string();
+    } else if q.ends_with(" please") {
+        q = q.trim_end_matches(" please").trim().to_string();
+    }
+
+    let q = q
+        .trim_matches(|c: char| c == '"' || c == '\'' || c == '.' || c == ',' || c == '!' || c == '?' || c == ';' || c == ':')
+        .trim();
 
     if q.is_empty() {
         return Err("No me dijiste qué programa abrir.".to_string());
     }
 
     // 1. Mapa directo de programas frecuentes en el notebook de Aym
-    match q.as_str() {
-        "chrome" | "google chrome" | "google-chrome" | "navegador" => {
+    match q {
+        "chrome" | "google chrome" | "google-chrome" | "navegador" | "browser" | "google" => {
             spawn_detached("google-chrome", &[])?;
             return Ok("Google Chrome".to_string());
         }
-        "firefox" | "mozilla" => {
+        "firefox" | "mozilla" | "mozilla firefox" => {
             spawn_detached("firefox", &[])?;
             return Ok("Firefox".to_string());
         }
-        "code" | "vscode" | "vs code" | "visual studio code" => {
+        "code" | "vscode" | "vs code" | "visual studio code" | "visual studio" | "editor de codigo" | "editor de código" => {
             spawn_detached("code", &[])?;
             return Ok("Visual Studio Code".to_string());
         }
@@ -120,7 +164,7 @@ pub async fn open_application(app_query: &str) -> Result<String, String> {
             }
             return Ok("IntelliJ IDEA".to_string());
         }
-        "terminal" | "consola" | "gnome-terminal" | "bash" => {
+        "terminal" | "consola" | "gnome-terminal" | "bash" | "cmd" | "linea de comandos" | "línea de comandos" => {
             spawn_detached("gnome-terminal", &[])?;
             return Ok("Terminal de GNOME".to_string());
         }
@@ -128,7 +172,7 @@ pub async fn open_application(app_query: &str) -> Result<String, String> {
             spawn_detached("kitty", &[])?;
             return Ok("Kitty Terminal".to_string());
         }
-        "archivos" | "explorador" | "carpetas" | "nautilus" | "files" | "gestor de archivos" => {
+        "archivos" | "explorador" | "carpetas" | "nautilus" | "files" | "gestor de archivos" | "carpeta personal" => {
             spawn_detached("nautilus", &[])?;
             return Ok("Archivos (Nautilus)".to_string());
         }
@@ -270,10 +314,10 @@ pub async fn open_application(app_query: &str) -> Result<String, String> {
     let snap_candidate = format!("/snap/bin/{}", q);
     if Path::new(&snap_candidate).exists() {
         spawn_detached(&snap_candidate, &[])?;
-        return Ok(q);
+        return Ok(q.to_string());
     }
 
-    spawn_detached(&q, &[])?;
+    spawn_detached(q, &[])?;
     Ok(app_query.to_string())
 }
 
@@ -986,16 +1030,38 @@ pub async fn try_direct_notebook_action<R: Runtime>(
         }
     }
 
-    // 3. Abrir programas, carpetas o sitios ("abre ...", "abrir ...", "open ...", "inicia ...", "ejecuta ...")
-    for prefix in ["abre ", "abrir ", "open ", "inicia ", "lanza "] {
+    // 3. Abrir programas, carpetas o sitios ("abre ...", "abrir ...", "ábreme ...", etc.)
+    let open_prefixes = [
+        "ábreme ", "abreme ", "abre ", "abrir ",
+        "puedes abrir ", "podrías abrir ", "podrias abrir ",
+        "quiero abrir ", "por favor abre ",
+        "open ", "inicia ", "iniciar ", "ejecuta ", "ejecutar ", "lanza ", "lanzar ",
+    ];
+    for prefix in open_prefixes {
         if lower.starts_with(prefix) {
             let rest = raw[prefix.len()..].trim();
-            let rest_lower = rest
+            let mut rest_lower = rest
                 .to_lowercase()
-                .trim_start_matches("el ")
-                .trim_start_matches("la ")
-                .trim_start_matches("mi ")
-                .trim_start_matches("programa ")
+                .trim_matches(|c: char| c == '.' || c == ',' || c == '!' || c == '?' || c == ';' || c == ':')
+                .trim()
+                .to_string();
+
+            for art in ["el ", "la ", "los ", "las ", "un ", "una ", "mi ", "mis ", "programa ", "aplicacion ", "aplicación "] {
+                if rest_lower.starts_with(art) {
+                    rest_lower = rest_lower[art.len()..].trim().to_string();
+                }
+            }
+
+            if rest_lower.ends_with(" por favor") {
+                rest_lower = rest_lower.trim_end_matches(" por favor").trim().to_string();
+            } else if rest_lower.ends_with(" porfa") {
+                rest_lower = rest_lower.trim_end_matches(" porfa").trim().to_string();
+            } else if rest_lower.ends_with(" please") {
+                rest_lower = rest_lower.trim_end_matches(" please").trim().to_string();
+            }
+
+            let rest_lower = rest_lower
+                .trim_matches(|c: char| c == '.' || c == ',' || c == '!' || c == '?' || c == ';' || c == ':')
                 .trim()
                 .to_string();
 
