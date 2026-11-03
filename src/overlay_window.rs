@@ -14,6 +14,10 @@ pub const BUBBLE_WINDOW_NAME: &str = "bubble_window";
 pub const BUBBLE_WIDTH: i32 = 440;
 pub const BUBBLE_HEIGHT: i32 = 260;
 
+pub const PEEK_WINDOW_NAME: &str = "peek_window";
+pub const PEEK_WIDTH: i32 = 380;
+pub const PEEK_HEIGHT: i32 = 180;
+
 static LAST_WIN_X: AtomicI32 = AtomicI32::new(-1);
 static LAST_WIN_Y: AtomicI32 = AtomicI32::new(-1);
 
@@ -184,8 +188,74 @@ pub fn setup_window<R: Runtime>(app_handle: &AppHandle<R>) -> Result<(), String>
         .map_err(|e| format!("Failed to build bubble window: {}", e))?;
     }
 
+    let peek_start_x = (geom.screen_width - PEEK_WIDTH - 20).max(16);
+    let peek_start_y = 32;
+
+    if let Some(existing_peek) = app_handle.get_webview_window(PEEK_WINDOW_NAME) {
+        let _ = existing_peek.set_size(tauri::Size::Physical(tauri::PhysicalSize {
+            width: PEEK_WIDTH as u32,
+            height: PEEK_HEIGHT as u32,
+        }));
+        let _ = existing_peek.set_position(Position::Physical(PhysicalPosition {
+            x: peek_start_x,
+            y: peek_start_y,
+        }));
+        let _ = existing_peek.set_always_on_top(true);
+        let _ = existing_peek.set_skip_taskbar(true);
+    } else {
+        let _ = WebviewWindowBuilder::new(
+            app_handle,
+            PEEK_WINDOW_NAME,
+            WebviewUrl::App("peek.html".into()),
+        )
+        .title("Fuko Peek")
+        .visible(false)
+        .resizable(false)
+        .decorations(false)
+        .transparent(true)
+        .skip_taskbar(true)
+        .always_on_top(true)
+        .inner_size(PEEK_WIDTH as f64, PEEK_HEIGHT as f64)
+        .position(peek_start_x as f64, peek_start_y as f64)
+        .build();
+    }
+
+    setup_x11_dock_hint();
+
     Ok(())
 }
+
+#[cfg(target_os = "linux")]
+pub fn setup_x11_dock_hint() {
+    std::thread::spawn(|| {
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        let _ = std::process::Command::new("python3")
+            .arg("-c")
+            .arg(r#"
+import ctypes, subprocess
+try:
+    x11 = ctypes.cdll.LoadLibrary('libX11.so.6')
+    d = x11.XOpenDisplay(None)
+    if d:
+        out = subprocess.check_output(['xwininfo', '-root', '-tree'], text=True)
+        for line in out.splitlines():
+            if '"Fuko"' in line and '"Fuko Dialogue"' not in line and '"Fuko Peek"' not in line:
+                wid = int(line.strip().split()[0], 16)
+                atom_type = x11.XInternAtom(d, b'_NET_WM_WINDOW_TYPE', False)
+                atom_dock = x11.XInternAtom(d, b'_NET_WM_WINDOW_TYPE_DOCK', False)
+                c_atom = ctypes.c_ulong(atom_dock)
+                x11.XChangeProperty(d, wid, atom_type, 4, 32, 0, ctypes.byref(c_atom), 1)
+                x11.XFlush(d)
+        x11.XCloseDisplay(d)
+except Exception:
+    pass
+"#)
+            .spawn();
+    });
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn setup_x11_dock_hint() {}
 
 pub fn toggle_window<R: Runtime>(window: &WebviewWindow<R>, show: bool) -> Result<(), String> {
     if show {
@@ -260,8 +330,8 @@ pub async fn move_overlay_window_cmd(
     app_handle: AppHandle<tauri::Wry>,
 ) -> Result<(), String> {
     let geom = query_geometry(&app_handle);
-    let clamped_x = x.clamp(-60, geom.screen_width - OVERLAY_WIDTH + 60);
-    let clamped_y = y.clamp(0, geom.floor_y);
+    let clamped_x = x.clamp(-120, geom.screen_width - OVERLAY_WIDTH + 120);
+    let clamped_y = y.clamp(-160, geom.floor_y);
     LAST_WIN_X.store(clamped_x, Ordering::Relaxed);
     LAST_WIN_Y.store(clamped_y, Ordering::Relaxed);
     if let Some(window) = app_handle.get_webview_window(WINDOW_NAME) {
@@ -269,6 +339,22 @@ pub async fn move_overlay_window_cmd(
             x: clamped_x,
             y: clamped_y,
         }));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn show_peek_window_cmd(
+    show: bool,
+    app_handle: AppHandle<tauri::Wry>,
+) -> Result<(), String> {
+    if let Some(peek) = app_handle.get_webview_window(PEEK_WINDOW_NAME) {
+        if show {
+            let _ = peek.show();
+            let _ = peek.set_always_on_top(true);
+        } else {
+            let _ = peek.hide();
+        }
     }
     Ok(())
 }

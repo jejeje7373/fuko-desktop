@@ -150,6 +150,7 @@ pub fn run() {
             overlay_window::set_ignore_cursor_events_cmd,
             overlay_window::move_overlay_window_cmd,
             overlay_window::show_bubble_window_cmd,
+            overlay_window::show_peek_window_cmd,
             overlay_window::position_bubble_near_avatar_cmd,
             overlay_window::move_bubble_window_cmd,
             overlay_window::get_window_ledges_cmd,

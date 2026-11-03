@@ -12,115 +12,8 @@
       {
         "label": "overlay_window",
         "title": "Fuko",
-        "width": 320,
-        "height": 380,
-        "resizable": false,
-        "decorations": false,
-        "transparent": true,
-        "skipTaskbar": true,
-        "alwaysOnTop": true,
-        "visible": true,
-        "focus": false,
-        "url": "index.html"
-      },
-      {
-        "label": "bubble_window",
-        "title": "Fuko Dialogue",
-        "width": 440,
-        "height": 260,
-        "resizable": false,
-        "decorations": false,
-        "transparent": true,
-        "skipTaskbar": true,
-        "alwaysOnTop": true,
-        "visible": false,
-        "focus": false,
-        "url": "index.html"
-      }
-    ],
-    "security": {
-      "csp": null
-    }
-  },
-  "bundle": {
-    "active": true,
-    "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ]
-  }
-}1.0",{
-  "identifier": "com.claudia.desktop",
-  "productName": "Claudia Desktop Companion",
-  "version": "0.1.0",
-  "build": {
-    "frontendDist": "../public"
-  },
-  "app": {
-    "withGlobalTauri": true,
-    "macOSPrivateApi": true,
-    "windows": [
-      {
-        "label": "overlay_window",
-        "title": "Fuko",
-        "width": 320,
-        "height": 380,
-        "resizable": false,
-        "decorations": false,
-        "transparent": true,
-        "skipTaskbar": true,
-        "alwaysOnTop": true,
-        "visible": true,
-        "focus": false,
-        "url": "index.html"
-      },
-      {
-        "label": "bubble_window",
-        "title": "Fuko Dialogue",
-        "width": 440,
-        "height": 260,
-        "resizable": false,
-        "decorations": false,
-        "transparent": true,
-        "skipTaskbar": true,
-        "alwaysOnTop": true,
-        "visible": false,
-        "focus": false,
-        "url": "index.html"
-      }
-    ],
-    "security": {
-      "csp": null
-    }
-  },
-  "bundle": {
-    "active": true,
-    "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ]
-  }
-}
-  "build": {
-    "frontendDist": "../public"
-  },
-  "app": {
-    "withGlobalTauri": true,
-    "macOSPrivateApi": true,
-    "windows": [
-      {
-        "label": "overlay_window",
-        "title": "Fuko",
-        "width": 320,
-        "height": 380,
+        "width": 360,
+        "height": 420,
         "resizable": false,
         "decorations": false,
         "transparent": true,
@@ -143,6 +36,20 @@
         "alwaysOnTop": true,
         "visible": false,
         "url": "bubble.html"
+      },
+      {
+        "label": "peek_window",
+        "title": "Fuko Peek",
+        "width": 380,
+        "height": 180,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "skipTaskbar": true,
+        "alwaysOnTop": true,
+        "visible": false,
+        "url": "peek.html"
       }
     ],
     "security": {

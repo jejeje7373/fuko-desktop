@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Fuko Peek</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: transparent !important;
+      font-family: 'Share Tech Mono', 'JetBrains Mono', Consolas, monospace;
+    }
+
+    .notebook-peek {
+      position: absolute;
+      top: 0px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-140%);
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      opacity: 0;
+      transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease-out;
+      filter: drop-shadow(0 10px 32px rgba(255, 45, 111, 0.85)) drop-shadow(0 0 16px rgba(58, 214, 235, 0.4));
+    }
+
+    .notebook-peek.active {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .peek-chassis-bezel {
+      width: 100%;
+      height: 22px;
+      background: linear-gradient(180deg, #1f1430 0%, #100a1a 100%);
+      border: 1px solid rgba(255, 45, 111, 0.9);
+      border-bottom: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 100%, 0 100%);
+      position: relative;
+    }
+
+    .peek-hud-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #3ad6eb;
+      letter-spacing: 0.1em;
+    }
+
+    .peek-led-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ff2d6f;
+      box-shadow: 0 0 8px #ff2d6f;
+      animation: ledPulse 1.1s infinite ease-in-out;
+    }
+
+    .peek-sub-tag {
+      font-size: 8px;
+      color: rgba(255, 238, 85, 0.85);
+      letter-spacing: 0.08em;
+    }
+
+    @keyframes ledPulse {
+      0%, 100% { opacity: 0.45; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    .peek-avatar-frame {
+      position: relative;
+      width: 316px;
+      height: 145px;
+      background: #0d0816;
+      border: 1px solid rgba(255, 45, 111, 0.9);
+      border-top: none;
+      border-bottom: 2px solid #3ad6eb;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 25px rgba(255, 45, 111, 0.35);
+      clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 10px 100%);
+    }
+
+    .peek-avatar-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      filter: contrast(1.12) saturate(1.2);
+      transition: transform 0.22s ease, filter 0.22s ease;
+    }
+
+    .peek-avatar-frame img.glitch {
+      filter: invert(0.2) hue-rotate(90deg) contrast(1.3) drop-shadow(0 0 6px #3ad6eb);
+    }
+
+    .peek-scanlines {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.3) 0px,
+        rgba(0, 0, 0, 0.3) 2px,
+        transparent 2px,
+        transparent 4px
+      );
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    .peek-frame-corners {
+      position: absolute;
+      inset: 0;
+      border: 1px dashed rgba(58, 214, 235, 0.25);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="notebook-peek-wrap" class="notebook-peek" title="Fuko observando tu notebook (Click para interactuar)">
+    <div class="peek-chassis-bezel">
+      <div class="peek-hud-badge">
+        <span class="peek-led-dot"></span>
+        <span id="peek-hud-label">FUKO.SYS // LIVE SCAN</span>
+      </div>
+      <span class="peek-sub-tag">NOTEBOOK</span>
+    </div>
+    <div class="peek-avatar-frame">
+      <img id="peek-face-img" src="assets/capri/cutin-eyes.png" alt="Fuko Cut-in" />
+      <div class="peek-scanlines"></div>
+      <div class="peek-frame-corners"></div>
+    </div>
+  </div>
+
+  <script>
+    const tauri = window.__TAURI__;
+    const invoke = tauri ? tauri.core.invoke : async () => {};
+    const listen = tauri ? tauri.event.listen : () => {};
+
+    const FACES = {
+      'look': 'assets/capri/face-look.png',
+      'face-look': 'assets/capri/face-look.png',
+      'cutin-eyes': 'assets/capri/cutin-eyes.png',
+      'eyes': 'assets/capri/cutin-eyes.png',
+      'cutin-laugh': 'assets/capri/cutin-laugh.png',
+      'laugh': 'assets/capri/cutin-laugh.png',
+      'cutin-grin': 'assets/capri/cutin-grin.png',
+      'grin': 'assets/capri/cutin-grin.png',
+      'cutin-many': 'assets/capri/cutin-many.png',
+      'many': 'assets/capri/cutin-many.png',
+      'capri-face': 'assets/capri/capri-face.png',
+      'smug': 'assets/capri/cutin-grin.png',
+      'wide': 'assets/capri/cutin-eyes.png',
+      'aside': 'assets/capri/face-look.png'
+    };
+
+    const peekWrap = document.getElementById('notebook-peek-wrap');
+    const peekFaceImg = document.getElementById('peek-face-img');
+    const hudLabel = document.getElementById('peek-hud-label');
+    let hideTimer = null;
+
+    async function showPeek(faceKey = 'cutin-eyes', titleHint = '', durationMs = 4200) {
+      if (!peekWrap || !peekFaceImg) return;
+      const src = FACES[faceKey] || FACES['cutin-eyes'];
+      peekFaceImg.src = src;
+
+      if (hudLabel) {
+        if (faceKey.includes('laugh')) {
+          hudLabel.textContent = 'FUKO.SYS // MUSIC AUDIO';
+        } else {
+          hudLabel.textContent = titleHint || 'FUKO.SYS // LIVE SCAN';
+        }
+      }
+
+      try {
+        await invoke('show_peek_window_cmd', { show: true });
+      } catch (_) {}
+
+      // Activar animación de entrada
+      requestAnimationFrame(() => {
+        peekWrap.classList.add('active');
+      });
+
+      if (hideTimer) clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
+        peekWrap.classList.remove('active');
+        setTimeout(async () => {
+          try {
+            await invoke('show_peek_window_cmd', { show: false });
+          } catch (_) {}
+        }, 380);
+      }, durationMs);
+    }
+
+    if (peekWrap) {
+      peekWrap.addEventListener('click', () => {
+        showPeek('cutin-laugh', 'FUKO.SYS // GIGGLE', 3500);
+      });
+    }
+
+    listen('capri_peek_expression', (event) => {
+      const data = event.payload || {};
+      showPeek(data.face || 'cutin-eyes', data.hint || '', data.duration_ms || 4200);
+    });
+  </script>
+</body>
+</html>
