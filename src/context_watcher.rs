@@ -384,11 +384,11 @@ pub fn start_watcher<R: Runtime>(
                             if song != last_song {
                                 last_song = song.clone();
                                 let _ = app_for_sys.emit(
-                                    "avatar_speak",
+                                    "capri_peek_expression",
                                     serde_json::json!({
-                                        "heard": "(música detectada)",
-                                        "message": format!("Ooh, buen tema choom: {}. ¡Subámosle el volumen!", song),
-                                        "model": "sensor-audio"
+                                        "face": "cutin-laugh",
+                                        "reason": "music_playing",
+                                        "duration_ms": 5000
                                     }),
                                 );
                             }
@@ -567,33 +567,24 @@ pub fn start_watcher<R: Runtime>(
                 pending_since = Instant::now();
             }
 
-            // Expresión contextual: al abrir o cambiar de página web o ventana, asomar face-look.png desde la notebook
+            // Expresión contextual: al abrir o cambiar de página web o ventana, asomar cutin-eyes.png desde el borde superior
             if current_key != last_peek_window_key && !info.clean_title.is_empty() {
                 last_peek_window_key = current_key.clone();
                 let is_browser = info.browser_name.is_some();
-                let hint = if is_browser {
-                    let b = info.browser_name.as_deref().unwrap_or("Navegador");
-                    format!("[{}: {}]", b, info.clean_title)
-                } else {
-                    format!("[VENTANA: {}]", info.clean_title)
-                };
                 let _ = app_for_sys.emit(
                     "capri_peek_expression",
                     serde_json::json!({
-                        "face": "look",
+                        "face": "cutin-eyes",
                         "reason": if is_browser { "browser_page" } else { "window_focus" },
                         "title": info.clean_title,
                         "browser": info.browser_name,
-                        "hint": hint,
-                        "duration_ms": 4500
+                        "duration_ms": 4000
                     }),
                 );
             }
 
             let is_browser = info.browser_name.is_some();
             let is_new_page = !info.clean_title.is_empty() && current_key != last_commented_window;
-            // Si abriste una página nueva en un navegador, reaccionar tras ~2.0s de estabilidad (con cooldown corto de 10s).
-            // Si es otra aplicación de escritorio o sigues en la misma pantalla, comentar cada ~38s.
             let ready_for_browser_reaction = is_browser
                 && is_new_page
                 && pending_since.elapsed() >= Duration::from_millis(1800)
@@ -605,55 +596,16 @@ pub fn start_watcher<R: Runtime>(
                 || last_glance_time.elapsed() >= Duration::from_secs(42);
 
             if ready_for_browser_reaction || ready_for_general_glance {
-                let busy = *glance_in_flight.lock().unwrap();
-                if !busy {
-                    if let Some(bridge) = app_for_sys.try_state::<Arc<OpenClawBridge>>() {
-                        if bridge.get_status().proactive {
-                            *glance_in_flight.lock().unwrap() = true;
-                            last_glance_time = Instant::now();
-                            last_commented_window = current_key;
-
-                            let app_clone = app_for_sys.clone();
-                            let bridge_clone = bridge.inner().clone();
-                            let summary_snap = summary.clone();
-                            let clean_title_snap = info.clean_title.clone();
-                            let browser_snap = info.browser_name.clone();
-                            let in_flight_clone = glance_in_flight.clone();
-
-                            tauri::async_runtime::spawn(async move {
-                                let heard_tag = if let Some(ref b) = browser_snap {
-                                    if b.contains("Antigravity") {
-                                        "(viendo pantalla en tiempo real)".to_string()
-                                    } else {
-                                        format!("(viendo {}: {})", b, clean_title_snap)
-                                    }
-                                } else {
-                                    format!("(viendo: {})", clean_title_snap)
-                                };
-
-                                if let Ok(res) = glance_at_screen_realtime(
-                                    &app_clone,
-                                    &bridge_clone,
-                                    &clean_title_snap,
-                                    browser_snap.as_deref(),
-                                    &summary_snap,
-                                )
-                                .await
-                                {
-                                    let _ = app_clone.emit(
-                                        "avatar_speak",
-                                        serde_json::json!({
-                                            "heard": heard_tag,
-                                            "message": res.reply,
-                                            "model": res.model_used
-                                        }),
-                                    );
-                                }
-                                *in_flight_clone.lock().unwrap() = false;
-                            });
-                        }
-                    }
-                }
+                last_glance_time = Instant::now();
+                last_commented_window = current_key;
+                let _ = app_for_sys.emit(
+                    "capri_peek_expression",
+                    serde_json::json!({
+                        "face": "cutin-eyes",
+                        "reason": "screen_observation",
+                        "duration_ms": 3800
+                    }),
+                );
             }
         }
     });
