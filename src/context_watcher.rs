@@ -590,10 +590,9 @@ pub fn start_watcher<R: Runtime>(
                 && pending_since.elapsed() >= Duration::from_millis(1800)
                 && last_glance_time.elapsed() >= Duration::from_secs(10);
 
-            let ready_for_general_glance = (is_new_page
+            let ready_for_general_glance = is_new_page
                 && pending_since.elapsed() >= Duration::from_secs(3)
-                && last_glance_time.elapsed() >= Duration::from_secs(22))
-                || last_glance_time.elapsed() >= Duration::from_secs(42);
+                && last_glance_time.elapsed() >= Duration::from_secs(20);
 
             if ready_for_browser_reaction || ready_for_general_glance {
                 let is_busy = {

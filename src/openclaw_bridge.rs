@@ -440,7 +440,10 @@ pub async fn query_openclaw_cli(
     Err(format!("OpenClaw sin respuesta: {}", stderr))
 }
 
-pub async fn query_antigravity_cli(prompt: &str) -> Result<(String, String), String> {
+pub async fn query_antigravity_cli_with_timeout(
+    prompt: &str,
+    timeout_secs: u64,
+) -> Result<(String, String), String> {
     let cfg = crate::connections_config::load_connections_config();
 
     let agy_bin = if Path::new(&cfg.antigravity_bin).exists() {
@@ -459,8 +462,6 @@ pub async fn query_antigravity_cli(prompt: &str) -> Result<(String, String), Str
     } else {
         "gemini-3.8-flash-high"
     };
-
-    let timeout_secs = 18;
 
     // Intento 1 con el modelo objetivo
     let mut cmd = Command::new(agy_bin);
@@ -508,6 +509,10 @@ pub async fn query_antigravity_cli(prompt: &str) -> Result<(String, String), Str
     }
 
     Err(format!("Antigravity ({}): {}", target_model, stderr.trim()))
+}
+
+pub async fn query_antigravity_cli(prompt: &str) -> Result<(String, String), String> {
+    query_antigravity_cli_with_timeout(prompt, 18).await
 }
 
 pub async fn query_gemini_argon_cli(prompt: &str) -> Result<(String, String), String> {
@@ -1029,7 +1034,7 @@ pub async fn glance_at_screen_realtime<R: Runtime>(
         prompt.clone()
     };
 
-    match query_antigravity_cli(&agy_prompt).await {
+    match query_antigravity_cli_with_timeout(&agy_prompt, 40).await {
         Ok((raw_reply, _)) => {
             let reply = strip_emojis_and_ansi(&raw_reply);
             speak_out_loud_async(reply.clone());
