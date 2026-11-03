@@ -126,7 +126,44 @@ pub async fn open_application(app_query: &str) -> Result<String, String> {
         return Err("No me dijiste qué programa abrir.".to_string());
     }
 
-    // 1. Mapa directo de programas frecuentes en el notebook de Aym
+    // 1. Detección inteligente por inclusión y nombres frecuentes
+    if q == "chrome" || q == "google chrome" || q == "google-chrome" || q == "navegador" || q == "browser" || q == "google" || q.contains("chrome") {
+        spawn_detached("google-chrome", &[])?;
+        return Ok("Google Chrome".to_string());
+    }
+    if q == "firefox" || q == "mozilla" || q == "mozilla firefox" || q.contains("firefox") {
+        spawn_detached("firefox", &[])?;
+        return Ok("Firefox".to_string());
+    }
+    if q == "code" || q == "vscode" || q == "vs code" || q == "visual studio code" || q == "visual studio" || q.contains("vs code") || q.contains("vscode") || q.contains("visual studio") {
+        spawn_detached("code", &[])?;
+        return Ok("Visual Studio Code".to_string());
+    }
+    if q == "terminal" || q == "consola" || q == "gnome-terminal" || q == "bash" || q == "cmd" || q.contains("terminal") || q.contains("consola") {
+        spawn_detached("gnome-terminal", &[])?;
+        return Ok("Terminal de GNOME".to_string());
+    }
+    if q == "calculadora" || q == "calc" || q == "calculator" || q == "gnome-calculator" || q.contains("calculadora") {
+        if Path::new("/usr/bin/gnome-calculator").exists() {
+            spawn_detached("gnome-calculator", &[])?;
+        } else {
+            spawn_detached("qalculate-gtk", &[])?;
+        }
+        return Ok("Calculadora".to_string());
+    }
+    if q == "archivos" || q == "explorador" || q == "carpetas" || q == "nautilus" || q == "files" || q.contains("nautilus") || q.contains("carpetas") || q.contains("archivos") {
+        spawn_detached("nautilus", &[])?;
+        return Ok("Archivos (Nautilus)".to_string());
+    }
+    if q == "antigravity" || q == "agy" || q.contains("antigravity") {
+        if Path::new("/snap/bin/antigravity").exists() {
+            spawn_detached("/snap/bin/antigravity", &[])?;
+        } else {
+            spawn_detached("antigravity", &[])?;
+        }
+        return Ok("Antigravity IDE".to_string());
+    }
+
     match q {
         "chrome" | "google chrome" | "google-chrome" | "navegador" | "browser" | "google" => {
             spawn_detached("google-chrome", &[])?;
@@ -778,7 +815,7 @@ pub async fn try_direct_notebook_action<R: Runtime>(
     user_msg: &str,
 ) -> Option<String> {
     let raw = user_msg.trim();
-    let lower = raw.to_lowercase();
+    let lower = raw.to_lowercase().replace(',', " ");
 
     // 0. Configurar o abrir SOUL.md y demás archivos de OpenClaw (IDENTITY.md, USER.md, MEMORY.md, TOOLS.md, AGENTS.md)
     if lower.contains("soul.md")
