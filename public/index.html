@@ -264,6 +264,166 @@
       object-fit: contain;
     }
 
+    /* ==================================================
+       NOTEBOOK PEEK EXPRESSION (Asomarse desde la notebook)
+       ================================================== */
+    .notebook-peek {
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-140%);
+      width: 220px;
+      z-index: 3000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: auto;
+      cursor: pointer;
+      opacity: 0;
+      transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease-out;
+      filter: drop-shadow(0 10px 28px rgba(255, 45, 111, 0.6));
+    }
+
+    .notebook-peek.active {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .peek-chassis-bezel {
+      width: 100%;
+      height: 22px;
+      background: linear-gradient(180deg, #1f1430 0%, #100a1a 100%);
+      border: 1px solid rgba(255, 45, 111, 0.85);
+      border-bottom: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 100%, 0 100%);
+      position: relative;
+    }
+
+    .peek-hud-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Share Tech Mono', monospace, sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      color: #3ad6eb;
+      letter-spacing: 0.08em;
+    }
+
+    .peek-led-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ff2d6f;
+      box-shadow: 0 0 8px #ff2d6f;
+      animation: ledPulse 1.1s infinite ease-in-out;
+    }
+
+    .peek-sub-tag {
+      font-family: 'Share Tech Mono', monospace, sans-serif;
+      font-size: 8px;
+      color: rgba(255, 238, 85, 0.8);
+      letter-spacing: 0.05em;
+    }
+
+    @keyframes ledPulse {
+      0%, 100% { opacity: 0.45; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    .peek-avatar-frame {
+      position: relative;
+      width: 196px;
+      height: 144px;
+      background: #0d0816;
+      border-left: 2px solid #ff2d6f;
+      border-right: 2px solid #3ad6eb;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      box-shadow: inset 0 0 25px rgba(255, 45, 111, 0.35);
+    }
+
+    .peek-avatar-frame img {
+      width: 196px;
+      height: 196px;
+      object-fit: cover;
+      object-position: top center;
+      transform: translateY(-6px);
+      filter: contrast(1.08) saturate(1.15);
+      transition: transform 0.22s ease, filter 0.22s ease;
+    }
+
+    .peek-avatar-frame img.glitch {
+      filter: invert(0.2) hue-rotate(90deg) contrast(1.3) drop-shadow(0 0 6px #3ad6eb);
+    }
+
+    .peek-scanlines {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.3) 0px,
+        rgba(0, 0, 0, 0.3) 2px,
+        transparent 2px,
+        transparent 4px
+      );
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    .peek-frame-corners {
+      position: absolute;
+      inset: 0;
+      border: 1px dashed rgba(58, 214, 235, 0.3);
+      pointer-events: none;
+    }
+
+    .peek-bottom-bezel {
+      width: 100%;
+      background: #110b1c;
+      border: 1px solid rgba(255, 45, 111, 0.9);
+      border-top: 2px solid #3ad6eb;
+      padding: 4px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 10px 100%);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.85);
+    }
+
+    .peek-bezel-tag {
+      font-family: 'Share Tech Mono', monospace, sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      color: #ff2d6f;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 190px;
+    }
+
+    /* Ocultar el avatar completo y controles para simular que está adentro de la notebook */
+    #pet-stage.hidden-inside {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: translateX(-50%) translateY(45px) scale(0.88) !important;
+      transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    #talk-pill-wrap.hidden-inside {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: scale(0.85) !important;
+      transition: all 0.22s ease !important;
+    }
+
     .fx {
       width: 100vw;
       height: 100vh;
@@ -412,6 +572,25 @@
     <span id="typer-mode-pill" title="Click para cambiar motor IA"> AUTO</span>
   </div>
 
+  <!-- Expresión asomándose desde el borde superior / adentro de la notebook -->
+  <div id="notebook-peek-wrap" class="notebook-peek" title="Fuko observando tu notebook (Click para interactuar)">
+    <div class="peek-chassis-bezel">
+      <div class="peek-hud-badge">
+        <span class="peek-led-dot"></span>
+        <span id="peek-hud-label">FUKO.SYS // NOTEBOOK PEEK</span>
+      </div>
+      <span class="peek-sub-tag">LIVE HUD</span>
+    </div>
+    <div class="peek-avatar-frame">
+      <img id="peek-face-img" src="assets/capri/face-look.png" alt="Fuko Expression" />
+      <div class="peek-scanlines"></div>
+      <div class="peek-frame-corners"></div>
+    </div>
+    <div class="peek-bottom-bezel">
+      <span class="peek-bezel-tag" id="peek-action-hint">[OBSERVANDO PANTALLA]</span>
+    </div>
+  </div>
+
   <!-- Escenario del personaje -->
   <div id="pet-stage">
     <div id="cutin-wrap" class="cutin-wrap">
@@ -466,6 +645,10 @@
     <div class="menu-item" data-action="toggle-watch">
       <span>Reaccionar sola a mi pantalla</span>
       <span class="sub" id="menu-watch-val">Activo</span>
+    </div>
+    <div class="menu-item" data-action="toggle-notebook-mode">
+      <span>Modo: Oculta en notebook (Solo asomarse)</span>
+      <span class="sub" id="menu-nb-val">Desactivado</span>
     </div>
     <div class="menu-sep"></div>
     <div class="menu-item" data-action="mainframe"><span>Abrir Mainframe</span></div>
@@ -559,6 +742,67 @@
       wrap.classList.remove('active');
     }, duration);
   }
+
+  // =========================================================
+  // EXPRESIONES DE RETRATO ASOMÁNDOSE DESDE LA NOTEBOOK
+  // =========================================================
+  const FACES = {
+    look: 'assets/capri/face-look.png',
+    aside: 'assets/capri/face-aside.png',
+    smug: 'assets/capri/face-smug.png',
+    laugh: 'assets/capri/face-laugh.png',
+    wide: 'assets/capri/face-wide.png',
+    many: 'assets/capri/face-many.png',
+    calm: 'assets/capri/face-calm.png'
+  };
+
+  const notebookPeekWrap = document.getElementById('notebook-peek-wrap');
+  const peekFaceImg = document.getElementById('peek-face-img');
+  const peekActionHint = document.getElementById('peek-action-hint');
+  let peekHideTimer = null;
+  let permanentNotebookMode = false;
+
+  function triggerNotebookPeek(faceKey = 'look', hintText = '', durationMs = 4500) {
+    if (!notebookPeekWrap || !peekFaceImg) return;
+    const src = FACES[faceKey] || FACES.look;
+    peekFaceImg.src = src;
+    if (peekActionHint) {
+      peekActionHint.textContent = hintText || `[NOTEBOOK // face-${faceKey}.png]`;
+    }
+
+    // Ocultar avatar de cuerpo completo para simular que está adentro de la notebook
+    if (petStage) petStage.classList.add('hidden-inside');
+    if (talkPillWrap) talkPillWrap.classList.add('hidden-inside');
+
+    notebookPeekWrap.classList.add('active');
+    playSynthBlip(faceKey);
+
+    if (peekHideTimer) clearTimeout(peekHideTimer);
+    peekHideTimer = setTimeout(() => {
+      notebookPeekWrap.classList.remove('active');
+      setTimeout(() => {
+        if (!permanentNotebookMode) {
+          if (petStage) petStage.classList.remove('hidden-inside');
+          if (talkPillWrap) talkPillWrap.classList.remove('hidden-inside');
+        }
+      }, 350);
+    }, durationMs);
+  }
+
+  // Interacción al hacer click sobre la expresión que se asoma
+  if (notebookPeekWrap) {
+    notebookPeekWrap.addEventListener('click', () => {
+      triggerNotebookPeek('laugh', '[FUKO // CARIÑOS REGISTRADOS]', 3500);
+      flashCutin('grin', 1100);
+      playSynthBlip('laugh');
+    });
+  }
+
+  // Pre-cargar imágenes de expresiones
+  Object.values(FACES).forEach(src => {
+    const im = new Image();
+    im.src = src;
+  });
 
   const images = {};
   function getClipImage(key) {
@@ -1409,6 +1653,7 @@
 
   function triggerHeadPat() {
     walking = false;
+    triggerNotebookPeek('laugh', '[FUKO // CARIÑOS REGISTRADOS]', 3500);
     flashCutin(Math.random() < 0.5 ? 'laugh' : 'grin', 1100);
     if (seated) {
       playClip('perch');
@@ -2058,6 +2303,19 @@
           try { await invoke('set_proactive_mode_cmd', { enabled: proactiveWatch }); } catch (_) {}
           showCapriBubble('(vigilancia)', proactiveWatch ? 'Vigilancia de tu pantalla activada, choom.' : 'Modo silencioso activado.', 'capri');
           break;
+        case 'toggle-notebook-mode':
+          permanentNotebookMode = !permanentNotebookMode;
+          const nbVal = document.getElementById('menu-nb-val');
+          if (nbVal) nbVal.textContent = permanentNotebookMode ? 'Activado' : 'Desactivado';
+          if (permanentNotebookMode) {
+            if (petStage) petStage.classList.add('hidden-inside');
+            if (talkPillWrap) talkPillWrap.classList.add('hidden-inside');
+            triggerNotebookPeek('look', '[MODO NOTEBOOK: FUKO ADENTRO]', 3500);
+          } else {
+            if (petStage) petStage.classList.remove('hidden-inside');
+            if (talkPillWrap) talkPillWrap.classList.remove('hidden-inside');
+          }
+          break;
         case 'mainframe':
           try { await invoke('open_mainframe_cmd'); } catch (_) {}
           break;
@@ -2088,12 +2346,21 @@
     if (d.mood === 'burla') {
       playClip('grin');
       flashCutin('grin', 950);
+      triggerNotebookPeek('smug', '[CAPRI // BURLA]', 3500);
     } else if (d.mood === 'emocion') {
       playClip('dance');
       flashCutin('many', 1100);
+      triggerNotebookPeek('laugh', '[CAPRI // EMOCION]', 3500);
     } else if (d.mood === 'sorpresa') {
       flashCutin('eyes', 900);
+      triggerNotebookPeek('wide', '[CAPRI // SORPRESA]', 3500);
     }
+  });
+
+  // Evento reactivo autónomo: Fuko se asoma desde arriba con la expresión correspondiente
+  listen('capri_peek_expression', (event) => {
+    const data = event.payload || {};
+    triggerNotebookPeek(data.face || 'look', data.hint || data.title, data.duration_ms || 4500);
   });
 
   // Nivel del micrófono en vivo (0..6) desde claudia_ears_daemon.py -> estira las 5 barras de onda de TalkPill

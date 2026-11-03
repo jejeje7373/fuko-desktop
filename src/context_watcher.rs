@@ -352,6 +352,7 @@ pub fn start_watcher<R: Runtime>(
         let mut last_commented_window = String::new();
         let mut pending_window_title = String::new();
         let mut pending_since = Instant::now();
+        let mut last_peek_window_key = String::new();
         let glance_in_flight = Arc::new(Mutex::new(false));
         let mut last_glance_time = Instant::now() - Duration::from_secs(25);
 
@@ -422,6 +423,15 @@ pub fn start_watcher<R: Runtime>(
                     if cap <= 20 && st == "Discharging" && !warned_low_battery {
                         warned_low_battery = true;
                         let _ = app_for_sys.emit(
+                            "capri_peek_expression",
+                            serde_json::json!({
+                                "face": "wide",
+                                "reason": "battery_low",
+                                "hint": format!("[BATERÍA BAJA: {}%]", cap),
+                                "duration_ms": 5000
+                            }),
+                        );
+                        let _ = app_for_sys.emit(
                             "avatar_speak",
                             serde_json::json!({
                                 "heard": "(batería baja)",
@@ -477,6 +487,15 @@ pub fn start_watcher<R: Runtime>(
                 if let Some(avatar) = app_for_sys.try_state::<Arc<AvatarSystem<R>>>() {
                     avatar.set_state(AvatarState::Thinking);
                 }
+                let _ = app_for_sys.emit(
+                    "capri_peek_expression",
+                    serde_json::json!({
+                        "face": "aside",
+                        "reason": "compiling",
+                        "hint": "[COMPILANDO EN RUST / CARGO]",
+                        "duration_ms": 5000
+                    }),
+                );
                 let _ = app_for_sys.emit(
                     "avatar_speak",
                     serde_json::json!({
@@ -546,6 +565,29 @@ pub fn start_watcher<R: Runtime>(
             if current_key != pending_window_title {
                 pending_window_title = current_key.clone();
                 pending_since = Instant::now();
+            }
+
+            // Expresión contextual: al abrir o cambiar de página web o ventana, asomar face-look.png desde la notebook
+            if current_key != last_peek_window_key && !info.clean_title.is_empty() {
+                last_peek_window_key = current_key.clone();
+                let is_browser = info.browser_name.is_some();
+                let hint = if is_browser {
+                    let b = info.browser_name.as_deref().unwrap_or("Navegador");
+                    format!("[{}: {}]", b, info.clean_title)
+                } else {
+                    format!("[VENTANA: {}]", info.clean_title)
+                };
+                let _ = app_for_sys.emit(
+                    "capri_peek_expression",
+                    serde_json::json!({
+                        "face": "look",
+                        "reason": if is_browser { "browser_page" } else { "window_focus" },
+                        "title": info.clean_title,
+                        "browser": info.browser_name,
+                        "hint": hint,
+                        "duration_ms": 4500
+                    }),
+                );
             }
 
             let is_browser = info.browser_name.is_some();
