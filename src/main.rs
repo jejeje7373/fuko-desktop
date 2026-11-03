@@ -146,6 +146,8 @@ pub fn run() {
             avatar::head_pat,
             avatar::set_avatar_position,
             overlay_window::get_desktop_geometry_cmd,
+            overlay_window::get_screen_bounds_cmd,
+            overlay_window::set_ignore_cursor_events_cmd,
             overlay_window::move_overlay_window_cmd,
             overlay_window::show_bubble_window_cmd,
             overlay_window::position_bubble_near_avatar_cmd,
