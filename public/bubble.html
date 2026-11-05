@@ -313,10 +313,63 @@
   </aside>
 
   <script>
-    const tauri = window.__TAURI__ || null;
-    const invoke = tauri ? tauri.core.invoke : async () => ({});
-    const listen = tauri ? tauri.event.listen : () => {};
-    const emit = tauri ? tauri.event.emit : async () => {};
+    function getTauri() {
+      return window.__TAURI__ || null;
+    }
+
+    async function invoke(cmd, args = {}) {
+      const t = window.__TAURI__;
+      if (t && t.core && typeof t.core.invoke === 'function') {
+        return await t.core.invoke(cmd, args);
+      }
+      if (t && typeof t.invoke === 'function') {
+        return await t.invoke(cmd, args);
+      }
+      for (let i = 0; i < 20; i++) {
+        await new Promise(r => setTimeout(r, 50));
+        const t2 = window.__TAURI__;
+        if (t2 && t2.core && typeof t2.core.invoke === 'function') {
+          return await t2.core.invoke(cmd, args);
+        }
+        if (t2 && typeof t2.invoke === 'function') {
+          return await t2.invoke(cmd, args);
+        }
+      }
+      console.error('[Tauri IPC] window.__TAURI__ no disponible para invocar:', cmd);
+      throw new Error('Canal IPC de Tauri no disponible.');
+    }
+
+    function listen(event, handler) {
+      const attach = () => {
+        const t = window.__TAURI__;
+        if (t && t.event && typeof t.event.listen === 'function') {
+          t.event.listen(event, handler);
+          return true;
+        }
+        return false;
+      };
+      if (!attach()) {
+        let count = 0;
+        const timer = setInterval(() => {
+          count++;
+          if (attach() || count > 30) clearInterval(timer);
+        }, 80);
+      }
+    }
+
+    async function emit(event, payload) {
+      const t = window.__TAURI__;
+      if (t && t.event && typeof t.event.emit === 'function') {
+        return await t.event.emit(event, payload);
+      }
+      for (let i = 0; i < 15; i++) {
+        await new Promise(r => setTimeout(r, 60));
+        const t2 = window.__TAURI__;
+        if (t2 && t2.event && typeof t2.event.emit === 'function') {
+          return await t2.event.emit(event, payload);
+        }
+      }
+    }
 
     const bubble = document.getElementById('bubble');
     const bubbleCloseBtn = document.getElementById('bubble-close-btn');
