@@ -216,13 +216,17 @@ fn build_claudia_prompt(
         String::new()
     } else {
         let soul_ctx = crate::soul_config::build_live_soul_context();
-        let catalog = crate::skills_hub::build_skills_catalog_summary();
         let matched = crate::skills_hub::match_skills_for_query(user_msg);
-        let mut active_docs = String::new();
-        for sk in &matched {
-            active_docs.push_str(&crate::skills_hub::read_skill_instructions(sk));
+        if matched.is_empty() {
+            format!("\n{}\n", soul_ctx)
+        } else {
+            let catalog = crate::skills_hub::build_skills_catalog_summary();
+            let mut active_docs = String::new();
+            for sk in &matched {
+                active_docs.push_str(&crate::skills_hub::read_skill_instructions(sk));
+            }
+            format!("\n{}\n{}\n{}\n", soul_ctx, catalog, active_docs)
         }
-        format!("\n{}\n{}\n{}\n", soul_ctx, catalog, active_docs)
     };
 
     let actions_rule = if is_short_reaction {
@@ -255,7 +259,8 @@ fn build_claudia_prompt(
         1. Responde SIEMPRE en espanol, en 1 a 3 oraciones cortas como maximo.\n\
         2. Responde en texto plano, sin Markdown, sin asteriscos ni listas.\n\
         3. NUNCA uses emojis bajo ninguna circunstancia.\n\
-        4. Empieza tu respuesta con una sola etiqueta de animo entre corchetes: [burla], [emocion], [aburrida] o [seria].\n\n\
+        4. Empieza tu respuesta con una sola etiqueta de animo entre corchetes: [burla], [emocion], [aburrida] o [seria].\n\
+        5. CRITICO: Responde DIRECTAMENTE con tu dialogo. NO uses herramientas (tools), NO ejecutes comandos bash ni leas archivos del disco. Responde de inmediato solo con tu texto en 1 a 2 oraciones.\n\n\
         What is open on the user's screen right now:\n\
         - {}\n\
         - Resumen de sensores: {}\n\
@@ -797,7 +802,7 @@ pub async fn ask_claudia<R: Runtime>(
 
             if !is_short_reaction {
                 if let Ok(mut hist) = bridge.history.lock() {
-                    hist.push((clean_msg, reply.clone()));
+                    hist.push((clean_msg.clone(), reply.clone()));
                     if hist.len() > 12 {
                         hist.remove(0);
                     }
@@ -809,6 +814,15 @@ pub async fn ask_claudia<R: Runtime>(
             }
 
             let _ = app_handle.emit("ai_status_updated", bridge.get_status());
+            let _ = app_handle.emit(
+                "avatar_speak",
+                serde_json::json!({
+                    "heard": clean_msg,
+                    "message": reply,
+                    "model": model_used,
+                    "thinking": false
+                }),
+            );
 
             // Reproducir sonido sintético no-humano de Capri tanto al responder por texto como por voz
             speak_out_loud_async(reply.clone());
@@ -1093,15 +1107,6 @@ pub async fn send_chat_message(
     match &res {
         Ok(r) => {
             eprintln!("[Chat IPC] Respuesta enviada: '{}' (modelo: {})", r.reply, r.model_used);
-            let _ = app_handle.emit(
-                "avatar_speak",
-                serde_json::json!({
-                    "heard": message,
-                    "message": r.reply,
-                    "model": r.model_used,
-                    "thinking": false
-                }),
-            );
         }
         Err(e) => eprintln!("[Chat IPC] Error: '{}'", e),
     }

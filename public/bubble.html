@@ -333,10 +333,10 @@
 
       <ol class="bubble__log" id="bubble-log" aria-live="polite"></ol>
 
-      <form id="bubble-form" class="bubble__prompt" action="javascript:void(0);">
+      <form id="bubble-form" class="bubble__prompt">
         <span class="bubble__you">TU &gt;</span>
         <input class="bubble__field" id="bubble-input" type="text" maxlength="500" placeholder="escribe aquí tu mensaje y presiona Enter..." autocomplete="off" />
-        <button type="submit" id="bubble-send-btn" class="bubble__send-btn" title="Enviar mensaje (Enter)">↵</button>
+        <button type="button" id="bubble-send-btn" class="bubble__send-btn" title="Enviar mensaje (Enter)">↵</button>
         <span class="bubble__mode-btn" id="bubble-mode-pill" title="Click para cambiar motor IA">AUTO</span>
       </form>
     </div>
@@ -355,6 +355,9 @@
       if (t && typeof t.invoke === 'function') {
         return await t.invoke(cmd, args);
       }
+      if (window.__TAURI_INTERNALS__ && typeof window.__TAURI_INTERNALS__.invoke === 'function') {
+        return await window.__TAURI_INTERNALS__.invoke(cmd, args);
+      }
       for (let i = 0; i < 20; i++) {
         await new Promise(r => setTimeout(r, 50));
         const t2 = window.__TAURI__;
@@ -363,6 +366,9 @@
         }
         if (t2 && typeof t2.invoke === 'function') {
           return await t2.invoke(cmd, args);
+        }
+        if (window.__TAURI_INTERNALS__ && typeof window.__TAURI_INTERNALS__.invoke === 'function') {
+          return await window.__TAURI_INTERNALS__.invoke(cmd, args);
         }
       }
       console.error('[Tauri IPC] window.__TAURI__ no disponible para invocar:', cmd);
