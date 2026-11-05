@@ -169,6 +169,7 @@ pub fn setup_window<R: Runtime>(app_handle: &AppHandle<R>) -> Result<(), String>
         }));
         let _ = existing_bubble.set_always_on_top(true);
         let _ = existing_bubble.set_skip_taskbar(true);
+        let _ = existing_bubble.set_focusable(true);
     } else {
         let _ = WebviewWindowBuilder::new(
             app_handle,
@@ -412,6 +413,18 @@ pub async fn show_bubble_window_cmd(
         } else {
             let _ = bubble.hide();
         }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn focus_bubble_window_cmd(
+    app_handle: AppHandle<tauri::Wry>,
+) -> Result<(), String> {
+    if let Some(bubble) = app_handle.get_webview_window(BUBBLE_WINDOW_NAME) {
+        let _ = bubble.set_focusable(true);
+        let _ = bubble.set_focus();
+        let _ = app_handle.emit("focus_bubble_input", true);
     }
     Ok(())
 }

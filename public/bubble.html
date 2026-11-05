@@ -304,11 +304,11 @@
 
       <ol class="bubble__log" id="bubble-log" aria-live="polite"></ol>
 
-      <div class="bubble__prompt">
+      <form id="bubble-form" class="bubble__prompt" action="javascript:void(0);">
         <span class="bubble__you">TU &gt;</span>
         <input class="bubble__field" id="bubble-input" type="text" maxlength="500" placeholder="escribe a Capri y presiona Enter..." autocomplete="off" />
         <span class="bubble__mode-btn" id="bubble-mode-pill" title="Click para cambiar motor IA">AUTO</span>
-      </div>
+      </form>
     </div>
   </aside>
 
@@ -653,28 +653,53 @@
           face: 'aside',
           reason: 'thinking',
           hint: '[CAPRI // PENSANDO...]',
-          duration_ms: 6000
+          duration_ms: 12000
         });
       } catch (_) {}
-      bubbleReply.textContent = 'pensando';
+      bubbleReply.textContent = 'pensando...';
       bubbleNoise.textContent = '...';
       bubbleCaret.style.display = 'inline-block';
+
+      if (window.__thinkingSafetyTimer) clearTimeout(window.__thinkingSafetyTimer);
+      window.__thinkingSafetyTimer = setTimeout(() => {
+        isThinking = false;
+        if (bubbleReply.textContent.startsWith('pensando')) {
+          setBubbleState('EN ESPERA');
+          bubbleCaret.style.display = 'none';
+        }
+      }, 45000);
 
       try {
         const res = await invoke('send_chat_message', {
           message: text,
           mode: currentBrainMode
         });
+        if (window.__thinkingSafetyTimer) {
+          clearTimeout(window.__thinkingSafetyTimer);
+          window.__thinkingSafetyTimer = null;
+        }
         if (res && res.reply) {
           startTypewriter(res.reply, res.model_used || currentBrainMode);
         } else {
           startTypewriter('Sin respuesta del motor.', 'error');
         }
       } catch (err) {
+        if (window.__thinkingSafetyTimer) {
+          clearTimeout(window.__thinkingSafetyTimer);
+          window.__thinkingSafetyTimer = null;
+        }
         startTypewriter(`Fallo en la conexion: ${err}`, 'error');
       } finally {
         isThinking = false;
       }
+    }
+
+    const bubbleForm = document.getElementById('bubble-form');
+    if (bubbleForm) {
+      bubbleForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        submitUserMessage();
+      });
     }
 
     bubbleInput.addEventListener('keydown', (e) => {
@@ -682,12 +707,12 @@
         invoke('show_bubble_window_cmd', { show: false });
         return;
       }
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' || e.code === 'Enter' || e.keyCode === 13) {
         e.preventDefault();
         submitUserMessage();
         return;
       }
-      if (e.key.length === 1) {
+      if (e.key && e.key.length === 1) {
         capriSynth.typeBlip();
       }
     });
@@ -733,11 +758,11 @@
         if (window.__thinkingSafetyTimer) clearTimeout(window.__thinkingSafetyTimer);
         window.__thinkingSafetyTimer = setTimeout(() => {
           isThinking = false;
-          if (bubbleReply.textContent === 'pensando') {
+          if (bubbleReply.textContent === 'pensando' || bubbleReply.textContent === 'pensando...') {
             setBubbleState('EN ESPERA');
             bubbleCaret.style.display = 'none';
           }
-        }, 12000);
+        }, 45000);
       } else if (msg) {
         if (window.__thinkingSafetyTimer) {
           clearTimeout(window.__thinkingSafetyTimer);
@@ -768,13 +793,26 @@
     });
 
     window.addEventListener('focus', () => {
+      try { invoke('focus_bubble_window_cmd'); } catch (_) {}
       setTimeout(() => bubbleInput.focus(), 50);
     });
 
+    document.addEventListener('mousedown', (e) => {
+      try { invoke('focus_bubble_window_cmd'); } catch (_) {}
+      if (e.target !== bubbleCloseBtn && e.target !== bubbleSettingsBtn && e.target !== bubbleModePill) {
+        setTimeout(() => bubbleInput.focus(), 10);
+      }
+    });
+
     document.addEventListener('click', (e) => {
+      try { invoke('focus_bubble_window_cmd'); } catch (_) {}
       if (e.target !== bubbleCloseBtn && e.target !== bubbleSettingsBtn && e.target !== bubbleModePill) {
         bubbleInput.focus();
       }
+    });
+
+    bubbleInput.addEventListener('focus', () => {
+      try { invoke('focus_bubble_window_cmd'); } catch (_) {}
     });
 
     listen('ai_status_updated', (e) => {

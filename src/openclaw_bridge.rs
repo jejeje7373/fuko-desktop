@@ -497,9 +497,9 @@ pub async fn query_antigravity_cli_with_timeout(
 pub async fn query_antigravity_cli(prompt: &str) -> Result<(String, String), String> {
     let cfg = crate::connections_config::load_connections_config();
     let timeout = if cfg.antigravity_timeout_secs > 0 {
-        cfg.antigravity_timeout_secs.max(25)
+        cfg.antigravity_timeout_secs.max(35)
     } else {
-        25
+        35
     };
     query_antigravity_cli_with_timeout(prompt, timeout).await
 }
@@ -1086,12 +1086,15 @@ pub async fn send_chat_message(
     app_handle: AppHandle<tauri::Wry>,
     bridge: tauri::State<'_, Arc<OpenClawBridge>>,
 ) -> Result<ChatResponse, String> {
+    use std::io::Write;
     eprintln!("[Chat IPC] Mensaje recibido: '{}' (modo: {:?})", message, mode);
+    let _ = std::io::stderr().flush();
     let res = ask_claudia(&app_handle, bridge.inner(), message, mode, false).await;
     match &res {
         Ok(r) => eprintln!("[Chat IPC] Respuesta enviada: '{}' (modelo: {})", r.reply, r.model_used),
         Err(e) => eprintln!("[Chat IPC] Error: '{}'", e),
     }
+    let _ = std::io::stderr().flush();
     res
 }
 
