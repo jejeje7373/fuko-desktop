@@ -412,12 +412,14 @@ pub async fn query_openclaw_cli(
     image_path: Option<&str>,
 ) -> Result<(String, String), String> {
     let bin = resolve_openclaw_bin();
-    let model_name = model_override.unwrap_or("nvidia/nemotron-3-ultra-550b-a55b");
+    let model_name = model_override.unwrap_or("openrouter/nvidia/nemotron-3.5-lightning:free");
 
     let mut cmd = Command::new(bin);
     cmd.args(["--log-level", "silent", "infer", "model", "run", "--local", "--json"]);
     if let Some(m) = model_override {
         cmd.args(["--model", m]);
+    } else {
+        cmd.args(["--model", model_name]);
     }
     if let Some(img) = image_path {
         if Path::new(img).exists() {
@@ -750,14 +752,14 @@ pub async fn ask_claudia<R: Runtime>(
     let cfg = crate::connections_config::load_connections_config();
     let is_explicit_antigravity = effective_mode == "antigravity" || effective_mode == "argon";
     let use_antigravity = is_explicit_antigravity || (!is_short_reaction && should_use_antigravity(&effective_mode, &user_message));
-    let use_agent_exec =
+    let _use_agent_exec =
         !is_short_reaction && (!matched_skills.is_empty() || user_message.starts_with("/skill") || effective_mode == "openclaw");
 
-    // Modelo de OpenClaw configurado
-    let oc_model = if !cfg.openclaw_model.is_empty() {
+    // Modelo de OpenClaw configurado (usar openrouter nemotron por defecto al ser ultra rápido y estable)
+    let oc_model = if !cfg.openclaw_model.is_empty() && cfg.openclaw_model != "nvidia/nemotron-3-ultra-550b-a55b" {
         cfg.openclaw_model.as_str()
     } else {
-        "nvidia/nemotron-3-ultra-550b-a55b"
+        "openrouter/nvidia/nemotron-3.5-lightning:free"
     };
 
     let result = if is_explicit_antigravity {
@@ -783,9 +785,15 @@ pub async fn ask_claudia<R: Runtime>(
             Ok((r, m)) => Ok((r, format!("{}{}", m, skill_badge))),
             Err(e) => {
                 println!("[Bridge] Antigravity fallo ({}), usando OpenClaw fallback...", e);
-                query_openclaw_agent_exec(&full_prompt, Some(oc_model))
+                query_openclaw_cli(&full_prompt, Some(oc_model), None)
                     .await
                     .map(|(r, m)| (r, format!("{}+fallback{}", m, skill_badge)))
+                    .or_else(|_| {
+                        Ok((
+                            "[burla] Glitch temporal en la red, pero aquí estoy. Dime qué necesitas ejecutar.".to_string(),
+                            "offline-fallback".to_string(),
+                        ))
+                    })
             }
         }
     } else {
@@ -793,16 +801,18 @@ pub async fn ask_claudia<R: Runtime>(
             "ollama" => Some("ollama/qwen3.5:cloud"),
             _ => Some(oc_model),
         };
-        let oc_res = if use_agent_exec {
-            query_openclaw_agent_exec(&full_prompt, model_choice).await
-        } else {
-            query_openclaw_cli(&full_prompt, model_choice, None).await
-        };
+        let oc_res = query_openclaw_cli(&full_prompt, model_choice, None).await;
         match oc_res {
             Ok((r, m)) => Ok((r, format!("{}{}", m, skill_badge))),
             Err(_) => query_antigravity_cli(&full_prompt)
                 .await
-                .map(|(r, m)| (r, format!("{}{}", m, skill_badge))),
+                .map(|(r, m)| (r, format!("{}{}", m, skill_badge)))
+                .or_else(|_| {
+                    Ok((
+                        "[burla] Glitch en el enlace neuronal, choom. Pero mis manos siguen listas en el sistema.".to_string(),
+                        "offline-fallback".to_string(),
+                    ))
+                }),
         }
     };
 

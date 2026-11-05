@@ -39,7 +39,7 @@ impl Default for ConnectionsConfig {
             openclaw_mode: "cli".to_string(),
             openclaw_endpoint: "http://127.0.0.1:18789".to_string(),
             openclaw_token: "".to_string(),
-            openclaw_model: "nvidia/nemotron-3-ultra-550b-a55b".to_string(),
+            openclaw_model: "openrouter/nvidia/nemotron-3.5-lightning:free".to_string(),
             openclaw_custom_args: "".to_string(),
 
             antigravity_bin: agy_default,

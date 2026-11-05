@@ -268,9 +268,16 @@ pub fn toggle_window<R: Runtime>(window: &WebviewWindow<R>, show: bool) -> Resul
     Ok(())
 }
 
-pub fn position_bubble_near_avatar<R: Runtime>(_app_handle: &AppHandle<R>) -> Result<(), String> {
-    // El usuario requiere que el bloque de texto (FUKO.SYS // DIALOGO) permanezca fijo
-    // en la esquina inferior derecha como en la imagen y no se desplace con el avatar.
+pub fn position_bubble_near_avatar<R: Runtime>(app_handle: &AppHandle<R>) -> Result<(), String> {
+    let geom = query_geometry(app_handle);
+    let bubble_x = (geom.screen_width - BUBBLE_WIDTH - 20).max(16);
+    let bubble_y = (geom.screen_height - BUBBLE_HEIGHT - 115).max(36);
+    if let Some(bubble) = app_handle.get_webview_window(BUBBLE_WINDOW_NAME) {
+        let _ = bubble.set_position(Position::Physical(PhysicalPosition {
+            x: bubble_x,
+            y: bubble_y,
+        }));
+    }
     Ok(())
 }
 
@@ -386,11 +393,16 @@ pub async fn show_bubble_window_cmd(
     focus: Option<bool>,
     app_handle: AppHandle<tauri::Wry>,
 ) -> Result<(), String> {
-    if show {
-        let _ = position_bubble_near_avatar(&app_handle);
-    }
+    let geom = query_geometry(&app_handle);
+    let bubble_x = (geom.screen_width - BUBBLE_WIDTH - 20).max(16);
+    let bubble_y = (geom.screen_height - BUBBLE_HEIGHT - 115).max(36);
+
     if let Some(bubble) = app_handle.get_webview_window(BUBBLE_WINDOW_NAME) {
         if show {
+            let _ = bubble.set_position(Position::Physical(PhysicalPosition {
+                x: bubble_x,
+                y: bubble_y,
+            }));
             let _ = bubble.show();
             let _ = bubble.set_always_on_top(true);
             if focus.unwrap_or(false) {

@@ -28,13 +28,15 @@
         "title": "Fuko Dialogue",
         "width": 440,
         "height": 260,
+        "x": 1460,
+        "y": 705,
         "resizable": false,
         "decorations": false,
         "transparent": true,
         "shadow": false,
         "skipTaskbar": true,
         "alwaysOnTop": true,
-        "visible": false,
+        "visible": true,
         "url": "bubble.html"
       },
       {

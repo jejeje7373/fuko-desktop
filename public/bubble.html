@@ -648,12 +648,14 @@
         typeTimer = null;
       }
       setBubbleState('PENSANDO');
-      emit('capri_peek_expression', {
-        face: 'aside',
-        reason: 'thinking',
-        hint: '[CAPRI // PENSANDO...]',
-        duration_ms: 6000
-      });
+      try {
+        emit('capri_peek_expression', {
+          face: 'aside',
+          reason: 'thinking',
+          hint: '[CAPRI // PENSANDO...]',
+          duration_ms: 6000
+        });
+      } catch (_) {}
       bubbleReply.textContent = 'pensando';
       bubbleNoise.textContent = '...';
       bubbleCaret.style.display = 'inline-block';
@@ -759,7 +761,20 @@
     });
 
     listen('focus_bubble_input', () => {
+      setTimeout(() => {
+        bubbleInput.focus();
+        bubbleInput.select();
+      }, 50);
+    });
+
+    window.addEventListener('focus', () => {
       setTimeout(() => bubbleInput.focus(), 50);
+    });
+
+    document.addEventListener('click', (e) => {
+      if (e.target !== bubbleCloseBtn && e.target !== bubbleSettingsBtn && e.target !== bubbleModePill) {
+        bubbleInput.focus();
+      }
     });
 
     listen('ai_status_updated', (e) => {
