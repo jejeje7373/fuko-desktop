@@ -147,32 +147,13 @@ pub async fn build_realtime_screen_context() -> String {
     )
 }
 
-fn should_use_antigravity(mode: &str, message: &str) -> bool {
-    if mode == "antigravity" || mode == "argon" {
-        return true;
-    }
-    if mode != "auto" {
+fn should_use_antigravity(mode: &str, _message: &str) -> bool {
+    // Si el usuario configuró o seleccionó explícitamente openclaw u ollama en el HUD, respetar su selección
+    if mode == "openclaw" || mode == "ollama" {
         return false;
     }
-    let lower = message.to_lowercase();
-    lower.starts_with("/antigravity")
-        || lower.starts_with("/agy")
-        || lower.starts_with("/heavy")
-        || lower.contains("antigravity")
-        || lower.contains("ciberseguridad")
-        || lower.contains("pentest")
-        || lower.contains("vulnerabilidad")
-        || lower.contains("inyeccion")
-        || lower.contains("sql injection")
-        || lower.contains("xss")
-        || lower.contains("exploit")
-        || lower.contains("auditoria")
-        || lower.contains("programar")
-        || lower.contains("codigo")
-        || lower.contains("arquitectura")
-        || lower.contains("refactorizar")
-        || lower.contains("optimizar")
-        || lower.contains("bug")
+    // En modo auto, antigravity, argon o por defecto: SIEMPRE priorizar modelos de Antigravity (Gemini 3.8 Flash High)
+    true
 }
 
 fn read_recent_file_snippet(file_path: &Option<String>) -> String {
@@ -514,7 +495,13 @@ pub async fn query_antigravity_cli_with_timeout(
 }
 
 pub async fn query_antigravity_cli(prompt: &str) -> Result<(String, String), String> {
-    query_antigravity_cli_with_timeout(prompt, 18).await
+    let cfg = crate::connections_config::load_connections_config();
+    let timeout = if cfg.antigravity_timeout_secs > 0 {
+        cfg.antigravity_timeout_secs.max(25)
+    } else {
+        25
+    };
+    query_antigravity_cli_with_timeout(prompt, timeout).await
 }
 
 pub async fn query_gemini_argon_cli(prompt: &str) -> Result<(String, String), String> {
@@ -762,35 +749,18 @@ pub async fn ask_claudia<R: Runtime>(
         "openrouter/nvidia/nemotron-3.5-lightning:free"
     };
 
-    let result = if is_explicit_antigravity {
-        // Modo Antigravity: si tarda más de 18s o falla, fallback a OpenClaw para no colgar al usuario
+    let result = if is_explicit_antigravity || use_antigravity {
+        // Prioridad 1: Modelos de Antigravity (Gemini 3.8 Flash High / agy CLI)
         match query_antigravity_cli(&full_prompt).await {
             Ok((r, m)) => Ok((r, format!("{}{}", m, skill_badge))),
             Err(e) => {
-                eprintln!("[Antigravity] Fallo o timeout ({}), usando fallback veloz OpenClaw...", e);
-                query_openclaw_cli(&full_prompt, Some(oc_model), None)
-                    .await
-                    .map(|(r, m)| (r, format!("{}+fast-fallback{}", m, skill_badge)))
-                    .or_else(|_| {
-                        Ok((
-                            "[burla] Glitch en la nube, pero sigo conectada a tu máquina. ¿Qué necesitas, choom?".to_string(),
-                            "offline-fallback".to_string(),
-                        ))
-                    })
-            }
-        }
-    } else if use_antigravity {
-        // Modo Auto con preferencia Antigravity
-        match query_antigravity_cli(&full_prompt).await {
-            Ok((r, m)) => Ok((r, format!("{}{}", m, skill_badge))),
-            Err(e) => {
-                println!("[Bridge] Antigravity fallo ({}), usando OpenClaw fallback...", e);
+                eprintln!("[Antigravity] Fallo o timeout ({}), usando fallback secundario OpenClaw...", e);
                 query_openclaw_cli(&full_prompt, Some(oc_model), None)
                     .await
                     .map(|(r, m)| (r, format!("{}+fallback{}", m, skill_badge)))
                     .or_else(|_| {
                         Ok((
-                            "[burla] Glitch temporal en la red, pero aquí estoy. Dime qué necesitas ejecutar.".to_string(),
+                            "[burla] Glitch en la nube, pero sigo conectada a tu máquina. ¿Qué necesitas, choom?".to_string(),
                             "offline-fallback".to_string(),
                         ))
                     })

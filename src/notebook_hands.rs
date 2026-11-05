@@ -996,36 +996,18 @@ pub async fn try_direct_notebook_action<R: Runtime>(
         return Some(format!("[seria] {}", POOL_DORMIR[idx]));
     }
 
-    if lower == "hola"
-        || lower == "hola fuko"
-        || lower == "hola capri"
-        || lower == "buenas"
-        || lower == "buenas tardes"
-        || lower == "buenos dias"
-        || lower == "buenos días"
-        || lower == "hey"
-        || lower == "despierta"
+    if lower == "despierta"
         || lower == "arriba"
         || lower == "fuko despierta"
     {
         const POOL_DESPERTAR: &[&str] = &[
-            "¿Me llamaste? Claro que sí, no puedes vivir sin mí.",
-            "¡Hola de nuevo, humanito! ¿Qué travesura hacemos hoy?",
             "Bueno, bueno, aquí estoy. ¿Qué necesitas, choom?",
             "Aquí estoy, tontito. Siempre cuidando tu máquina.",
             "¿Sí? Dime, dime, te escucho.",
-            "¡Hola, choom! Lista para ayudarte con tus programas y código.",
+            "¡Lista, choom! Lista para ayudarte con tus programas y código.",
         ];
         let idx = fastrand::usize(..POOL_DESPERTAR.len());
         return Some(format!("[emocion] {}", POOL_DESPERTAR[idx]));
-    }
-
-    if lower == "como estas" || lower == "cómo estás" || lower == "que tal" || lower == "qué tal" {
-        return Some("[burla] Excelente choom, monitoreando tu sistema y lista para ejecutar lo que me pidas.".to_string());
-    }
-
-    if lower == "que haces" || lower == "qué haces" || lower == "que estas haciendo" || lower == "qué estás haciendo" {
-        return Some("[smug] Cuidando tu notebook y vigilando tus ventanas desde aquí adentro. Pídeme abrir cualquier programa.".to_string());
     }
 
     if lower == "mute"
