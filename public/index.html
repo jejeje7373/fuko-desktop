@@ -105,11 +105,32 @@
        CAPRI TYPER INPUT BAR (Talk.cs Typer)
        ================================================== */
     #capri-typer {
-      display: none !important;
+      position: absolute;
+      bottom: 48px;
+      left: 10px;
+      right: 10px;
+      height: 40px;
+      background: rgba(9, 11, 15, 0.96);
+      border: 2px solid #3ad6eb;
+      clip-path: polygon(
+        8px 0%,
+        calc(100% - 8px) 0%,
+        100% 8px,
+        100% calc(100% - 8px),
+        calc(100% - 8px) 100%,
+        8px 100%,
+        0% calc(100% - 8px),
+        0% 8px
+      );
+      display: none;
+      align-items: center;
+      padding: 0 10px 0 18px;
+      z-index: 2100;
+      box-shadow: 0 0 16px rgba(58, 214, 235, 0.4);
     }
 
     #capri-typer.open {
-      display: flex;
+      display: flex !important;
     }
 
     #capri-typer .typer-red-bar {
@@ -2096,12 +2117,18 @@
   // 7.5. INPUT BAR (> tú:) Y CONEXIÓN A OPENCLAW + GEMINI 4 ARGON
   // =========================================================
   async function toggleTyper(force = null) {
+    const open = force !== null ? force : !typer.classList.contains('open');
+    typer.classList.toggle('open', open);
+    if (open) {
+      setTimeout(() => {
+        typerInput.focus();
+        typerInput.select();
+      }, 30);
+    }
     try {
-      await invoke('show_bubble_window_cmd', { show: force !== null ? force : true, focus: true });
-      await invoke('focus_bubble_window_cmd');
-      await emit('focus_bubble_input', true);
+      await invoke('show_bubble_window_cmd', { show: true, focus: false });
     } catch (e) {
-      console.warn('[toggleTyper] Error al enfocar dialogo:', e);
+      console.warn('[toggleTyper] Error al mostrar dialogo:', e);
     }
   }
 
