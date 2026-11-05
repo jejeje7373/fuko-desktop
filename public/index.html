@@ -26,39 +26,7 @@
        Panel: rgb(9, 11, 15), Border: #3ad6eb, Accent: #ff4466
        ================================================== */
     #capri-bubble {
-      position: absolute;
-      top: 8px;
-      left: 10px;
-      right: 10px;
-      background: rgba(9, 11, 15, 0.95);
-      border: 2px solid #3ad6eb;
-      clip-path: polygon(
-        10px 0%,
-        calc(100% - 10px) 0%,
-        100% 10px,
-        100% calc(100% - 10px),
-        calc(100% - 10px) 100%,
-        10px 100%,
-        0% calc(100% - 10px),
-        0% 10px
-      );
-      box-shadow: 0 0 14px rgba(58, 214, 235, 0.35);
-      padding: 10px 14px 11px 22px;
-      min-height: 54px;
-      max-height: 148px;
-      overflow-y: auto;
-      opacity: 0;
-      transform: translateY(6px);
-      pointer-events: none;
-      transition: opacity 0.14s ease, transform 0.14s ease;
-      z-index: 2000;
-      cursor: pointer;
-    }
-
-    #capri-bubble.visible {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
+      display: none !important;
     }
 
     #capri-bubble::before {
@@ -137,28 +105,7 @@
        CAPRI TYPER INPUT BAR (Talk.cs Typer)
        ================================================== */
     #capri-typer {
-      position: absolute;
-      bottom: 256px;
-      left: 12px;
-      right: 12px;
-      height: 42px;
-      background: rgba(9, 11, 15, 0.96);
-      border: 2px solid #3ad6eb;
-      clip-path: polygon(
-        8px 0%,
-        calc(100% - 8px) 0%,
-        100% 8px,
-        100% calc(100% - 8px),
-        calc(100% - 8px) 100%,
-        8px 100%,
-        0% calc(100% - 8px),
-        0% 8px
-      );
-      display: none;
-      align-items: center;
-      padding: 0 10px 0 18px;
-      z-index: 2100;
-      box-shadow: 0 0 16px rgba(58, 214, 235, 0.4);
+      display: none !important;
     }
 
     #capri-typer.open {
@@ -1558,34 +1505,13 @@
     // 1. Mostrar bubble_window (bubble.html) en su posición fija derecha y enviarle 'capri_bubble_render'
     try {
       await invoke('show_bubble_window_cmd', { show: true, focus: false });
-      if (tauri && tauri.event) {
-        await tauri.event.emit('capri_bubble_render', {
-          heard: cleanHeard,
-          message: cleanReply || (thinking ? 'pensando...' : ''),
-          model: stripTextTagsAndEmojis(model || 'CAPRI'),
-          thinking: !!thinking
-        });
-      }
-    } catch (_) {
-      // Fallback al globo integrado si bubble_window no está disponible
-      bubblePrompt.innerText = `> tu: ${cleanHeard}`;
-      bubbleModel.innerText = model ? `[${stripTextTagsAndEmojis(model)}]` : '';
-      isThinking = thinking;
-      fullReplyText = thinking ? '...' : cleanReply;
-      revealedChars = 0;
-      revealStart = getNow();
-      bubbleVisible = true;
-      bubble.classList.add('visible');
-    }
-
-    clearTimeout(bubbleHideTimer);
-    if (!thinking) {
-      const readDuration = Math.max(9000, Math.min(22000, cleanReply.length * 75 + 5000));
-      bubbleHideTimer = setTimeout(() => {
-        bubbleVisible = false;
-        bubble.classList.remove('visible');
-      }, readDuration);
-    }
+      await emit('capri_bubble_render', {
+        heard: cleanHeard,
+        message: cleanReply || (thinking ? 'pensando...' : ''),
+        model: stripTextTagsAndEmojis(model || 'CAPRI'),
+        thinking: !!thinking
+      });
+    } catch (_) {}
   }
 
   function updateBubbleTypewriter(now) {
@@ -2172,13 +2098,10 @@
   async function toggleTyper(force = null) {
     try {
       await invoke('show_bubble_window_cmd', { show: force !== null ? force : true, focus: true });
-      if (tauri && tauri.event) {
-        await tauri.event.emit('focus_bubble_input', true);
-      }
-    } catch (_) {
-      const open = force !== null ? force : !typer.classList.contains('open');
-      typer.classList.toggle('open', open);
-      if (open) typerInput.focus();
+      await invoke('focus_bubble_window_cmd');
+      await emit('focus_bubble_input', true);
+    } catch (e) {
+      console.warn('[toggleTyper] Error al enfocar dialogo:', e);
     }
   }
 

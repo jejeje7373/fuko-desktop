@@ -253,6 +253,33 @@
       user-select: text;
     }
 
+    .bubble__send-btn {
+      background: rgba(255, 45, 111, 0.18);
+      border: 1px solid var(--capri-pink);
+      color: var(--capri-pink);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1;
+      padding: 3px 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 2px;
+      transition: all 0.14s ease;
+    }
+
+    .bubble__send-btn:hover {
+      background: var(--capri-pink);
+      color: #07040d;
+      box-shadow: 0 0 10px rgba(255, 45, 111, 0.6);
+    }
+
+    .bubble__send-btn:active {
+      transform: scale(0.94);
+    }
+
     .bubble__mode-btn {
       font-size: 9.5px;
       font-weight: 700;
@@ -306,7 +333,8 @@
 
       <form id="bubble-form" class="bubble__prompt" action="javascript:void(0);">
         <span class="bubble__you">TU &gt;</span>
-        <input class="bubble__field" id="bubble-input" type="text" maxlength="500" placeholder="escribe a Capri y presiona Enter..." autocomplete="off" />
+        <input class="bubble__field" id="bubble-input" type="text" maxlength="500" placeholder="escribe aquí tu mensaje y presiona Enter..." autocomplete="off" />
+        <button type="submit" id="bubble-send-btn" class="bubble__send-btn" title="Enviar mensaje (Enter)">↵</button>
         <span class="bubble__mode-btn" id="bubble-mode-pill" title="Click para cambiar motor IA">AUTO</span>
       </form>
     </div>
@@ -382,6 +410,7 @@
     const bubbleCaret = document.getElementById('bubble-caret');
     const bubbleLog = document.getElementById('bubble-log');
     const bubbleInput = document.getElementById('bubble-input');
+    const bubbleSendBtn = document.getElementById('bubble-send-btn');
     const bubbleModePill = document.getElementById('bubble-mode-pill');
 
     const BRAIN_MODES = ['auto', 'antigravity', 'openclaw', 'ollama'];
@@ -753,6 +782,18 @@
         e.preventDefault();
         submitUserMessage();
       });
+      bubbleForm.addEventListener('click', (e) => {
+        if (e.target !== bubbleModePill && e.target !== bubbleSendBtn) {
+          bubbleInput.focus();
+        }
+      });
+    }
+
+    if (bubbleSendBtn) {
+      bubbleSendBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        submitUserMessage();
+      });
     }
 
     bubbleInput.addEventListener('keydown', (e) => {
@@ -838,34 +879,28 @@
       }
     });
 
-    listen('focus_bubble_input', () => {
+    listen('focus_bubble_input', (e) => {
+      const selectAll = e && e.payload === true;
       setTimeout(() => {
         bubbleInput.focus();
-        bubbleInput.select();
+        if (selectAll) bubbleInput.select();
       }, 50);
     });
 
     window.addEventListener('focus', () => {
-      try { invoke('focus_bubble_window_cmd'); } catch (_) {}
       setTimeout(() => bubbleInput.focus(), 50);
     });
 
     document.addEventListener('mousedown', (e) => {
-      try { invoke('focus_bubble_window_cmd'); } catch (_) {}
-      if (e.target !== bubbleCloseBtn && e.target !== bubbleSettingsBtn && e.target !== bubbleModePill) {
+      if (e.target !== bubbleCloseBtn && e.target !== bubbleSettingsBtn && e.target !== bubbleModePill && e.target !== bubbleSendBtn) {
         setTimeout(() => bubbleInput.focus(), 10);
       }
     });
 
     document.addEventListener('click', (e) => {
-      try { invoke('focus_bubble_window_cmd'); } catch (_) {}
-      if (e.target !== bubbleCloseBtn && e.target !== bubbleSettingsBtn && e.target !== bubbleModePill) {
+      if (e.target !== bubbleCloseBtn && e.target !== bubbleSettingsBtn && e.target !== bubbleModePill && e.target !== bubbleSendBtn) {
         bubbleInput.focus();
       }
-    });
-
-    bubbleInput.addEventListener('focus', () => {
-      try { invoke('focus_bubble_window_cmd'); } catch (_) {}
     });
 
     listen('ai_status_updated', (e) => {

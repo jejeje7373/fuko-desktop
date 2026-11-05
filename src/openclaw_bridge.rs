@@ -1089,9 +1089,20 @@ pub async fn send_chat_message(
     use std::io::Write;
     eprintln!("[Chat IPC] Mensaje recibido: '{}' (modo: {:?})", message, mode);
     let _ = std::io::stderr().flush();
-    let res = ask_claudia(&app_handle, bridge.inner(), message, mode, false).await;
+    let res = ask_claudia(&app_handle, bridge.inner(), message.clone(), mode, false).await;
     match &res {
-        Ok(r) => eprintln!("[Chat IPC] Respuesta enviada: '{}' (modelo: {})", r.reply, r.model_used),
+        Ok(r) => {
+            eprintln!("[Chat IPC] Respuesta enviada: '{}' (modelo: {})", r.reply, r.model_used);
+            let _ = app_handle.emit(
+                "avatar_speak",
+                serde_json::json!({
+                    "heard": message,
+                    "message": r.reply,
+                    "model": r.model_used,
+                    "thinking": false
+                }),
+            );
+        }
         Err(e) => eprintln!("[Chat IPC] Error: '{}'", e),
     }
     let _ = std::io::stderr().flush();

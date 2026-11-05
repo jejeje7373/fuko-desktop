@@ -171,7 +171,7 @@ pub fn setup_window<R: Runtime>(app_handle: &AppHandle<R>) -> Result<(), String>
         let _ = existing_bubble.set_skip_taskbar(true);
         let _ = existing_bubble.set_focusable(true);
     } else {
-        let _ = WebviewWindowBuilder::new(
+        let bubble_win = WebviewWindowBuilder::new(
             app_handle,
             BUBBLE_WINDOW_NAME,
             WebviewUrl::App("bubble.html".into()),
@@ -187,6 +187,7 @@ pub fn setup_window<R: Runtime>(app_handle: &AppHandle<R>) -> Result<(), String>
         .position(bubble_start_x as f64, bubble_start_y as f64)
         .build()
         .map_err(|e| format!("Failed to build bubble window: {}", e))?;
+        let _ = bubble_win.set_focusable(true);
     }
 
     let peek_start_x = (geom.screen_width - PEEK_WIDTH - 20).max(16);
@@ -404,6 +405,7 @@ pub async fn show_bubble_window_cmd(
                 x: bubble_x,
                 y: bubble_y,
             }));
+            let _ = bubble.set_focusable(true);
             let _ = bubble.show();
             let _ = bubble.set_always_on_top(true);
             if focus.unwrap_or(false) {
@@ -424,7 +426,7 @@ pub async fn focus_bubble_window_cmd(
     if let Some(bubble) = app_handle.get_webview_window(BUBBLE_WINDOW_NAME) {
         let _ = bubble.set_focusable(true);
         let _ = bubble.set_focus();
-        let _ = app_handle.emit("focus_bubble_input", true);
+        let _ = app_handle.emit("focus_bubble_input", false);
     }
     Ok(())
 }
