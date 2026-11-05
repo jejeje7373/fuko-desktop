@@ -385,7 +385,7 @@ pub fn open_path_or_folder(raw_target: &str, in_vscode: bool) -> Result<String, 
         "descargas" | "downloads" => home.join("Descargas"),
         "documentos" | "documents" => home.join("Documentos"),
         "workspace" | "openclaw" | "proyectos" => home.join(".openclaw/workspace"),
-        "claudia" | "claudia-desktop" => home.join(".openclaw/workspace/claudia-desktop"),
+        "claudia" | "claudia-desktop" | "fuko" | "fuko-desktop" => home.join("fuko-desktop"),
         "home" | "inicio" | "carpeta personal" => home,
         "escritorio" | "desktop" => {
             let d = home.join("Escritorio");
@@ -691,7 +691,7 @@ pub async fn run_notebook_command(cmd_str: &str) -> Result<String, String> {
 
 /// Escribe texto o código directamente en la ventana activa del notebook usando Mutter RemoteDesktop (`claudia_hid.py`)
 pub async fn type_into_active_window(text: &str, enter_after: bool) -> Result<String, String> {
-    let script = "/home/jejej/.openclaw/workspace/claudia-desktop/scripts/claudia_hid.py";
+    let script = "/home/jejej/fuko-desktop/scripts/claudia_hid.py";
     let mode = if enter_after { "type_enter" } else { "type" };
     let unescaped = text.replace("\\n", "\n").replace("\\t", "\t");
     let mut cmd = prepare_host_command("python3");
@@ -705,7 +705,7 @@ pub async fn type_into_active_window(text: &str, enter_after: bool) -> Result<St
 
 /// Presiona una tecla o atajo (ej. `Return`, `Tab`, `ctrl+s`, `ctrl+v`, `ctrl+l`, `alt+Tab`) en la ventana activa
 pub async fn press_keys_in_active_window(combo: &str) -> Result<String, String> {
-    let script = "/home/jejej/.openclaw/workspace/claudia-desktop/scripts/claudia_hid.py";
+    let script = "/home/jejej/fuko-desktop/scripts/claudia_hid.py";
     let mut cmd = prepare_host_command("python3");
     cmd.arg(script).arg("key").arg(combo.trim());
     let _ = tokio::time::timeout(tokio::time::Duration::from_secs(5), cmd.status())
@@ -721,7 +721,7 @@ pub async fn fill_login_in_active_window(
     pass: &str,
     submit: bool,
 ) -> Result<String, String> {
-    let script = "/home/jejej/.openclaw/workspace/claudia-desktop/scripts/claudia_hid.py";
+    let script = "/home/jejej/fuko-desktop/scripts/claudia_hid.py";
     let mut cmd = prepare_host_command("python3");
     cmd.arg(script)
         .arg("login")
@@ -776,7 +776,7 @@ pub async fn open_or_fill_login_page(spec: &str) -> Result<String, String> {
 /// Abre Google Chrome en https://gemini.google.com, selecciona el modelo especificado (ej. 4 Argon)
 /// en el selector de la web de Gemini y escribe la pregunta en el cuadro de texto.
 pub async fn ask_gemini_in_chrome(model: &str, question: &str) -> Result<String, String> {
-    let script = "/home/jejej/.openclaw/workspace/claudia-desktop/scripts/ask_gemini_chrome.py";
+    let script = "/home/jejej/fuko-desktop/scripts/ask_gemini_chrome.py";
     let mut cmd = prepare_host_command("python3");
     cmd.arg(script).arg(model.trim()).arg(question.trim());
 

@@ -845,8 +845,8 @@ pub async fn take_desktop_screenshot() -> Option<String> {
     for py_script in [
         "scripts/silent_screenshot.py",
         "../scripts/silent_screenshot.py",
-        "/home/jejej/.openclaw/workspace/claudia-desktop/scripts/silent_screenshot.py",
         "/home/jejej/fuko-desktop/scripts/silent_screenshot.py",
+        "/home/jejej/.openclaw/workspace/claudia-desktop/scripts/silent_screenshot.py",
     ] {
         if Path::new(py_script).exists() {
             let res = Command::new("python3")

@@ -28,6 +28,6 @@ if [ -x "$SCRIPT_DIR/src-tauri/target/debug/claudia-desktop" ]; then
   exec "$SCRIPT_DIR/src-tauri/target/debug/claudia-desktop" "$@"
 elif [ -x "$SCRIPT_DIR/target/debug/claudia-desktop" ]; then
   exec "$SCRIPT_DIR/target/debug/claudia-desktop" "$@"
-else
-  exec "/home/jejej/.openclaw/workspace/claudia-desktop/src-tauri/target/debug/claudia-desktop" "$@"
+elif [ -x "/home/jejej/fuko-desktop/src-tauri/target/debug/claudia-desktop" ]; then
+  exec "/home/jejej/fuko-desktop/src-tauri/target/debug/claudia-desktop" "$@"
 fi

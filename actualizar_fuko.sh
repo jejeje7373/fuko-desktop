@@ -38,20 +38,23 @@ if [ ! -d "$TARGET_DIR" ]; then
     mkdir -p "$TARGET_DIR"
 fi
 
-echo -e "\n${BLUE}[2/5] Sincronizando archivos del proyecto a $TARGET_DIR...${NC}"
-# Sincronizar archivos esenciales excluyendo temporales, node_modules y target/ de compilación
-rsync -av --delete \
-    --exclude=".git" \
-    --exclude="node_modules" \
-    --exclude="target" \
-    --exclude="src-tauri/target" \
-    --exclude="*.log" \
-    --exclude="__pycache__" \
-    --exclude="*.pyc" \
-    --exclude=".DS_Store" \
-    --exclude="README.md" \
-    --exclude=".gitignore" \
-    "$WORKSPACE_DIR/" "$TARGET_DIR/"
+if [ -d "$WORKSPACE_DIR" ] && [ "$(realpath "$WORKSPACE_DIR" 2>/dev/null)" != "$(realpath "$TARGET_DIR" 2>/dev/null)" ]; then
+    echo -e "\n${BLUE}[2/5] Sincronizando archivos del proyecto a $TARGET_DIR...${NC}"
+    rsync -av --delete \
+        --exclude=".git" \
+        --exclude="node_modules" \
+        --exclude="target" \
+        --exclude="src-tauri/target" \
+        --exclude="*.log" \
+        --exclude="__pycache__" \
+        --exclude="*.pyc" \
+        --exclude=".DS_Store" \
+        --exclude="README.md" \
+        --exclude=".gitignore" \
+        "$WORKSPACE_DIR/" "$TARGET_DIR/"
+else
+    echo -e "\n${BLUE}[2/5] Carpeta unificada ($TARGET_DIR) al día. Omitiendo sincronización redundante.${NC}"
+fi
 
 # Sincronizar SOUL.md e IDENTITY.md si están en el workspace raíz
 if [ -f "$OPENCLAW_WORKSPACE/SOUL.md" ]; then

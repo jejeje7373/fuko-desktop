@@ -25,3 +25,4 @@ Thumbs.db
 # Temporary and log files
 *.log
 /tmp/
+connections.json
